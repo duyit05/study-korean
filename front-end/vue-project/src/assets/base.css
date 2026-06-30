@@ -1,78 +1,78 @@
-/* Modern Premium Design Token System */
+/* Modern Premium Design Token System - Warm Beige / Sand Palette */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
 
 :root {
-  /* HSL Color Tokens - Light Theme */
-  --bg-app: hsl(210, 40%, 98%);
-  --bg-card: hsl(0, 0%, 100%);
-  --bg-hover: hsl(210, 30%, 96%);
-  --bg-badge: hsl(210, 30%, 92%);
-  --border-color: hsl(210, 20%, 90%);
-  --border-color-hover: hsl(210, 20%, 80%);
+  /* HSL Color Tokens - Light Beige Theme */
+  --bg-app: hsl(36, 30%, 95%);            /* Soft warm cream/beige background */
+  --bg-card: hsl(36, 40%, 99%);           /* Pure warm ivory card background */
+  --bg-hover: hsl(36, 25%, 90%);          /* Sand hover background */
+  --bg-badge: hsl(36, 20%, 86%);          /* Soft sand badge background */
+  --border-color: hsl(36, 15%, 82%);      /* Mild beige border */
+  --border-color-hover: hsl(36, 15%, 72%);
 
-  --text-title: hsl(222, 47%, 12%);
-  --text-body: hsl(220, 16%, 36%);
-  --text-muted: hsl(220, 10%, 56%);
+  --text-title: hsl(24, 30%, 15%);        /* Deep espresso brown */
+  --text-body: hsl(24, 15%, 32%);         /* Roasted coffee brown */
+  --text-muted: hsl(24, 10%, 52%);        /* Soft taupe grey */
 
-  --primary: hsl(222, 89%, 60%);
-  --primary-hover: hsl(222, 89%, 52%);
-  --primary-light: hsl(222, 89%, 95%);
-  --primary-glow: hsla(222, 89%, 60%, 0.15);
+  --primary: hsl(28, 75%, 48%);           /* Warm rich amber / terracotta */
+  --primary-hover: hsl(28, 80%, 42%);
+  --primary-light: hsl(30, 60%, 91%);     /* Soft amber light */
+  --primary-glow: hsla(28, 75%, 48%, 0.12);
 
-  --success: hsl(142, 72%, 29%);
-  --success-light: hsl(142, 70%, 95%);
-  --success-border: hsl(142, 70%, 90%);
+  --success: hsl(135, 45%, 35%);          /* Muted leaf green */
+  --success-light: hsl(135, 40%, 93%);
+  --success-border: hsl(135, 40%, 85%);
 
-  --warning: hsl(38, 92%, 50%);
-  --warning-light: hsl(38, 92%, 95%);
+  --warning: hsl(42, 85%, 45%);           /* Ochre gold */
+  --warning-light: hsl(42, 85%, 93%);
 
-  --danger: hsl(354, 84%, 57%);
-  --danger-light: hsl(354, 84%, 96%);
+  --danger: hsl(5, 75%, 52%);             /* Terracotta red */
+  --danger-light: hsl(5, 75%, 94%);
 
   --radius-sm: 8px;
   --radius-md: 16px;
   --radius-lg: 24px;
 
-  --shadow-sm: 0 2px 8px rgba(99, 99, 99, 0.05);
-  --shadow-md: 0 10px 30px rgba(99, 99, 99, 0.08);
-  --shadow-lg: 0 20px 45px rgba(99, 99, 99, 0.12);
+  --shadow-sm: 0 2px 8px rgba(139, 129, 119, 0.05);
+  --shadow-md: 0 10px 30px rgba(139, 129, 119, 0.08);
+  --shadow-lg: 0 20px 45px rgba(139, 129, 119, 0.12);
 
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark Mode Tokens */
+/* Dark Mode Tokens - Warm Dark Bronze Theme */
 .dark-theme {
-  --bg-app: hsl(222, 47%, 10%);
-  --bg-card: hsl(223, 47%, 14%);
-  --bg-hover: hsl(223, 30%, 18%);
-  --bg-badge: hsl(223, 30%, 20%);
-  --border-color: hsl(223, 20%, 22%);
-  --border-color-hover: hsl(223, 20%, 30%);
+  --bg-app: hsl(24, 20%, 9%);            /* Dark espresso/ebony */
+  --bg-card: hsl(24, 20%, 13%);           /* Dark chocolate card */
+  --bg-hover: hsl(24, 15%, 18%);          /* Soft bronze hover */
+  --bg-badge: hsl(24, 15%, 22%);
+  --border-color: hsl(24, 12%, 24%);      /* Dark bronze border */
+  --border-color-hover: hsl(24, 12%, 32%);
 
-  --text-title: hsl(210, 40%, 98%);
-  --text-body: hsl(215, 20%, 78%);
-  --text-muted: hsl(215, 16%, 58%);
+  --text-title: hsl(38, 40%, 93%);        /* Creamy white */
+  --text-body: hsl(38, 20%, 78%);         /* Warm grey-beige */
+  --text-muted: hsl(38, 15%, 58%);        /* Muted sand */
 
-  --primary: hsl(217, 91%, 60%);
-  --primary-hover: hsl(217, 91%, 68%);
-  --primary-light: hsl(217, 91%, 18%);
-  --primary-glow: hsla(217, 91%, 60%, 0.3);
+  --primary: hsl(28, 75%, 54%);           /* Amber gold */
+  --primary-hover: hsl(28, 80%, 62%);
+  --primary-light: hsl(28, 40%, 20%);
+  --primary-glow: hsla(28, 75%, 54%, 0.25);
 
-  --success: hsl(142, 69%, 58%);
-  --success-light: hsl(142, 69%, 14%);
-  --success-border: hsl(142, 69%, 20%);
+  --success: hsl(135, 45%, 52%);
+  --success-light: hsl(135, 45%, 15%);
+  --success-border: hsl(135, 45%, 20%);
 
-  --warning: hsl(38, 92%, 55%);
-  --warning-light: hsl(38, 92%, 16%);
+  --warning: hsl(42, 85%, 52%);
+  --warning-light: hsl(42, 85%, 16%);
 
-  --danger: hsl(354, 84%, 62%);
-  --danger-light: hsl(354, 84%, 18%);
+  --danger: hsl(5, 75%, 58%);
+  --danger-light: hsl(5, 75%, 18%);
 
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.45);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.5);
 }
 
 *, *::before, *::after {

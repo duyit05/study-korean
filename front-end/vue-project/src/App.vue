@@ -119,8 +119,10 @@ const handleSubmitQuiz = ({ quizId, score, userAnswers, completedAt }) => {
     quizzes.value[quizIndex].completedAt = completedAt
     
     localStorage.setItem('sk_quizzes', JSON.stringify(quizzes.value))
-    
-    // Reward XP based on score
+  }
+  
+  // Reward XP based on score for both teacher assignments and self-practice quizzes
+  if (user.value) {
     const xpReward = Math.round(score * 10)
     user.value.xp += xpReward
     localStorage.setItem('sk_user', JSON.stringify(user.value))
@@ -596,7 +598,7 @@ const navigateTo = (viewName) => {
 /* Page content space */
 .app-main-content {
   flex-grow: 1;
-  max-width: 1200px;
+  max-width: 1700px;
   width: 100%;
   margin: 0 auto;
   padding: 2rem;

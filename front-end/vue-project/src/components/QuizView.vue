@@ -4,64 +4,119 @@
     <div class="quiz-header-section" v-if="!activeQuiz && !viewingResultQuiz && !isCreatingQuiz">
       <div>
         <h2>Bài Tập & Kiểm Tra 📝</h2>
-        <p>Hoàn thành bài tập giáo viên giao hoặc tự tạo đề trắc nghiệm để ôn tập kiến thức.</p>
+        <p>Danh mục bài tập được phân loại theo kỹ năng giúp bạn dễ dàng ôn tập và học tập tốt hơn.</p>
       </div>
       
       <div class="quiz-status-tabs">
         <button 
           class="tab-btn" 
-          :class="{ active: activeTab === 'pending' }"
-          @click="activeTab = 'pending'"
+          :class="{ active: activeTab === 'reading' }"
+          @click="activeTab = 'reading'"
         >
-          Chưa làm ({{ pendingQuizzes.length }})
+          📖 Đọc & Từ Vựng ({{ readingQuizzesCount }})
         </button>
         <button 
           class="tab-btn" 
+          :class="{ active: activeTab === 'listening' }"
+          @click="activeTab = 'listening'"
+        >
+          🎧 Kỹ Năng Nghe ({{ listeningQuizzesCount }})
+        </button>
+        <button 
+          class="tab-btn completed-tab" 
           :class="{ active: activeTab === 'completed' }"
           @click="activeTab = 'completed'"
         >
-          Đã hoàn thành ({{ completedQuizzes.length }})
-        </button>
-        <button 
-          class="tab-btn practice-tab" 
-          :class="{ active: activeTab === 'practice' }"
-          @click="activeTab = 'practice'"
-        >
-          Tự ôn luyện ({{ practiceQuizzes.length }})
+          ✅ Lịch Sử Làm Bài ({{ completedQuizzes.length }})
         </button>
       </div>
     </div>
 
     <!-- LIST OF QUIZZES -->
     <div v-if="!activeQuiz && !viewingResultQuiz && !isCreatingQuiz" class="quizzes-grid animate-scale">
-      <!-- Pending Quizzes -->
-      <template v-if="activeTab === 'pending'">
+      <!-- 1. Reading & Vocab Tab -->
+      <template v-if="activeTab === 'reading'">
+        <!-- Create Shortcut Box inside Reading tab -->
+        <div class="quiz-card create-trigger-card reading-btn" @click="openCreator('reading')">
+          <div class="trigger-content">
+            <div class="trigger-plus-icon">📖</div>
+            <h4>Tạo Đề Đọc/Từ Vựng</h4>
+            <p>Tự thiết kế đề thi trắc nghiệm đọc hiểu, từ vựng và ngữ pháp tiếng Hàn.</p>
+          </div>
+        </div>
+
+        <!-- Quizzes under Reading category -->
         <div 
-          v-for="quiz in pendingQuizzes" 
+          v-for="quiz in readingQuizzes" 
           :key="quiz.id" 
           class="quiz-card pending"
         >
           <div class="quiz-badge-row">
-            <span class="badge time"><AppIcon name="clock" size="14" /> {{ quiz.timeLimit }} Phút</span>
-            <span class="badge points"><AppIcon name="award" size="14" /> {{ quiz.points }} Điểm</span>
+            <span class="badge type-badge reading">📖 Đọc & Từ Vựng</span>
+            <span class="badge time"><AppIcon name="clock" size="14" /> {{ quiz.timeLimit || 10 }} Phút</span>
+            <span v-if="quiz.score !== null && quiz.score !== undefined" class="badge score-badge practice-score">Điểm gần nhất: {{ quiz.score }} / 10</span>
           </div>
-          <h3>{{ quiz.title }}</h3>
-          <p class="due-date">Hạn nộp: {{ formatDate(quiz.dueDate) }}</p>
+          <h3>{{ quiz.title || 'Đề ôn tập đọc' }}</h3>
+          <p class="due-date" v-if="quiz.dueDate && quiz.status !== 'completed'">Hạn nộp: {{ formatDate(quiz.dueDate) }}</p>
+          <p class="summary-q" v-else>{{ quiz.questions ? quiz.questions.length : 0 }} câu hỏi ôn tập</p>
 
           <div class="quiz-action-bar">
             <button class="start-btn" @click="startQuiz(quiz)">
-              <AppIcon name="play" size="16" /> Làm bài ngay
+              <AppIcon name="play" size="16" /> {{ (quiz.score !== null && quiz.score !== undefined) ? 'Làm lại ôn tập' : 'Làm bài ngay' }}
+            </button>
+            <button v-if="quiz.id && quiz.id.toString().startsWith('practice-')" class="delete-practice-btn" @click.stop="deletePracticeQuiz(quiz.id)" title="Xóa đề ôn tập này">
+              <AppIcon name="x" size="16" />
             </button>
           </div>
         </div>
 
-        <div v-if="pendingQuizzes.length === 0" class="empty-state">
-          <AppIcon name="check" size="32" class="success-text" />
-          <p>Tốt lắm! Bạn không còn bài tập nào chưa làm.</p>
+        <div v-if="readingQuizzes.length === 0" class="empty-state">
+          <p>Không có bài tập đọc nào.</p>
         </div>
       </template>
 
-      <!-- Completed Quizzes -->
+      <!-- 2. Listening Skills Tab -->
+      <template v-if="activeTab === 'listening'">
+        <!-- Create Shortcut Box inside Listening tab -->
+        <div class="quiz-card create-trigger-card listening-btn" @click="openCreator('listening')">
+          <div class="trigger-content">
+            <div class="trigger-plus-icon">🎧</div>
+            <h4>Tạo Bài Thi Nghe</h4>
+            <p>Soạn bài thi nghe có chèn audio của riêng bạn hoặc phát giọng AI và chọn đáp án ABCD.</p>
+          </div>
+        </div>
+
+        <!-- Quizzes under Listening category -->
+        <div 
+          v-for="quiz in listeningQuizzes" 
+          :key="quiz.id" 
+          class="quiz-card pending"
+        >
+          <div class="quiz-badge-row">
+            <span class="badge type-badge listening">🎧 Kỹ Năng Nghe</span>
+            <span class="badge time"><AppIcon name="clock" size="14" /> {{ quiz.timeLimit || 10 }} Phút</span>
+            <span v-if="quiz.score !== null && quiz.score !== undefined" class="badge score-badge practice-score">Điểm gần nhất: {{ quiz.score }} / 10</span>
+          </div>
+          <h3>{{ quiz.title || 'Đề ôn tập nghe' }}</h3>
+          <p class="due-date" v-if="quiz.dueDate && quiz.status !== 'completed'">Hạn nộp: {{ formatDate(quiz.dueDate) }}</p>
+          <p class="summary-q" v-else>{{ quiz.questions ? quiz.questions.length : 0 }} câu hỏi luyện nghe</p>
+
+          <div class="quiz-action-bar">
+            <button class="start-btn" @click="startQuiz(quiz)">
+              <AppIcon name="play" size="16" /> {{ (quiz.score !== null && quiz.score !== undefined) ? 'Làm lại đề nghe' : 'Làm bài ngay' }}
+            </button>
+            <button v-if="quiz.id && quiz.id.toString().startsWith('practice-')" class="delete-practice-btn" @click.stop="deletePracticeQuiz(quiz.id)" title="Xóa đề ôn tập này">
+              <AppIcon name="x" size="16" />
+            </button>
+          </div>
+        </div>
+
+        <div v-if="listeningQuizzes.length === 0" class="empty-state">
+          <p>Không có bài tập nghe nào.</p>
+        </div>
+      </template>
+
+      <!-- 3. Completed History Tab -->
       <template v-if="activeTab === 'completed'">
         <div 
           v-for="quiz in completedQuizzes" 
@@ -69,11 +124,14 @@
           class="quiz-card completed"
         >
           <div class="quiz-badge-row">
+            <span class="badge type-badge" :class="quiz.quizType === 'listening' ? 'listening' : 'reading'">
+              {{ quiz.quizType === 'listening' ? '🎧 Bài Nghe' : '📖 Bài Đọc' }}
+            </span>
             <span class="badge score-badge">Điểm: {{ quiz.score }} / 10</span>
-            <span class="badge date-completed"><AppIcon name="check" size="14" /> {{ formatDateShort(quiz.completedAt) }}</span>
+            <span class="badge date-completed" v-if="quiz.completedAt"><AppIcon name="check" size="14" /> {{ formatDateShort(quiz.completedAt) }}</span>
           </div>
-          <h3>{{ quiz.title }}</h3>
-          <p class="summary-q">{{ quiz.questions.length }} câu hỏi đã trả lời</p>
+          <h3>{{ quiz.title || 'Đề hoàn thành' }}</h3>
+          <p class="summary-q">{{ quiz.questions ? quiz.questions.length : 0 }} câu hỏi đã nộp</p>
 
           <div class="quiz-action-bar">
             <button class="review-btn" @click="viewResults(quiz)">
@@ -87,41 +145,6 @@
           <p>Bạn chưa hoàn thành bài tập nào.</p>
         </div>
       </template>
-
-      <!-- Practice Quizzes (Self Created) -->
-      <template v-if="activeTab === 'practice'">
-        <!-- Create Shortcut Box -->
-        <div class="quiz-card create-trigger-card" @click="openCreator">
-          <div class="trigger-content">
-            <div class="trigger-plus-icon">+</div>
-            <h4>Tự Tạo Đề Trắc Nghiệm</h4>
-            <p>Tự thêm câu hỏi tiếng Hàn và lựa chọn đáp án để ôn tập từ vựng.</p>
-          </div>
-        </div>
-
-        <div 
-          v-for="quiz in practiceQuizzes" 
-          :key="quiz.id" 
-          class="quiz-card practice"
-        >
-          <div class="quiz-badge-row">
-            <span class="badge time"><AppIcon name="clock" size="14" /> {{ quiz.timeLimit }} Phút</span>
-            <span v-if="quiz.score !== null" class="badge score-badge practice-score">Điểm: {{ quiz.score }} / 10</span>
-            <span v-else class="badge score-badge pending-practice">Chưa làm</span>
-          </div>
-          <h3>{{ quiz.title }}</h3>
-          <p class="summary-q">{{ quiz.questions.length }} câu hỏi trắc nghiệm</p>
-
-          <div class="quiz-action-bar practice-actions">
-            <button class="start-btn" @click="startQuiz(quiz)">
-              <AppIcon name="play" size="16" /> Làm bài ôn tập
-            </button>
-            <button class="delete-practice-btn" @click.stop="deletePracticeQuiz(quiz.id)" title="Xóa đề ôn tập này">
-              <AppIcon name="x" size="16" />
-            </button>
-          </div>
-        </div>
-      </template>
     </div>
 
     <!-- QUIZ CREATOR FORM VIEW -->
@@ -131,18 +154,22 @@
       </button>
 
       <div class="creator-header">
-        <h3>Tạo Đề Ôn Tập Trắc Nghiệm Mới 🛠️</h3>
-        <p>Thiết kế các câu hỏi trắc nghiệm ôn tập từ vựng với 4 sự lựa chọn đáp án A, B, C, D.</p>
+        <h3>{{ creatorQuizType === 'listening' ? 'Thiết Kế Đề Thi Nghe (Listening) 🎧' : 'Thiết Kế Đề Đọc / Từ Vựng 📖' }}</h3>
+        <p>
+          {{ creatorQuizType === 'listening' 
+            ? 'Cấu trúc bài nghe bao gồm đoạn audio tự chọn (tải lên file .mp3 hoặc dán link) và 4 đáp án trắc nghiệm A B C D.' 
+            : 'Cấu trúc trắc nghiệm chữ kiểm tra mặt chữ, ngữ pháp và nghĩa từ vựng.' }}
+        </p>
       </div>
 
       <div class="creator-form-card">
         <div class="form-group">
-          <label for="new-quiz-title" class="label-bold">Tên đề ôn tập</label>
+          <label for="new-quiz-title" class="label-bold">Tên đề thi tự luyện</label>
           <input 
             type="text" 
             id="new-quiz-title" 
             v-model="newQuizTitle" 
-            placeholder="Ví dụ: Ôn tập từ vựng thời tiết & mùa"
+            placeholder="Ví dụ: Đề thi thử nghe tiếng Hàn sơ cấp"
             class="creator-input-field"
           >
         </div>
@@ -164,12 +191,67 @@
               </button>
             </div>
 
+            <!-- Custom Audio selection inside Listening Quiz Creator -->
+            <template v-if="creatorQuizType === 'listening'">
+              <div class="form-group" style="margin-bottom: 1rem;">
+                <label class="label-accent">Nguồn file âm thanh (Audio Source)</label>
+                <div class="source-toggle-group">
+                  <label class="radio-label">
+                    <input type="radio" value="tts" v-model="q.audioSource">
+                    <span>AI phát âm mẫu (TTS ko-KR)</span>
+                  </label>
+                  <label class="radio-label">
+                    <input type="radio" value="file" v-model="q.audioSource">
+                    <span>Tải file MP3 / Dán liên kết</span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Option 1: AI voice text -->
+              <div class="form-group animate-fade" v-if="q.audioSource === 'tts'" style="margin-bottom: 1rem;">
+                <label>Từ hoặc câu tiếng Hàn để AI phát âm</label>
+                <input 
+                  type="text" 
+                  v-model="q.koreanText" 
+                  placeholder="Ví dụ: 안녕하세요 hoặc 봄"
+                  class="creator-input-field"
+                >
+              </div>
+
+              <!-- Option 2: MP3 file / Link url -->
+              <div class="form-group animate-fade" v-else style="margin-bottom: 1rem;">
+                <label>Liên kết âm thanh (.mp3) hoặc chọn file từ máy tính</label>
+                <input 
+                  type="text" 
+                  v-model="q.audioUrl" 
+                  placeholder="Dán link audio: https://example.com/audio.mp3"
+                  class="creator-input-field"
+                  style="margin-bottom: 0.5rem;"
+                >
+                <div class="file-uploader-box">
+                  <input 
+                    type="file" 
+                    accept="audio/*" 
+                    @change="handleAudioUpload($event, qIdx)"
+                    :id="'file-upload-' + qIdx"
+                    class="hidden-file-input"
+                  >
+                  <label :for="'file-upload-' + qIdx" class="file-upload-btn">
+                    📁 {{ q.audioUrl ? 'Chọn file khác...' : 'Tải file MP3 từ thiết bị...' }}
+                  </label>
+                  <span class="file-name-hint" v-if="q.audioUrl && q.audioUrl.toString().startsWith('data:')">
+                    ⚡ Đã đính kèm file âm thanh gốc (dạng offline)
+                  </span>
+                </div>
+              </div>
+            </template>
+
             <div class="form-group">
-              <label>Nội dung câu hỏi</label>
+              <label>Câu hỏi phụ / Gợi ý bằng tiếng Việt</label>
               <input 
                 type="text" 
                 v-model="q.question" 
-                placeholder="Ví dụ: Từ nào có nghĩa là Mùa Đông?"
+                :placeholder="creatorQuizType === 'listening' ? 'Ví dụ: Lắng nghe đoạn audio hội thoại sau và chọn nghĩa đúng:' : 'Ví dụ: Từ nào sau đây có nghĩa là Mùa Đông?'"
                 class="creator-input-field"
               >
             </div>
@@ -195,7 +277,7 @@
               </div>
             </div>
             
-            <p class="correct-hint">* Nhấp vào nút tròn bên cạnh đáp án đúng để thiết lập đáp án cho câu hỏi.</p>
+            <p class="correct-hint">* Nhấp chọn nút tròn bên cạnh đáp án đúng của câu hỏi này.</p>
           </div>
         </div>
 
@@ -205,7 +287,7 @@
           </button>
           
           <button class="save-quiz-btn" @click="saveCustomQuiz">
-            Lưu đề ôn tập
+            Lưu đề thi
           </button>
         </div>
       </div>
@@ -215,8 +297,8 @@
     <div v-else-if="activeQuiz" class="active-quiz-container animate-scale">
       <div class="quiz-run-header">
         <div class="quiz-title-info">
-          <h3>{{ activeQuiz.title }}</h3>
-          <span class="question-tracker">Câu hỏi {{ currentQuestionIndex + 1 }} / {{ activeQuiz.questions.length }}</span>
+          <h3>{{ activeQuiz.title || 'Đang làm bài' }}</h3>
+          <span class="question-tracker">Câu hỏi {{ currentQuestionIndex + 1 }} / {{ activeQuiz.questions ? activeQuiz.questions.length : 0 }}</span>
         </div>
         
         <div class="timer-box" :class="{ warning: timerMinutes < 2 }">
@@ -227,17 +309,17 @@
 
       <!-- Question Progress Bar -->
       <div class="run-progress-bar">
-        <div class="fill" :style="{ width: ((currentQuestionIndex + 1) / activeQuiz.questions.length) * 100 + '%' }"></div>
+        <div class="fill" :style="{ width: (((currentQuestionIndex + 1) / (activeQuiz.questions ? activeQuiz.questions.length : 1)) * 100) + '%' }"></div>
       </div>
 
       <!-- Question Box -->
       <div class="question-view-card">
-        <p class="question-text">{{ currentQuestionIndex + 1 }}. {{ currentQuestion.question }}</p>
+        <p class="question-text">{{ currentQuestionIndex + 1 }}. {{ currentQuestion.question || '' }}</p>
 
-        <!-- Option Choice Question -->
+        <!-- Standard Option Choice Question -->
         <div v-if="currentQuestion.type === 'choice' || currentQuestion.type === 'match'" class="options-grid">
           <button 
-            v-for="opt in currentQuestion.options" 
+            v-for="opt in (currentQuestion.options || [])" 
             :key="opt"
             class="option-row"
             :class="{ selected: userAnswers[currentQuestion.id] === opt }"
@@ -250,15 +332,65 @@
           </button>
         </div>
 
+        <!-- Listening (Audio Player + Option Choice) Question -->
+        <div v-else-if="currentQuestion.type === 'listening'" class="listening-block">
+          <div class="audio-player-card">
+            <!-- Custom MP3 / URL playback -->
+            <button 
+              v-if="currentQuestion.audioUrl"
+              class="audio-play-btn" 
+              @click="playCustomAudio(currentQuestion.audioUrl)"
+              title="Phát file âm thanh đính kèm"
+            >
+              <AppIcon name="play" size="20" />
+              <span>Phát Audio Đính Kèm 🎧</span>
+            </button>
+            
+            <!-- Fallback to TTS -->
+            <button 
+              v-else
+              class="audio-play-btn" 
+              @click="playSpeech(currentQuestion.koreanText)"
+              title="Phát giọng đọc mẫu bằng AI"
+            >
+              <AppIcon name="play" size="20" />
+              <span>Phát Giọng AI (TTS) 🔊</span>
+            </button>
+            
+            <div class="audio-visualizer" :class="{ playing: isSpeaking && (playingKoreanText === currentQuestion.koreanText || playingKoreanText === currentQuestion.audioUrl) }">
+              <span class="bar bar-1"></span>
+              <span class="bar bar-2"></span>
+              <span class="bar bar-3"></span>
+              <span class="bar bar-4"></span>
+              <span class="bar bar-5"></span>
+            </div>
+          </div>
+
+          <div class="options-grid">
+            <button 
+              v-for="opt in (currentQuestion.options || [])" 
+              :key="opt"
+              class="option-row"
+              :class="{ selected: userAnswers[currentQuestion.id] === opt }"
+              @click="selectOption(opt)"
+            >
+              <div class="radio-indicator">
+                <span v-if="userAnswers[currentQuestion.id] === opt" class="dot"></span>
+              </div>
+              <span class="option-text">{{ opt }}</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Text Fill Question -->
         <div v-else-if="currentQuestion.type === 'fill'" class="fill-input-box">
           <input 
             type="text" 
             v-model="userAnswers[currentQuestion.id]" 
-            placeholder="Nhập câu trả lời của bạn tại đây..."
+            placeholder="Nhập câu trả lời của bạn..."
             class="fill-text-field"
           >
-          <p class="input-hint">* Hãy viết tiếng Hàn chính xác và không thừa ký tự trắng.</p>
+          <p class="input-hint">* Điền từ hoặc cụm từ tiếng Hàn chính xác.</p>
         </div>
       </div>
 
@@ -273,7 +405,7 @@
         </button>
 
         <button 
-          v-if="currentQuestionIndex < activeQuiz.questions.length - 1"
+          v-if="currentQuestionIndex < (activeQuiz.questions ? activeQuiz.questions.length - 1 : 0)"
           class="nav-btn-run primary" 
           @click="nextQuestion"
         >
@@ -298,15 +430,15 @@
 
       <div class="result-score-banner">
         <div class="score-radial">
-          <span class="score-num">{{ viewingResultQuiz.score }}</span>
+          <span class="score-num">{{ viewingResultQuiz.score || 0 }}</span>
           <span class="total-num">/ 10</span>
         </div>
         <div class="score-text-details">
-          <h3>Kết quả: {{ viewingResultQuiz.title }}</h3>
+          <h3>Kết quả: {{ viewingResultQuiz.title || 'Đề ôn tập' }}</h3>
           <p>Nộp ngày: {{ formatDate(viewingResultQuiz.completedAt) }}</p>
           <div class="points-earned">
             <AppIcon name="award" class="gold-award" size="20" />
-            <span>Bạn đã tích lũy thêm <strong>{{ Math.round(viewingResultQuiz.score * 10) }} XP</strong> vào tài khoản học viên!</span>
+            <span>Tích lũy: <strong>+{{ Math.round((viewingResultQuiz.score || 0) * 10) }} XP</strong></span>
           </div>
         </div>
       </div>
@@ -315,7 +447,7 @@
 
       <div class="questions-review-list">
         <div 
-          v-for="(q, idx) in viewingResultQuiz.questions" 
+          v-for="(q, idx) in (viewingResultQuiz.questions || [])" 
           :key="q.id" 
           class="review-question-card"
           :class="isUserCorrect(q) ? 'correct' : 'incorrect'"
@@ -328,19 +460,29 @@
             </span>
           </div>
 
-          <p class="q-text">{{ q.question }}</p>
+          <p class="q-text">{{ q.question || '' }}</p>
+
+          <!-- Replay buttons in Review for Listening -->
+          <div class="review-listening-replay" v-if="q.type === 'listening'">
+            <button v-if="q.audioUrl" class="replay-btn" @click="playCustomAudio(q.audioUrl)">
+              <AppIcon name="play" size="14" /> Phát lại Audio 🎧
+            </button>
+            <button v-else class="replay-btn" @click="playSpeech(q.koreanText)">
+              <AppIcon name="play" size="14" /> Phát lại giọng đọc AI: <strong>{{ q.koreanText }}</strong>
+            </button>
+          </div>
 
           <div class="review-answers-grid">
             <div class="ans-row">
               <span class="label">Câu trả lời của bạn:</span>
               <span class="ans-val student-ans" :class="{ err: !isUserCorrect(q) }">
-                {{ viewingResultQuiz.userAnswers[q.id] || '(Không trả lời)' }}
+                {{ viewingResultQuiz.userAnswers ? (viewingResultQuiz.userAnswers[q.id] || '(Không trả lời)') : '(Không trả lời)' }}
               </span>
             </div>
             
             <div class="ans-row" v-if="!isUserCorrect(q)">
               <span class="label">Đáp án đúng:</span>
-              <span class="ans-val correct-ans">{{ q.correctAnswer }}</span>
+              <span class="ans-val correct-ans">{{ q.correctAnswer || '' }}</span>
             </div>
           </div>
 
@@ -362,20 +504,22 @@ import AppIcon from './icons/AppIcon.vue'
 const props = defineProps({
   quizzes: {
     type: Array,
-    required: true
+    required: true,
+    default: () => []
   }
 })
 
 const emit = defineEmits(['submit-quiz'])
 
-const activeTab = ref('pending') // pending, completed, practice
+const activeTab = ref('reading') // reading, listening, completed
 
 // Practice / Custom Quiz States
 const practiceQuizzes = ref([])
 const isCreatingQuiz = ref(false)
+const creatorQuizType = ref('reading') // reading or listening
 const newQuizTitle = ref('')
 const newQuizQuestions = ref([
-  { question: '', options: ['', '', '', ''], correctOptionIndex: 0 }
+  { type: 'choice', question: '', koreanText: '', audioSource: 'tts', audioUrl: '', options: ['', '', '', ''], correctOptionIndex: 0 }
 ])
 
 // Run states
@@ -386,20 +530,49 @@ const timerMinutes = ref(0)
 const timerSeconds = ref(0)
 let timerInterval = null
 
+// Audio playing TTS state
+const isSpeaking = ref(false)
+const playingKoreanText = ref('')
+const currentAudio = ref(null)
+
 // Result view states
 const viewingResultQuiz = ref(null)
+
+const currentQuestion = computed(() => {
+  if (!activeQuiz.value || !activeQuiz.value.questions || !Array.isArray(activeQuiz.value.questions)) {
+    return {}
+  }
+  return activeQuiz.value.questions[currentQuestionIndex.value] || {}
+})
 
 onMounted(() => {
   // Load custom quizzes from localStorage
   const savedPractice = localStorage.getItem('sk_practice_quizzes')
   if (savedPractice) {
-    practiceQuizzes.value = JSON.parse(savedPractice)
+    try {
+      const parsed = JSON.parse(savedPractice)
+      if (Array.isArray(parsed)) {
+        // Migrate old practice quizzes to have quizType if missing
+        practiceQuizzes.value = parsed.map(pq => {
+          if (!pq.quizType) {
+            const hasListening = pq.questions && pq.questions.some(q => q.type === 'listening')
+            pq.quizType = hasListening ? 'listening' : 'reading'
+          }
+          return pq
+        })
+      } else {
+        practiceQuizzes.value = []
+      }
+    } catch (e) {
+      practiceQuizzes.value = []
+    }
   } else {
-    // Seed default custom practice quiz
+    // Seed default custom practice quizzes
     const seedPractice = [
       {
-        id: "practice-seed",
-        title: "Đề tự luyện: Từ vựng Trái cây & Thức ăn 🍎",
+        id: "practice-seed-reading",
+        title: "Đề tự luyện Đọc: Từ vựng Động từ cơ bản 📖",
+        quizType: "reading",
         status: "not_started",
         points: 10,
         score: null,
@@ -407,20 +580,54 @@ onMounted(() => {
         completedAt: null,
         questions: [
           {
-            id: "pq-seed-1",
+            id: "pq-reading-1",
             type: "choice",
-            question: "Từ '사과' trong tiếng Hàn có nghĩa là gì?",
-            options: ["A. Quả chuối", "B. Quả táo", "C. Quả cam", "D. Quả nho"],
-            correctAnswer: "B. Quả táo",
-            explanation: "사과 nghĩa là Quả táo."
+            question: "Từ '일어나다' trong tiếng Hàn có nghĩa là gì?",
+            options: ["A. Đi làm", "B. Thức dậy", "C. Ăn cơm", "D. Thể dục"],
+            correctAnswer: "B. Thức dậy",
+            explanation: "일어나다 nghĩa là Thức dậy."
           },
           {
-            id: "pq-seed-2",
+            id: "pq-reading-2",
             type: "choice",
-            question: "Từ '우유' trong tiếng Hàn nghĩa là gì?",
-            options: ["A. Nước ngọt", "B. Cà phê", "C. Sữa", "D. Trà xanh"],
-            correctAnswer: "C. Sữa",
-            explanation: "우유 nghĩa là Sữa."
+            question: "Từ nào có nghĩa là 'Học tập'?",
+            options: ["A. 운동하다", "B. 공부하다", "C. 세수하다", "D. 일하다"],
+            correctAnswer: "B. 공부하다",
+            explanation: "공부하다 nghĩa là Học tập."
+          }
+        ]
+      },
+      {
+        id: "practice-seed-listening",
+        title: "Đề thi thử Nghe: TOEIC Hàn ngữ Part 1 🎧",
+        quizType: "listening",
+        status: "not_started",
+        points: 10,
+        score: null,
+        timeLimit: 10,
+        completedAt: null,
+        questions: [
+          {
+            id: "pq-listening-1",
+            type: "listening",
+            question: "Hãy nghe đoạn âm thanh tiếng Hàn sau và chọn ý nghĩa chính xác:",
+            koreanText: "오늘 날씨가 아주 따뜻합니다",
+            audioSource: "tts",
+            audioUrl: "",
+            options: ["A. Thời tiết hôm nay rất lạnh.", "B. Thời tiết hôm nay rất ấm áp.", "C. Thời tiết hôm nay mát mẻ.", "D. Hôm nay trời mưa lớn."],
+            correctAnswer: "B. Thời tiết hôm nay rất ấm áp.",
+            explanation: "Âm thanh tiếng Hàn nói: '오늘 날씨가 아주 따뜻합니다' (Thời tiết hôm nay rất ấm áp)."
+          },
+          {
+            id: "pq-listening-2",
+            type: "listening",
+            question: "Hãy nghe phát âm và chọn động từ mô tả hành động tương ứng:",
+            koreanText: "세수하다",
+            audioSource: "tts",
+            audioUrl: "",
+            options: ["A. Rửa mặt", "B. Thức dậy", "C. Đi ngủ", "D. Ăn cơm"],
+            correctAnswer: "A. Rửa mặt",
+            explanation: "Từ nghe được là '세수하다', nghĩa là Rửa mặt."
           }
         ]
       }
@@ -430,17 +637,38 @@ onMounted(() => {
   }
 })
 
-// Split lists
-const pendingQuizzes = computed(() => {
-  return props.quizzes.filter(q => q.status !== 'completed')
+// Categories lists - heavily guarded
+const readingQuizzes = computed(() => {
+  const list = Array.isArray(props.quizzes) ? props.quizzes : []
+  const teacherPending = list.filter(q => q.status !== 'completed' && q.quizType !== 'listening')
+  const practiceAll = Array.isArray(practiceQuizzes.value) ? practiceQuizzes.value.filter(q => q.quizType === 'reading') : []
+  return [...teacherPending, ...practiceAll]
+})
+
+const listeningQuizzes = computed(() => {
+  const list = Array.isArray(props.quizzes) ? props.quizzes : []
+  const teacherPending = list.filter(q => q.status !== 'completed' && q.quizType === 'listening')
+  const practiceAll = Array.isArray(practiceQuizzes.value) ? practiceQuizzes.value.filter(q => q.quizType === 'listening') : []
+  return [...teacherPending, ...practiceAll]
 })
 
 const completedQuizzes = computed(() => {
-  return props.quizzes.filter(q => q.status === 'completed')
+  const list = Array.isArray(props.quizzes) ? props.quizzes : []
+  const teacherCompleted = list.filter(q => q.status === 'completed')
+  const practiceCompleted = Array.isArray(practiceQuizzes.value) ? practiceQuizzes.value.filter(q => q.score !== null && q.score !== undefined) : []
+  return [...teacherCompleted, ...practiceCompleted].sort((a, b) => {
+    const dateA = a.completedAt ? new Date(a.completedAt).getTime() : 0
+    const dateB = b.completedAt ? new Date(b.completedAt).getTime() : 0
+    return dateB - dateA
+  })
 })
 
-const currentQuestion = computed(() => {
-  return activeQuiz.value ? activeQuiz.value.questions[currentQuestionIndex.value] : {}
+const readingQuizzesCount = computed(() => {
+  return readingQuizzes.value.length
+})
+
+const listeningQuizzesCount = computed(() => {
+  return listeningQuizzes.value.length
 })
 
 // Timer helpers
@@ -448,19 +676,94 @@ const padZero = (num) => {
   return num.toString().padStart(2, '0')
 }
 
-// Start a quiz
+// Speak Korean TTS
+const playSpeech = (text) => {
+  if (!text) return
+  stopAudio()
+  
+  if ('speechSynthesis' in window) {
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.lang = 'ko-KR'
+    utterance.rate = 0.8
+    
+    utterance.onstart = () => {
+      isSpeaking.value = true
+      playingKoreanText.value = text
+    }
+    utterance.onend = () => {
+      isSpeaking.value = false
+      playingKoreanText.value = ''
+    }
+    utterance.onerror = () => {
+      isSpeaking.value = false
+      playingKoreanText.value = ''
+    }
+    
+    window.speechSynthesis.speak(utterance)
+  } else {
+    alert("Trình duyệt không hỗ trợ phát âm thanh tự động.")
+  }
+}
+
+// Play custom audio files (mp3, wav, local base64)
+const playCustomAudio = (url) => {
+  if (!url) return
+  stopAudio()
+
+  const audio = new Audio(url)
+  currentAudio.value = audio
+  
+  isSpeaking.value = true
+  playingKoreanText.value = url
+  
+  audio.play()
+  
+  audio.onended = () => {
+    isSpeaking.value = false
+    playingKoreanText.value = ''
+    currentAudio.value = null
+  }
+  
+  audio.onerror = () => {
+    isSpeaking.value = false
+    playingKoreanText.value = ''
+    currentAudio.value = null
+    alert("Không thể phát file âm thanh này. Hãy kiểm tra lại định dạng file hoặc liên kết đường dẫn.")
+  }
+}
+
+// Clean stop audio
+const stopAudio = () => {
+  if (currentAudio.value) {
+    currentAudio.value.pause()
+    currentAudio.value = null
+  }
+  if ('speechSynthesis' in window) {
+    window.speechSynthesis.cancel()
+  }
+  isSpeaking.value = false
+  playingKoreanText.value = ''
+}
+
+// Start a quiz - heavily guarded against undefined arrays
 const startQuiz = (quiz) => {
+  if (!quiz) return
   activeQuiz.value = quiz
   currentQuestionIndex.value = 0
   userAnswers.value = {}
-  
-  // Set default values for all inputs
-  quiz.questions.forEach(q => {
-    userAnswers.value[q.id] = ''
-  })
+  stopAudio()
+
+  // Set default values for all inputs safely
+  if (quiz.questions && Array.isArray(quiz.questions)) {
+    quiz.questions.forEach(q => {
+      if (q && q.id) {
+        userAnswers.value[q.id] = ''
+      }
+    })
+  }
 
   // Start countdown timer
-  timerMinutes.value = quiz.timeLimit
+  timerMinutes.value = quiz.timeLimit || 10
   timerSeconds.value = 0
   
   clearInterval(timerInterval)
@@ -471,7 +774,6 @@ const startQuiz = (quiz) => {
       timerMinutes.value--
       timerSeconds.value = 59
     } else {
-      // Out of time - auto submit
       submitQuiz()
     }
   }, 1000)
@@ -479,7 +781,7 @@ const startQuiz = (quiz) => {
 
 // Option selection
 const selectOption = (opt) => {
-  if (activeQuiz.value) {
+  if (activeQuiz.value && currentQuestion.value && currentQuestion.value.id) {
     userAnswers.value[currentQuestion.value.id] = opt
   }
 }
@@ -487,36 +789,41 @@ const selectOption = (opt) => {
 const prevQuestion = () => {
   if (currentQuestionIndex.value > 0) {
     currentQuestionIndex.value--
+    stopAudio()
   }
 }
 
 const nextQuestion = () => {
-  if (currentQuestionIndex.value < activeQuiz.value.questions.length - 1) {
+  const maxIdx = activeQuiz.value && activeQuiz.value.questions ? activeQuiz.value.questions.length - 1 : 0
+  if (currentQuestionIndex.value < maxIdx) {
     currentQuestionIndex.value++
+    stopAudio()
   }
 }
 
 // Submit and grade
 const submitQuiz = () => {
   clearInterval(timerInterval)
+  stopAudio()
   if (!activeQuiz.value) return
 
   // Grader
   let correctCount = 0
-  const questionsList = activeQuiz.value.questions
+  const questionsList = activeQuiz.value.questions || []
 
   questionsList.forEach(q => {
-    const studentAns = (userAnswers.value[q.id] || '').trim().toLowerCase()
+    if (!q) return
+    const studentAns = (userAnswers.value[q.id] || '').toString().trim().toLowerCase()
+    const correctAns = (q.correctAnswer || '').toString().trim().toLowerCase()
     
-    if (q.type === 'choice' || q.type === 'match') {
-      if (studentAns === q.correctAnswer.trim().toLowerCase()) {
+    if (q.type === 'choice' || q.type === 'match' || q.type === 'listening') {
+      if (studentAns === correctAns) {
         correctCount++
       }
     } else if (q.type === 'fill') {
-      const correctAns = q.correctAnswer.trim().toLowerCase()
       let matchesAlternative = false
       if (q.alternativeAnswers) {
-        matchesAlternative = q.alternativeAnswers.some(alt => alt.trim().toLowerCase() === studentAns)
+        matchesAlternative = q.alternativeAnswers.some(alt => (alt || '').toString().trim().toLowerCase() === studentAns)
       }
       if (studentAns === correctAns || matchesAlternative) {
         correctCount++
@@ -525,11 +832,12 @@ const submitQuiz = () => {
   })
 
   // Score out of 10
-  const score = Math.round((correctCount / questionsList.length) * 10 * 10) / 10
+  const totalQuestions = questionsList.length || 1
+  const score = Math.round((correctCount / totalQuestions) * 10 * 10) / 10
   const compAt = new Date().toISOString()
 
   // Handle saving if custom practice quiz
-  if (activeQuiz.value.id.startsWith('practice-')) {
+  if (activeQuiz.value.id && activeQuiz.value.id.toString().startsWith('practice-')) {
     const idx = practiceQuizzes.value.findIndex(pq => pq.id === activeQuiz.value.id)
     if (idx !== -1) {
       practiceQuizzes.value[idx].status = 'completed'
@@ -539,7 +847,7 @@ const submitQuiz = () => {
       localStorage.setItem('sk_practice_quizzes', JSON.stringify(practiceQuizzes.value))
     }
     
-    // Reward XP globally by emitting
+    // Reward XP globally by emitting to parent
     emit('submit-quiz', {
       quizId: activeQuiz.value.id,
       score,
@@ -547,7 +855,6 @@ const submitQuiz = () => {
       completedAt: compAt
     })
   } else {
-    // Emit completed details to parent for standard quizzes
     emit('submit-quiz', {
       quizId: activeQuiz.value.id,
       score,
@@ -573,20 +880,20 @@ const viewResults = (quiz) => {
   viewingResultQuiz.value = quiz
 }
 
-// Grader check helper for UI display
+// Grader check helper for UI display - with fallback typeguards
 const isUserCorrect = (question) => {
-  if (!viewingResultQuiz.value) return false
-  const studentAns = (viewingResultQuiz.value.userAnswers[question.id] || '').trim().toLowerCase()
-  const correctAns = question.correctAnswer.trim().toLowerCase()
+  if (!question || !viewingResultQuiz.value || !viewingResultQuiz.value.userAnswers) return false
+  const studentAns = (viewingResultQuiz.value.userAnswers[question.id] || '').toString().trim().toLowerCase()
+  const correctAns = (question.correctAnswer || '').toString().trim().toLowerCase()
   
-  if (question.type === 'choice' || question.type === 'match') {
+  if (question.type === 'choice' || question.type === 'match' || question.type === 'listening') {
     return studentAns === correctAns
   }
   
   if (question.type === 'fill') {
     let matchesAlternative = false
     if (question.alternativeAnswers) {
-      matchesAlternative = question.alternativeAnswers.some(alt => alt.trim().toLowerCase() === studentAns)
+      matchesAlternative = question.alternativeAnswers.some(alt => (alt || '').toString().trim().toLowerCase() === studentAns)
     }
     return studentAns === correctAns || matchesAlternative
   }
@@ -595,17 +902,31 @@ const isUserCorrect = (question) => {
 }
 
 // Practice Quiz Creator Handlers
-const openCreator = () => {
+const openCreator = (type) => {
   isCreatingQuiz.value = true
-  newQuizTitle.value = ''
+  creatorQuizType.value = type
+  newQuizTitle.value = type === 'listening' ? 'Bài ôn tập Nghe tiếng Hàn (TOEIC)' : 'Đề trắc nghiệm đọc từ vựng tự luyện'
   newQuizQuestions.value = [
-    { question: '', options: ['', '', '', ''], correctOptionIndex: 0 }
+    { 
+      type: type === 'listening' ? 'listening' : 'choice', 
+      question: type === 'listening' ? 'Lắng nghe đoạn audio tiếng Hàn bên dưới và chọn đáp án chính xác:' : '', 
+      koreanText: '', 
+      audioSource: 'tts', 
+      audioUrl: '', 
+      options: ['', '', '', ''], 
+      correctOptionIndex: 0 
+    }
   ]
 }
 
 const addQuestionToBuilder = () => {
+  const type = creatorQuizType.value
   newQuizQuestions.value.push({
-    question: '',
+    type: type === 'listening' ? 'listening' : 'choice',
+    question: type === 'listening' ? 'Lắng nghe đoạn audio tiếng Hàn bên dưới và chọn đáp án chính xác:' : '',
+    koreanText: '',
+    audioSource: 'tts',
+    audioUrl: '',
     options: ['', '', '', ''],
     correctOptionIndex: 0
   })
@@ -615,9 +936,23 @@ const removeQuestionFromBuilder = (idx) => {
   newQuizQuestions.value.splice(idx, 1)
 }
 
+const handleAudioUpload = (event, idx) => {
+  const file = event.target.files[0]
+  if (file) {
+    if (file.size > 1.2 * 1024 * 1024) {
+      alert("Lưu ý: Khuyên dùng file MP3 nhỏ dưới 1.2MB để đảm bảo lưu trữ nhanh trong trình duyệt.")
+    }
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      newQuizQuestions.value[idx].audioUrl = e.target.result // base64 string
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
 const saveCustomQuiz = () => {
   if (!newQuizTitle.value.trim()) {
-    alert("Vui lòng nhập tên đề ôn tập.")
+    alert("Vui lòng nhập tên đề thi ôn tập.");
     return
   }
 
@@ -625,12 +960,22 @@ const saveCustomQuiz = () => {
   for (let i = 0; i < newQuizQuestions.value.length; i++) {
     const q = newQuizQuestions.value[i]
     if (!q.question.trim()) {
-      alert(`Vui lòng nhập nội dung câu hỏi thứ ${i + 1}.`)
+      alert(`Vui lòng nhập câu hỏi phụ cho câu hỏi thứ ${i + 1}.`);
       return
+    }
+    if (q.type === 'listening') {
+      if (q.audioSource === 'tts' && (!q.koreanText || !q.koreanText.trim())) {
+        alert(`Vui lòng nhập đoạn tiếng Hàn để AI phát âm cho câu hỏi ${i + 1}.`);
+        return
+      }
+      if (q.audioSource === 'file' && (!q.audioUrl || !q.audioUrl.trim())) {
+        alert(`Vui lòng tải lên file âm thanh MP3 hoặc chèn liên kết link cho câu hỏi ${i + 1}.`);
+        return
+      }
     }
     for (let j = 0; j < 4; j++) {
       if (!q.options[j] || !q.options[j].trim()) {
-        alert(`Vui lòng nhập đáp án ${String.fromCharCode(65 + j)} cho câu hỏi thứ ${i + 1}.`)
+        alert(`Vui lòng điền đáp án ${String.fromCharCode(65 + j)} cho câu hỏi thứ ${i + 1}.`);
         return
       }
     }
@@ -643,17 +988,24 @@ const saveCustomQuiz = () => {
     
     return {
       id: `pq-${idx}-${Date.now()}`,
-      type: "choice",
+      type: q.type,
       question: q.question.trim(),
+      koreanText: q.audioSource === 'tts' ? q.koreanText.trim() : null,
+      audioUrl: q.audioSource === 'file' ? q.audioUrl.trim() : null,
       options: opts,
       correctAnswer: correctVal,
-      explanation: `Đáp án đúng là: ${correctVal}`
+      explanation: q.type === 'listening'
+        ? (q.audioSource === 'tts' 
+            ? `Đáp án đúng là: ${correctVal}. Từ tiếng Hàn được phát âm: '${q.koreanText.trim()}'.`
+            : `Đáp án đúng là: ${correctVal}. Đoạn hội thoại nghe được từ file audio.`)
+        : `Đáp án đúng là: ${correctVal}.`
     }
   })
 
   const newQuiz = {
     id: `practice-${Date.now()}`,
     title: newQuizTitle.value.trim(),
+    quizType: creatorQuizType.value,
     status: 'not_started',
     points: 10,
     score: null,
@@ -666,19 +1018,20 @@ const saveCustomQuiz = () => {
   localStorage.setItem('sk_practice_quizzes', JSON.stringify(practiceQuizzes.value))
 
   isCreatingQuiz.value = false
-  activeTab.value = 'practice'
+  activeTab.value = creatorQuizType.value
 }
 
 const deletePracticeQuiz = (quizId) => {
-  if (confirm("Bạn có chắc chắn muốn xóa đề ôn tập tự luyện này không?")) {
+  if (confirm("Bạn có chắc chắn muốn xóa bài thi tự luyện này không?")) {
     practiceQuizzes.value = practiceQuizzes.value.filter(q => q.id !== quizId)
     localStorage.setItem('sk_practice_quizzes', JSON.stringify(practiceQuizzes.value))
   }
 }
 
-// Clean up timer
+// Clean up timer and TTS
 onUnmounted(() => {
   clearInterval(timerInterval)
+  stopAudio()
 })
 
 // Date formats
@@ -803,6 +1156,7 @@ const formatDateShort = (dateStr) => {
   justify-content: center;
   align-items: center;
   text-align: center;
+  min-height: 180px;
 }
 
 .create-trigger-card:hover {
@@ -819,17 +1173,8 @@ const formatDateShort = (dateStr) => {
 }
 
 .trigger-plus-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background-color: var(--primary-light);
-  color: var(--primary);
-  font-size: 1.8rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--shadow-sm);
+  font-size: 2.2rem;
+  margin-bottom: 0.25rem;
 }
 
 .trigger-content h4 {
@@ -860,18 +1205,23 @@ const formatDateShort = (dateStr) => {
   gap: 0.25rem;
 }
 
-.badge.time { background-color: var(--primary-light); color: var(--primary); }
+.badge.time { background-color: var(--bg-badge); color: var(--text-title); }
 .badge.points { background-color: var(--success-light); color: var(--success); }
 .badge.score-badge { background-color: var(--primary-light); color: var(--primary); font-size: 0.8rem; }
 .badge.date-completed { background-color: var(--bg-badge); color: var(--text-title); }
 
+.badge.type-badge {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+.badge.type-badge.listening {
+  background-color: var(--warning-light);
+  color: var(--warning);
+}
+
 .badge.score-badge.practice-score {
   background-color: var(--success-light);
   color: var(--success);
-}
-.badge.score-badge.pending-practice {
-  background-color: var(--bg-badge);
-  color: var(--text-muted);
 }
 
 .quiz-card h3 {
@@ -978,6 +1328,13 @@ const formatDateShort = (dateStr) => {
   color: var(--text-title);
 }
 
+.label-accent {
+  color: var(--primary);
+  font-weight: 700;
+  display: block;
+  margin-bottom: 0.35rem;
+}
+
 .creator-input-field {
   width: 100%;
   padding: 0.75rem;
@@ -989,6 +1346,58 @@ const formatDateShort = (dateStr) => {
 .creator-input-field:focus {
   border-color: var(--primary);
   background-color: var(--bg-card);
+}
+
+/* Creator file upload box */
+.source-toggle-group {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.35rem;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.file-uploader-box {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.file-upload-btn {
+  display: inline-block;
+  align-self: flex-start;
+  padding: 0.5rem 1rem;
+  background-color: var(--bg-badge);
+  border: 1px dashed var(--border-color-hover);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-title);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.file-upload-btn:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--primary);
+}
+
+.file-name-hint {
+  font-size: 0.75rem;
+  color: var(--success);
+  font-weight: 600;
 }
 
 .questions-builder-list {
@@ -1200,6 +1609,67 @@ const formatDateShort = (dateStr) => {
   color: var(--text-title);
   margin-bottom: 1.5rem;
 }
+
+/* Listening Audio Box inside test */
+.audio-player-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, var(--bg-hover), var(--bg-badge));
+  border: 1px solid var(--border-color);
+  padding: 1rem 1.5rem;
+  border-radius: var(--radius-md);
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.audio-play-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--primary);
+  color: #fff;
+  padding: 0.6rem 1.25rem;
+  border-radius: 50px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  box-shadow: 0 4px 10px var(--primary-glow);
+}
+
+.audio-play-btn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.audio-visualizer {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 24px;
+}
+
+.audio-visualizer .bar {
+  width: 4px;
+  height: 4px;
+  background-color: var(--primary);
+  border-radius: 2px;
+  transition: height 0.15s ease;
+}
+
+@keyframes wave {
+  0%, 100% { height: 4px; }
+  50% { height: 22px; }
+}
+
+.audio-visualizer.playing .bar {
+  animation: wave 1s ease-in-out infinite;
+}
+
+.audio-visualizer.playing .bar-1 { animation-delay: 0.1s; }
+.audio-visualizer.playing .bar-2 { animation-delay: 0.3s; }
+.audio-visualizer.playing .bar-3 { animation-delay: 0.5s; }
+.audio-visualizer.playing .bar-4 { animation-delay: 0.2s; }
+.audio-visualizer.playing .bar-5 { animation-delay: 0.4s; }
 
 .options-grid {
   display: flex;
@@ -1446,6 +1916,28 @@ const formatDateShort = (dateStr) => {
   font-weight: 700;
   color: var(--text-title);
   margin-bottom: 1rem;
+}
+
+.review-listening-replay {
+  margin-bottom: 1rem;
+}
+
+.replay-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--bg-badge);
+  border: 1px solid var(--border-color);
+  color: var(--text-title);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.replay-btn:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--primary);
 }
 
 .review-answers-grid {
