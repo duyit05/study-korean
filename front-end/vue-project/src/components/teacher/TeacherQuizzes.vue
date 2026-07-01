@@ -221,6 +221,7 @@
 <script setup>
 import { ref } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
+import { useQuizStore } from '../../stores/quiz'
 
 const props = defineProps({
   quizzes: {
@@ -228,6 +229,8 @@ const props = defineProps({
     required: true
   }
 })
+
+const quizStore = useQuizStore()
 
 const selectedQuiz = ref(null)
 const showCreateModal = ref(false)
@@ -265,17 +268,20 @@ const openCreateQuizModal = () => {
   showCreateModal.value = true
 }
 
-const handleCreateQuiz = () => {
+const handleCreateQuiz = async () => {
   if (!newQuizTitle.value || !newQuizTime.value || !newQuizDueDate.value) return
 
-  props.quizzes.push({
-    id: 'quiz-' + (props.quizzes.length + 1),
-    title: newQuizTitle.value,
-    topikLevel: newQuizLevel.value,
-    timeLimitMins: parseInt(newQuizTime.value),
-    dueDate: newQuizDueDate.value,
-    questions: []
-  })
+  try {
+    await quizStore.createQuiz({
+      title: newQuizTitle.value,
+      topikLevel: newQuizLevel.value,
+      timeLimitMins: parseInt(newQuizTime.value),
+      dueDate: newQuizDueDate.value + 'T23:59:59',
+      classId: 1 // Default classId
+    })
+  } catch (e) {
+    console.error("Failed to create quiz via API:", e)
+  }
 
   showCreateModal.value = false
 }
@@ -293,48 +299,50 @@ const openAddQuestionModal = () => {
   showAddQuestionModal.value = true
 }
 
-const handleAddQuestion = () => {
+const handleAddQuestion = async () => {
   if (!selectedQuiz.value || !newQText.value) return
 
-  const targetQuiz = props.quizzes.find(q => q.id === selectedQuiz.value.id)
-  if (targetQuiz) {
-    if (!targetQuiz.questions) targetQuiz.questions = []
-    
-    const newQuestion = {
-      id: 'q-' + (targetQuiz.questions.length + 1),
+  try {
+    const wrongAnswers = [
+      newQWrong1.value,
+      newQWrong2.value,
+      newQWrong3.value
+    ].filter(Boolean)
+
+    const questionPayload = {
       questionText: newQText.value,
       questionType: newQType.value,
       points: parseFloat(newQPoints.value),
       section: newQSection.value,
-      correctAnswer: newQCorrectAnswer.value
+      correctAnswer: newQCorrectAnswer.value,
+      wrongAnswers: newQType.value === 'MULTIPLE_CHOICE' ? wrongAnswers : [],
+      audioUrl: newQSection.value === 'LISTENING' ? newQAudio.value : null
     }
 
-    if (newQSection.value === 'LISTENING') {
-      newQuestion.audioUrl = newQAudio.value
-      newQuestion.audioSource = 'UPLOAD'
+    const newQuestion = await quizStore.addQuestion(selectedQuiz.value.id, questionPayload)
+    
+    if (selectedQuiz.value) {
+      if (!selectedQuiz.value.questions) selectedQuiz.value.questions = []
+      selectedQuiz.value.questions.push(newQuestion)
     }
-
-    if (newQType.value === 'MULTIPLE_CHOICE') {
-      newQuestion.wrongAnswers = [
-        newQWrong1.value,
-        newQWrong2.value,
-        newQWrong3.value
-      ].filter(Boolean)
-    }
-
-    targetQuiz.questions.push(newQuestion)
+  } catch (e) {
+    console.error("Failed to add question via API:", e)
   }
 
   showAddQuestionModal.value = false
 }
 
-const deleteQuestion = (quiz, questionId) => {
-  const targetQuiz = props.quizzes.find(q => q.id === quiz.id)
-  if (targetQuiz && targetQuiz.questions) {
-    const index = targetQuiz.questions.findIndex(q => q.id === questionId)
-    if (index !== -1) {
-      targetQuiz.questions.splice(index, 1)
+const deleteQuestion = async (quiz, questionId) => {
+  try {
+    await quizStore.deleteQuestion(quiz.id, questionId)
+    if (selectedQuiz.value && selectedQuiz.value.questions) {
+      const index = selectedQuiz.value.questions.findIndex(q => q.id === questionId)
+      if (index !== -1) {
+        selectedQuiz.value.questions.splice(index, 1)
+      }
     }
+  } catch (e) {
+    console.error("Failed to delete question via API:", e)
   }
 }
 

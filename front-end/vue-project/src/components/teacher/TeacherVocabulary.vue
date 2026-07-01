@@ -141,6 +141,7 @@
 <script setup>
 import { ref } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
+import { useStudySetStore } from '../../stores/studySet'
 
 const props = defineProps({
   studySets: {
@@ -148,6 +149,8 @@ const props = defineProps({
     required: true
   }
 })
+
+const studySetStore = useStudySetStore()
 
 const selectedSet = ref(null)
 const showCreateModal = ref(false)
@@ -163,16 +166,18 @@ const newCardKorean = ref('')
 const newCardMeaning = ref('')
 const newCardExample = ref('')
 
-const handleCreateSet = () => {
+const handleCreateSet = async () => {
   if (!newSetTitle.value || !newSetDescription.value) return
 
-  props.studySets.push({
-    id: 'set-' + (props.studySets.length + 1),
-    title: newSetTitle.value,
-    description: newSetDescription.value,
-    level: newSetLevel.value,
-    words: []
-  })
+  try {
+    await studySetStore.createStudySet({
+      title: newSetTitle.value,
+      description: newSetDescription.value,
+      category: newSetLevel.value
+    })
+  } catch (e) {
+    console.error("Failed to create study set via API:", e)
+  }
 
   newSetTitle.value = ''
   newSetDescription.value = ''
@@ -187,31 +192,38 @@ const openAddCardForm = () => {
   showAddCardModal.value = true
 }
 
-const handleAddCard = () => {
+const handleAddCard = async () => {
   if (!selectedSet.value || !newCardKorean.value || !newCardMeaning.value) return
 
-  const targetSet = props.studySets.find(s => s.id === selectedSet.value.id)
-  if (targetSet) {
-    if (!targetSet.words) targetSet.words = []
-    
-    targetSet.words.push({
-      id: 'word-' + (targetSet.words.length + 1),
-      word: newCardKorean.value,
-      meaning: newCardMeaning.value,
-      example: newCardExample.value || ''
+  try {
+    const newWord = await studySetStore.addCard(selectedSet.value.id, {
+      frontText: newCardKorean.value,
+      backText: newCardMeaning.value,
+      exampleSentence: newCardExample.value || ''
     })
+
+    if (selectedSet.value) {
+      if (!selectedSet.value.words) selectedSet.value.words = []
+      selectedSet.value.words.push(newWord)
+    }
+  } catch (e) {
+    console.error("Failed to add card via API:", e)
   }
 
   showAddCardModal.value = false
 }
 
-const deleteCard = (set, wordId) => {
-  const targetSet = props.studySets.find(s => s.id === set.id)
-  if (targetSet && targetSet.words) {
-    const index = targetSet.words.findIndex(w => w.id === wordId)
-    if (index !== -1) {
-      targetSet.words.splice(index, 1)
+const deleteCard = async (set, wordId) => {
+  try {
+    await studySetStore.deleteCard(set.id, wordId)
+    if (selectedSet.value && selectedSet.value.words) {
+      const index = selectedSet.value.words.findIndex(w => w.id === wordId)
+      if (index !== -1) {
+        selectedSet.value.words.splice(index, 1)
+      }
     }
+  } catch (e) {
+    console.error("Failed to delete card via API:", e)
   }
 }
 

@@ -141,11 +141,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
+import { useQuizStore } from '../../stores/quiz'
 
-// Mock Pending Attempts Data
-const pendingAttempts = ref([
+const quizStore = useQuizStore()
+
+// Mock Pending Attempts Data fallback
+const mockPendingAttempts = ref([
   {
     id: 'att-1',
     studentName: 'Nguyễn Văn An',
@@ -212,7 +215,40 @@ const pendingAttempts = ref([
   }
 ])
 
+const pendingAttempts = computed(() => {
+  const dbAttempts = quizStore.pendingAttempts
+  if (!dbAttempts || dbAttempts.length === 0) {
+    return mockPendingAttempts.value
+  }
+  return dbAttempts.map(att => {
+    return {
+      id: att.id,
+      studentName: att.studentName,
+      quizTitle: att.quizTitle,
+      submittedAt: att.submittedAt ? att.submittedAt.replace('T', ' ').substring(0, 16) : 'Vừa mới đây',
+      essayCount: att.answers ? att.answers.filter(a => a.questionType === 'WRITING').length : 0,
+      answers: att.answers ? att.answers.map(ans => ({
+        id: ans.id,
+        questionText: ans.questionText,
+        studentAnswer: ans.studentAnswer,
+        questionType: ans.questionType,
+        maxPoints: 10,
+        score: ans.pointsEarned !== null && ans.pointsEarned !== undefined ? ans.pointsEarned : 0,
+        feedback: ans.feedback || ''
+      })) : []
+    }
+  })
+})
+
 const selectedAttempt = ref(null)
+
+onMounted(async () => {
+  try {
+    await quizStore.fetchPendingAttempts()
+  } catch (e) {
+    console.warn("Failed to load pending attempts via API:", e)
+  }
+})
 
 const startGrading = (attempt) => {
   selectedAttempt.value = attempt
@@ -231,26 +267,41 @@ const autoGradedScore = computed(() => {
     .reduce((sum, ans) => sum + ans.score, 0)
 })
 
-const submitGrades = () => {
+const submitGrades = async () => {
   if (!selectedAttempt.value) return
 
   // Validate scores
+  const gradesPayload = []
   for (const ans of selectedAttempt.value.answers) {
     if (ans.questionType === 'WRITING') {
       if (ans.score === undefined || ans.score === null || ans.score < 0 || ans.score > ans.maxPoints) {
         alert(`Vui lòng nhập điểm hợp lệ cho Câu hỏi tự luận (Tối đa ${ans.maxPoints}đ)`)
         return
       }
+      gradesPayload.push({
+        answerId: ans.id,
+        pointsEarned: parseFloat(ans.score),
+        feedback: ans.feedback
+      })
     }
   }
 
-  // Remove the graded attempt from pending list
-  const index = pendingAttempts.value.findIndex(att => att.id === selectedAttempt.value.id)
-  if (index !== -1) {
-    pendingAttempts.value.splice(index, 1)
+  try {
+    if (String(selectedAttempt.value.id).startsWith('att-')) {
+      const index = mockPendingAttempts.value.findIndex(att => att.id === selectedAttempt.value.id)
+      if (index !== -1) {
+        mockPendingAttempts.value.splice(index, 1)
+      }
+    } else {
+      await quizStore.submitGrading(selectedAttempt.value.id, gradesPayload)
+      await quizStore.fetchPendingAttempts()
+    }
+    alert('Chấm điểm và gửi nhận xét thành công!')
+  } catch (e) {
+    console.error("Failed to submit grades via API:", e)
+    alert("Có lỗi xảy ra khi gửi điểm chấm.")
   }
 
-  alert('Chấm điểm và gửi nhận xét thành công!')
   selectedAttempt.value = null
 }
 </script>

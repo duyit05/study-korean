@@ -52,7 +52,10 @@
           <h3>Chi tiết lớp: {{ selectedClass.name }}</h3>
           <p>{{ selectedClass.schedule }} | {{ selectedClass.room }}</p>
         </div>
-        <button class="close-btn" @click="selectedClass = null">&times;</button>
+        <div class="header-actions">
+          <button class="delete-btn-sm" @click="handleDeleteClass(selectedClass.id)">Xóa lớp học</button>
+          <button class="close-btn" @click="selectedClass = null">&times;</button>
+        </div>
       </div>
 
       <div class="panel-tabs">
@@ -175,35 +178,15 @@ const props = defineProps({
   }
 })
 
-// Mock Classes Data
-const classes = ref([
-  {
-    id: 'class-1',
-    name: 'Tiếng Hàn Sơ Cấp 1A',
-    schedule: 'Thứ 2, 4, 6 (18:00 - 19:30)',
-    room: 'Online Zoom A1',
-    code: 'KOR-1A-517',
-    studentsCount: 12,
-    students: [
-      { id: 'st-1', name: 'Nguyễn Văn An', email: 'vanan.student@study-korea.edu.vn', vocabProgress: 85, avgScore: 92 },
-      { id: 'st-2', name: 'Trần Thị Bình', email: 'binhtran@gmail.com', vocabProgress: 90, avgScore: 88 },
-      { id: 'st-3', name: 'Lê Văn Cường', email: 'cuongle@gmail.com', vocabProgress: 75, avgScore: 95 },
-      { id: 'st-4', name: 'Phạm Minh Đức', email: 'ducminh@gmail.com', vocabProgress: 60, avgScore: 78 }
-    ]
-  },
-  {
-    id: 'class-2',
-    name: 'Luyện thi TOPIK II (Cấp 3-4)',
-    schedule: 'Thứ 7, Chủ Nhật (14:00 - 16:30)',
-    room: 'Phòng học 302',
-    code: 'KOR-TOP2-98',
-    studentsCount: 15,
-    students: [
-      { id: 'st-5', name: 'Hoàng Lan Anh', email: 'lananh@gmail.com', vocabProgress: 95, avgScore: 85 },
-      { id: 'st-6', name: 'Vũ Quốc Bảo', email: 'baovu@gmail.com', vocabProgress: 80, avgScore: 90 }
-    ]
-  }
-])
+import { useStudySetStore } from '../../stores/studySet'
+import { useQuizStore } from '../../stores/quiz'
+
+const studySetStore = useStudySetStore()
+const quizStore = useQuizStore()
+
+const classes = computed(() => {
+  return studySetStore.classes || []
+})
 
 const selectedClass = ref(null)
 const activeTab = ref('students')
@@ -216,33 +199,40 @@ const newClassRoom = ref('')
 
 const assignedQuizzes = computed(() => {
   if (!selectedClass.value) return []
-  // Filter quizzes that match the class or return a list of assigned quizzes
-  return [
-    { id: 'q-1', title: 'Luyện Viết TOPIK II - Đề 1', dueDate: 'Hạn nộp: 2026-07-05', type: 'Đề thi viết luận' },
-    { id: 'q-2', title: 'Trắc nghiệm Nghe Sơ cấp 1A', dueDate: 'Hạn nộp: 2026-07-02', type: 'Đề thi trắc nghiệm Nghe' }
-  ]
+  return quizStore.quizzes.filter(q => q.classId === selectedClass.value.id || q.clazzId === selectedClass.value.id)
 })
 
-const handleCreateClass = () => {
+const handleCreateClass = async () => {
   if (!newClassName.value || !newClassSchedule.value || !newClassRoom.value) return
 
-  const randomCode = 'KOR-' + Math.random().toString(36).substring(2, 5).toUpperCase() + '-' + Math.floor(100 + Math.random() * 900)
-  
-  classes.value.push({
-    id: 'class-' + (classes.value.length + 1),
-    name: newClassName.value,
-    schedule: newClassSchedule.value,
-    room: newClassRoom.value,
-    code: randomCode,
-    studentsCount: 0,
-    students: []
-  })
+  try {
+    await studySetStore.createClass({
+      name: newClassName.value,
+      schedule: newClassSchedule.value,
+      room: newClassRoom.value,
+      notes: ''
+    })
+  } catch (e) {
+    console.error("Failed to create class via API:", e)
+  }
 
   // Reset fields
   newClassName.value = ''
   newClassSchedule.value = ''
   newClassRoom.value = ''
   showCreateModal.value = false
+}
+
+const handleDeleteClass = async (classId) => {
+  if (!confirm("Bạn có chắc chắn muốn xóa lớp học này?")) return
+  try {
+    await studySetStore.deleteClass(classId)
+    selectedClass.value = null
+    alert("Xóa lớp học thành công!")
+  } catch (e) {
+    console.error("Failed to delete class:", e)
+    alert("Có lỗi xảy ra khi xóa lớp học.")
+  }
 }
 </script>
 
@@ -684,5 +674,27 @@ const handleCreateClass = () => {
 
 .submit-btn:hover {
   background-color: var(--primary-hover);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.delete-btn-sm {
+  background-color: transparent;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delete-btn-sm:hover {
+  background-color: #ef4444;
+  color: #fff;
 }
 </style>
