@@ -27,12 +27,22 @@
             <p class="desc">{{ set.description }}</p>
             <div class="card-meta">
               <span class="count">{{ set.words?.length || 0 }} Từ vựng</span>
-              <span v-if="set.level" class="level-badge">{{ set.level }}</span>
+              <span v-if="set.level || set.category" class="level-badge">{{ set.level || set.category }}</span>
             </div>
           </div>
         </div>
         <div class="card-actions-row">
-          <button class="action-btn text" @click.stop="openEditCards(set)">Sửa thẻ từ</button>
+          <div class="action-btn-group">
+            <button class="action-btn text" @click.stop="openEditSetModal(set)">
+              <AppIcon name="edit" size="12" />
+              <span>Sửa</span>
+            </button>
+            <button class="action-btn text danger" @click.stop="triggerDeleteSet(set)">
+              <AppIcon name="trash" size="12" />
+              <span>Xóa</span>
+            </button>
+          </div>
+          <button class="action-btn text primary-action" @click.stop="openEditCards(set)">Sửa thẻ từ</button>
         </div>
       </div>
     </div>
@@ -135,6 +145,58 @@
         </form>
       </div>
     </div>
+    <!-- Edit Vocabulary Set Modal -->
+    <div v-if="showEditModal" class="modal-overlay">
+      <div class="modal-content animate-scale">
+        <div class="modal-header">
+          <h3>Sửa thông tin bộ từ vựng</h3>
+          <button class="close-btn" @click="showEditModal = false">&times;</button>
+        </div>
+        <form @submit.prevent="handleUpdateSet" class="modal-form">
+          <div class="form-group">
+            <label for="editTitle">Tên bộ từ vựng</label>
+            <input type="text" id="editTitle" v-model="editSetTitle" required>
+          </div>
+          <div class="form-group">
+            <label for="editDescription">Mô tả ngắn</label>
+            <input type="text" id="editDescription" v-model="editSetDescription" required>
+          </div>
+          <div class="form-group">
+            <label for="editRange">Cấp độ (TOPIK)</label>
+            <select id="editRange" v-model="editSetLevel">
+              <option value="Sơ cấp 1A">Sơ cấp 1A</option>
+              <option value="Sơ cấp 1B">Sơ cấp 1B</option>
+              <option value="Trung cấp (3-4)">Trung cấp (3-4)</option>
+              <option value="Cao cấp (5-6)">Cao cấp (5-6)</option>
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" @click="showEditModal = false">Hủy bỏ</button>
+            <button type="submit" class="submit-btn">Lưu thay đổi</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteConfirmModal" class="modal-overlay">
+      <div class="modal-content animate-scale">
+        <div class="modal-header">
+          <h3 style="color: var(--danger);">Xác nhận xóa bộ từ vựng</h3>
+          <button class="close-btn" @click="showDeleteConfirmModal = false">&times;</button>
+        </div>
+        <div class="modal-body" style="margin-bottom: 1.5rem;">
+          <p>Bạn có chắc chắn muốn xóa bộ từ vựng <strong>{{ setToDelete?.title }}</strong>?</p>
+          <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.5rem;">
+            Lưu ý: Hành động này sẽ xóa vĩnh viễn bộ từ vựng cùng với toàn bộ thẻ từ liên quan và không thể khôi phục.
+          </p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="cancel-btn" @click="showDeleteConfirmModal = false">Hủy bỏ</button>
+          <button type="button" class="submit-btn" style="background-color: var(--danger);" @click="confirmDeleteSet">Đồng ý xóa</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -142,6 +204,8 @@
 import { ref } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
 import { useStudySetStore } from '../../stores/studySet'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 const props = defineProps({
   studySets: {
@@ -154,12 +218,23 @@ const studySetStore = useStudySetStore()
 
 const selectedSet = ref(null)
 const showCreateModal = ref(false)
+const showEditModal = ref(false)
+const showDeleteConfirmModal = ref(false)
 const showAddCardModal = ref(false)
 
 // New Set Fields
 const newSetTitle = ref('')
 const newSetDescription = ref('')
 const newSetLevel = ref('Sơ cấp 1A')
+
+// Edit Set Fields
+const editSetId = ref(null)
+const editSetTitle = ref('')
+const editSetDescription = ref('')
+const editSetLevel = ref('Sơ cấp 1A')
+
+// Delete Set Fields
+const setToDelete = ref(null)
 
 // New Card Fields
 const newCardKorean = ref('')
@@ -175,14 +250,78 @@ const handleCreateSet = async () => {
       description: newSetDescription.value,
       category: newSetLevel.value
     })
+    toast.success("Tạo bộ từ vựng thành công!")
   } catch (e) {
     console.error("Failed to create study set via API:", e)
+    toast.error("Tạo bộ từ vựng thất bại.")
   }
 
   newSetTitle.value = ''
   newSetDescription.value = ''
   newSetLevel.value = 'Sơ cấp 1A'
   showCreateModal.value = false
+}
+
+const openEditSetModal = (set) => {
+  editSetId.value = set.id
+  editSetTitle.value = set.title
+  editSetDescription.value = set.description
+  editSetLevel.value = set.category || set.level || 'Sơ cấp 1A'
+  showEditModal.value = true
+}
+
+const handleUpdateSet = async () => {
+  if (!editSetTitle.value || !editSetDescription.value || !editSetId.value) return
+
+  try {
+    await studySetStore.updateStudySet(editSetId.value, {
+      title: editSetTitle.value,
+      description: editSetDescription.value,
+      category: editSetLevel.value
+    })
+    
+    // Update selectedSet if it's currently selected
+    if (selectedSet.value && selectedSet.value.id === editSetId.value) {
+      selectedSet.value = {
+        ...selectedSet.value,
+        title: editSetTitle.value,
+        description: editSetDescription.value,
+        category: editSetLevel.value,
+        level: editSetLevel.value
+      }
+    }
+    toast.success("Cập nhật bộ từ vựng thành công!")
+  } catch (e) {
+    console.error("Failed to update study set via API:", e)
+    toast.error("Cập nhật bộ từ vựng thất bại.")
+  }
+
+  showEditModal.value = false
+}
+
+const triggerDeleteSet = (set) => {
+  setToDelete.value = set
+  showDeleteConfirmModal.value = true
+}
+
+const confirmDeleteSet = async () => {
+  if (!setToDelete.value) return
+
+  try {
+    await studySetStore.deleteStudySet(setToDelete.value.id)
+    
+    // If deleting the currently selected set, deselect it
+    if (selectedSet.value && selectedSet.value.id === setToDelete.value.id) {
+      selectedSet.value = null
+    }
+    toast.success("Xóa bộ từ vựng thành công!")
+  } catch (e) {
+    console.error("Failed to delete study set via API:", e)
+    toast.error("Xóa bộ từ vựng thất bại.")
+  }
+
+  showDeleteConfirmModal.value = false
+  setToDelete.value = null
 }
 
 const openAddCardForm = () => {
@@ -206,8 +345,10 @@ const handleAddCard = async () => {
       if (!selectedSet.value.words) selectedSet.value.words = []
       selectedSet.value.words.push(newWord)
     }
+    toast.success("Thêm thẻ từ mới thành công!")
   } catch (e) {
     console.error("Failed to add card via API:", e)
+    toast.error("Thêm thẻ từ mới thất bại.")
   }
 
   showAddCardModal.value = false
@@ -222,8 +363,10 @@ const deleteCard = async (set, wordId) => {
         selectedSet.value.words.splice(index, 1)
       }
     }
+    toast.success("Xóa thẻ từ thành công!")
   } catch (e) {
     console.error("Failed to delete card via API:", e)
+    toast.error("Xóa thẻ từ thất bại.")
   }
 }
 
@@ -361,8 +504,16 @@ const openEditCards = (set) => {
 
 .card-actions-row {
   border-top: 1px solid var(--border-color);
-  padding-top: 0.5rem;
-  text-align: right;
+  padding-top: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.action-btn-group {
+  display: flex;
+  gap: 0.4rem;
 }
 
 .action-btn.text {
@@ -372,10 +523,39 @@ const openEditCards = (set) => {
   font-weight: 600;
   font-size: 0.8rem;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
 }
 
 .action-btn.text:hover {
-  text-decoration: underline;
+  background-color: var(--primary-glow);
+}
+
+.action-btn.text.danger {
+  color: var(--danger);
+}
+
+.action-btn.text.danger:hover {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.action-btn.text.primary-action {
+  background-color: var(--primary);
+  color: #fff;
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.action-btn.text.primary-action:hover {
+  background-color: var(--primary-hover);
+  text-decoration: none;
 }
 
 .set-detail-panel {
@@ -477,7 +657,7 @@ const openEditCards = (set) => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex-grow: 1;
+  flex-shrink: 0;
 }
 
 .korean {
@@ -498,10 +678,9 @@ const openEditCards = (set) => {
   font-size: 0.75rem;
   color: var(--text-muted);
   font-style: italic;
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1;
+  text-align: right;
+  padding: 0 0.5rem;
 }
 
 .delete-btn {

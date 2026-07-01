@@ -17,7 +17,7 @@
           <AppIcon name="user" size="24" />
         </div>
         <div class="stat-info">
-          <h3>2</h3>
+          <h3>{{ classesCount }}</h3>
           <p>Lớp đang phụ trách</p>
         </div>
       </div>
@@ -27,7 +27,7 @@
           <AppIcon name="profile" size="24" />
         </div>
         <div class="stat-info">
-          <h3>24</h3>
+          <h3>{{ activeStudentsCount }}</h3>
           <p>Học viên hoạt động</p>
         </div>
       </div>
@@ -47,7 +47,7 @@
           <AppIcon name="edit" size="24" />
         </div>
         <div class="stat-info">
-          <h3>3</h3>
+          <h3>{{ pendingEssaysCount }}</h3>
           <p>Bài tự luận cần chấm</p>
         </div>
       </div>
@@ -113,38 +113,16 @@
           <h3>Nộp bài gần đây của lớp</h3>
         </div>
         <div class="activity-feed">
-          <div class="feed-item">
+          <div v-for="act in recentActivities" :key="act.id" class="feed-item">
             <div class="feed-badge unread"></div>
             <div class="feed-content">
-              <p><strong>Nguyễn Văn An</strong> đã nộp bài <em>Luyện Viết TOPIK II - Đề 1</em></p>
-              <span class="time">15 phút trước - Đang chờ cô chấm điểm</span>
+              <p><strong>{{ act.studentName }}</strong> đã nộp bài <em>{{ act.quizTitle }}</em></p>
+              <span class="time">{{ act.submittedAt }} - Đang chờ cô chấm điểm</span>
             </div>
             <button class="action-btn" @click="emit('navigate', 'teacher-grading')">Chấm điểm</button>
           </div>
-
-          <div class="feed-item">
-            <div class="feed-badge unread"></div>
-            <div class="feed-content">
-              <p><strong>Trần Thị Bình</strong> đã nộp bài <em>Luyện Viết TOPIK II - Đề 1</em></p>
-              <span class="time">1 giờ trước - Đang chờ cô chấm điểm</span>
-            </div>
-            <button class="action-btn" @click="emit('navigate', 'teacher-grading')">Chấm điểm</button>
-          </div>
-
-          <div class="feed-item">
-            <div class="feed-badge"></div>
-            <div class="feed-content">
-              <p><strong>Lê Văn Cường</strong> đạt điểm tối đa <em>Trắc nghiệm Nghe Sơ cấp 1A</em></p>
-              <span class="time">Hôm qua - Đã tự động chấm (100/100)</span>
-            </div>
-          </div>
-
-          <div class="feed-item">
-            <div class="feed-badge"></div>
-            <div class="feed-content">
-              <p><strong>Nguyễn Văn An</strong> hoàn thành bộ từ vựng <em>Từ vựng Bài 4: Mua sắm</em></p>
-              <span class="time">Hôm qua - Tiến độ: 100% thẻ đã thuộc</span>
-            </div>
+          <div v-if="recentActivities.length === 0" class="feed-item" style="text-align: center; color: var(--text-muted); justify-content: center; padding: 2rem 0;">
+            Hiện không có hoạt động nộp bài tự luận mới nào gần đây.
           </div>
         </div>
       </div>
@@ -153,7 +131,10 @@
 </template>
 
 <script setup>
+import { computed, onMounted } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
+import { useQuizStore } from '../../stores/quiz'
+import { useStudySetStore } from '../../stores/studySet'
 
 defineProps({
   quizzes: {
@@ -167,6 +148,37 @@ defineProps({
 })
 
 const emit = defineEmits(['navigate'])
+
+const quizStore = useQuizStore()
+const studySetStore = useStudySetStore()
+
+onMounted(async () => {
+  try {
+    await studySetStore.fetchClasses('TEACHER')
+    await quizStore.fetchPendingAttempts()
+  } catch (e) {
+    console.warn("Failed to load dashboard statistics:", e)
+  }
+})
+
+const classesCount = computed(() => studySetStore.classes.length)
+const activeStudentsCount = computed(() => {
+  return studySetStore.classes.reduce((sum, c) => sum + (c.studentsCount || 0), 0)
+})
+const pendingEssaysCount = computed(() => quizStore.pendingAttempts.length)
+
+const recentActivities = computed(() => {
+  const list = [];
+  (quizStore.pendingAttempts || []).slice(0, 5).forEach(att => {
+    list.push({
+      id: `act-att-${att.id}`,
+      studentName: att.studentName,
+      quizTitle: att.quizTitle,
+      submittedAt: att.submittedAt ? att.submittedAt.replace('T', ' ').substring(0, 16) : 'Mới đây'
+    })
+  })
+  return list
+})
 </script>
 
 <style scoped>

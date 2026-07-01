@@ -14,6 +14,10 @@ import com.example.back_end.repository.ClassRepository;
 import com.example.back_end.repository.QuizQuestionRepository;
 import com.example.back_end.repository.QuizRepository;
 import com.example.back_end.repository.UserRepository;
+import com.example.back_end.repository.QuizAttemptRepository;
+import com.example.back_end.repository.QuizAnswerRepository;
+import com.example.back_end.entity.QuizAttempt;
+import com.example.back_end.entity.QuizAnswer;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +37,8 @@ public class QuizService {
     private final QuizQuestionRepository quizQuestionRepository;
     private final ClassRepository classRepository;
     private final UserRepository userRepository;
+    private final QuizAttemptRepository quizAttemptRepository;
+    private final QuizAnswerRepository quizAnswerRepository;
 
     private User getCurrentUser() {
         String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -128,6 +134,54 @@ public class QuizService {
             throw new AppException(ErrorCode.INVALID_KEY);
         }
         quizQuestionRepository.delete(question);
+    }
+
+    @Transactional
+    public QuizResponse updateQuiz(Long id, QuizRequest request) {
+        log.info("Updating quiz: {}", id);
+        Quiz quiz = quizRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        Class clazz = null;
+        if (request.getClassId() != null) {
+            clazz = classRepository.findById(request.getClassId())
+                    .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+        }
+
+        quiz.setTitle(request.getTitle());
+        quiz.setTopikLevel(request.getTopikLevel() != null ? request.getTopikLevel() : "NORMAL");
+        quiz.setTimeLimitMins(request.getTimeLimitMins());
+        quiz.setTotalScore(request.getTotalScore());
+        quiz.setDueDate(request.getDueDate());
+        quiz.setClazz(clazz);
+
+        Quiz savedQuiz = quizRepository.save(quiz);
+        List<QuizQuestion> questions = quizQuestionRepository.findByQuizIdOrderByOrderAsc(id);
+        return mapToQuizResponse(savedQuiz, questions);
+    }
+
+    @Transactional
+    public void deleteQuiz(Long id) {
+        log.info("Deleting quiz: {}", id);
+        Quiz quiz = quizRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        // Delete student answers for attempts of this quiz
+        List<QuizAttempt> attempts = quizAttemptRepository.findByQuizId(id);
+        for (QuizAttempt attempt : attempts) {
+            List<QuizAnswer> answers = quizAnswerRepository.findByAttemptId(attempt.getId());
+            quizAnswerRepository.deleteAll(answers);
+        }
+
+        // Delete attempts
+        quizAttemptRepository.deleteAll(attempts);
+
+        // Delete all questions
+        List<QuizQuestion> questions = quizQuestionRepository.findByQuizId(id);
+        quizQuestionRepository.deleteAll(questions);
+
+        // Delete quiz
+        quizRepository.delete(quiz);
     }
 
     private QuizResponse mapToQuizResponse(Quiz quiz, List<QuizQuestion> questions) {

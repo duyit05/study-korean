@@ -88,23 +88,28 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="student in selectedClass.students" :key="student.id">
+            <tr v-for="student in (selectedClass.students || [])" :key="student.id">
               <td>
                 <div class="student-profile">
-                  <div class="avatar-circle">{{ student.name[0] }}</div>
+                  <div class="avatar-circle">{{ student.name ? student.name[0] : 'U' }}</div>
                   <strong>{{ student.name }}</strong>
                 </div>
               </td>
               <td>{{ student.email }}</td>
               <td>
                 <div class="progress-bar-wrapper">
-                  <div class="progress-bar" :style="{ width: student.vocabProgress + '%' }"></div>
-                  <span class="progress-text">{{ student.vocabProgress }}%</span>
+                  <div class="progress-bar" :style="{ width: (student.vocabProgress || 0) + '%' }"></div>
+                  <span class="progress-text">{{ student.vocabProgress || 0 }}%</span>
                 </div>
               </td>
-              <td><span class="score-badge">{{ student.avgScore }} / 100</span></td>
+              <td><span class="score-badge">{{ student.avgScore || 0 }} / 100</span></td>
               <td>
                 <button class="text-btn">Gửi nhắc nhở</button>
+              </td>
+            </tr>
+            <tr v-if="!selectedClass.students || selectedClass.students.length === 0">
+              <td colspan="5" class="empty-row" style="text-align: center; color: var(--text-muted); padding: 3rem;">
+                Lớp học này chưa có học viên nào tham gia. Hãy cung cấp Mã lớp cho học viên!
               </td>
             </tr>
           </tbody>
@@ -166,6 +171,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 const props = defineProps({
   quizzes: {
@@ -185,7 +192,12 @@ const studySetStore = useStudySetStore()
 const quizStore = useQuizStore()
 
 const classes = computed(() => {
-  return studySetStore.classes || []
+  const dbClasses = studySetStore.classes || []
+  return dbClasses.map(cls => ({
+    ...cls,
+    students: cls.students || [],
+    studentsCount: cls.studentsCount || 0
+  }))
 })
 
 const selectedClass = ref(null)
@@ -212,8 +224,10 @@ const handleCreateClass = async () => {
       room: newClassRoom.value,
       notes: ''
     })
+    toast.success("Tạo lớp học mới thành công!")
   } catch (e) {
     console.error("Failed to create class via API:", e)
+    toast.error("Tạo lớp học mới thất bại.")
   }
 
   // Reset fields
@@ -228,10 +242,10 @@ const handleDeleteClass = async (classId) => {
   try {
     await studySetStore.deleteClass(classId)
     selectedClass.value = null
-    alert("Xóa lớp học thành công!")
+    toast.success("Xóa lớp học thành công!")
   } catch (e) {
     console.error("Failed to delete class:", e)
-    alert("Có lỗi xảy ra khi xóa lớp học.")
+    toast.error("Có lỗi xảy ra khi xóa lớp học.")
   }
 }
 </script>

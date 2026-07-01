@@ -77,6 +77,28 @@ public class StudySetController {
                 .build();
     }
 
+    @PutMapping("/{id}")
+    public ApiResponse<StudySetResponse> updateStudySet(
+            @PathVariable Long id,
+            @Valid @RequestBody StudySetRequest request) {
+        StudySet studySet = studySetService.updateStudySet(id, request.getTitle(), request.getDescription(), request.getCategory());
+        List<Card> cards = studySetService.getCardsByStudySet(id);
+        return ApiResponse.<StudySetResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Cập nhật bộ từ vựng thành công.")
+                .data(mapToResponse(studySet, cards))
+                .build();
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteStudySet(@PathVariable Long id) {
+        studySetService.deleteStudySet(id);
+        return ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("Xóa bộ từ vựng thành công.")
+                .build();
+    }
+
     private StudySetResponse mapToResponse(StudySet s, List<Card> cards) {
         return StudySetResponse.builder()
                 .id(s.getId())

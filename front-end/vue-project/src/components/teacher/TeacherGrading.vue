@@ -144,82 +144,13 @@
 import { ref, computed, onMounted } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
 import { useQuizStore } from '../../stores/quiz'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 const quizStore = useQuizStore()
 
-// Mock Pending Attempts Data fallback
-const mockPendingAttempts = ref([
-  {
-    id: 'att-1',
-    studentName: 'Nguyễn Văn An',
-    quizTitle: 'Luyện Viết TOPIK II - Đề 1',
-    submittedAt: '2026-07-01 10:15',
-    essayCount: 2,
-    answers: [
-      {
-        id: 'ans-1',
-        questionText: 'Hãy điền từ thích hợp vào chỗ trống (Câu 51): ...',
-        studentAnswer: '고향에 가려고 비행기 표를 예매했습니다.',
-        questionType: 'WRITING',
-        maxPoints: 10,
-        score: 8,
-        feedback: 'Ngữ pháp tốt, viết đúng chính tả.'
-      },
-      {
-        id: 'ans-2',
-        questionText: 'Viết bài luận ngắn mô tả biểu đồ số lượng khách du lịch (Câu 53)',
-        studentAnswer: '최근 한국을 방문하는 외국인 관광객 수가 급격히 증가하고 있다. 2020년에는 100만 명이었으나...',
-        questionType: 'WRITING',
-        maxPoints: 30,
-        score: 0, // Pending grading
-        feedback: ''
-      },
-      {
-        id: 'ans-3',
-        questionText: 'Trắc nghiệm từ vựng thời tiết (câu tự động chấm)',
-        studentAnswer: '비가 오다',
-        questionType: 'MULTIPLE_CHOICE',
-        isCorrect: true,
-        maxPoints: 2,
-        score: 2,
-        feedback: ''
-      }
-    ]
-  },
-  {
-    id: 'att-2',
-    studentName: 'Trần Thị Bình',
-    quizTitle: 'Luyện Viết TOPIK II - Đề 1',
-    submittedAt: '2026-07-01 12:40',
-    essayCount: 2,
-    answers: [
-      {
-        id: 'ans-4',
-        questionText: 'Hãy điền từ thích hợp vào chỗ trống (Câu 51): ...',
-        studentAnswer: '고향에 가려고 비행기 표를 샀습니다.',
-        questionType: 'WRITING',
-        maxPoints: 10,
-        score: 6,
-        feedback: 'Nên dùng từ vựng lịch sự, trang trọng hơn như 예매하다 thay cho 사다.'
-      },
-      {
-        id: 'ans-5',
-        questionText: 'Viết bài luận ngắn mô tả biểu đồ số lượng khách du lịch (Câu 53)',
-        studentAnswer: '관광객 수가 많아졌습니다. 2020년 100만 명에서 2025년 500만 명으로 늘었습니다...',
-        questionType: 'WRITING',
-        maxPoints: 30,
-        score: 0, // Pending grading
-        feedback: ''
-      }
-    ]
-  }
-])
-
 const pendingAttempts = computed(() => {
-  const dbAttempts = quizStore.pendingAttempts
-  if (!dbAttempts || dbAttempts.length === 0) {
-    return mockPendingAttempts.value
-  }
+  const dbAttempts = quizStore.pendingAttempts || []
   return dbAttempts.map(att => {
     return {
       id: att.id,
@@ -275,7 +206,7 @@ const submitGrades = async () => {
   for (const ans of selectedAttempt.value.answers) {
     if (ans.questionType === 'WRITING') {
       if (ans.score === undefined || ans.score === null || ans.score < 0 || ans.score > ans.maxPoints) {
-        alert(`Vui lòng nhập điểm hợp lệ cho Câu hỏi tự luận (Tối đa ${ans.maxPoints}đ)`)
+        toast.warning(`Vui lòng nhập điểm hợp lệ cho Câu hỏi tự luận (Tối đa ${ans.maxPoints}đ)`)
         return
       }
       gradesPayload.push({
@@ -287,19 +218,12 @@ const submitGrades = async () => {
   }
 
   try {
-    if (String(selectedAttempt.value.id).startsWith('att-')) {
-      const index = mockPendingAttempts.value.findIndex(att => att.id === selectedAttempt.value.id)
-      if (index !== -1) {
-        mockPendingAttempts.value.splice(index, 1)
-      }
-    } else {
-      await quizStore.submitGrading(selectedAttempt.value.id, gradesPayload)
-      await quizStore.fetchPendingAttempts()
-    }
-    alert('Chấm điểm và gửi nhận xét thành công!')
+    await quizStore.submitGrading(selectedAttempt.value.id, gradesPayload)
+    await quizStore.fetchPendingAttempts()
+    toast.success('Chấm điểm và gửi nhận xét thành công!')
   } catch (e) {
     console.error("Failed to submit grades via API:", e)
-    alert("Có lỗi xảy ra khi gửi điểm chấm.")
+    toast.error("Có lỗi xảy ra khi gửi điểm chấm.")
   }
 
   selectedAttempt.value = null

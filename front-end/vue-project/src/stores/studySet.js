@@ -66,6 +66,39 @@ export const useStudySetStore = defineStore('studySet', () => {
     }
   };
 
+  const updateStudySet = async (id, payload) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      const response = await api.put(`/study-sets/${id}`, payload);
+      const updatedSet = response.data;
+      const idx = studySets.value.findIndex(s => s.id === id);
+      if (idx !== -1) {
+        studySets.value[idx] = updatedSet;
+      }
+      return updatedSet;
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const deleteStudySet = async (id) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      await api.delete(`/study-sets/${id}`);
+      studySets.value = studySets.value.filter(s => s.id !== id);
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   const fetchClasses = async (role) => {
     loading.value = true;
     errorMessage.value = '';
@@ -119,6 +152,8 @@ export const useStudySetStore = defineStore('studySet', () => {
     errorMessage,
     fetchStudySets,
     createStudySet,
+    updateStudySet,
+    deleteStudySet,
     addCard,
     deleteCard,
     fetchClasses,

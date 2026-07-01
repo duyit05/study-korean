@@ -34,7 +34,47 @@ const user = computed({
 })
 const studySets = computed(() => studySetStore.studySets)
 const quizzes = computed(() => quizStore.quizzes)
-const schedule = ref([])
+const schedule = computed(() => {
+  const list = []
+  const dbClasses = studySetStore.classes || []
+  dbClasses.forEach((cls, idx) => {
+    const rawSched = cls.schedule || "Thứ 2, 4, 6 (18:00 - 19:30)"
+    const parts = rawSched.split('(')
+    const dayStr = parts[0].trim()
+    const timeStr = parts.length > 1 ? parts[1].replace(')', '').trim() : '18:00 - 19:30'
+    
+    const days = dayStr.split(',').map(d => d.trim())
+    days.forEach((day, dayIdx) => {
+      const today = new Date()
+      const currentDay = today.getDay()
+      let targetDayNum = 1
+      if (day.includes('2')) targetDayNum = 1
+      else if (day.includes('3')) targetDayNum = 2
+      else if (day.includes('4')) targetDayNum = 3
+      else if (day.includes('5')) targetDayNum = 4
+      else if (day.includes('6')) targetDayNum = 5
+      else if (day.includes('7')) targetDayNum = 6
+      else if (day.toLowerCase().includes('chủ nhật')) targetDayNum = 0
+      
+      const diff = targetDayNum - currentDay
+      const date = new Date(today)
+      date.setDate(today.getDate() + diff)
+      
+      list.push({
+        id: `${cls.id}-${dayIdx}`,
+        date: date.toISOString().substring(0, 10),
+        dayOfWeek: day,
+        className: cls.name,
+        time: timeStr,
+        topic: `Bài học ôn tập & từ vựng tiếng Hàn - Lớp ${cls.name}`,
+        teacher: cls.teacherName || 'Giáo viên Bản xứ',
+        location: cls.room || 'Phòng học trực tuyến Zoom',
+        status: date >= today ? 'upcoming' : 'completed'
+      })
+    })
+  })
+  return list
+})
 
 const isDark = ref(false)
 const showNotificationDropdown = ref(false)
@@ -67,18 +107,6 @@ const safeStorage = {
 
 // Initialize states
 onMounted(async () => {
-  // Load Schedule
-  const savedSchedule = safeStorage.getItem('sk_schedule')
-  if (savedSchedule) {
-    schedule.value = JSON.parse(savedSchedule)
-  } else {
-    schedule.value = [
-      { id: 1, day: 'Thứ 2', time: '18:00 - 19:30', activity: 'Lớp Sơ cấp 1A' },
-      { id: 2, day: 'Thứ 4', time: '18:00 - 19:30', activity: 'Lớp Sơ cấp 1A' },
-      { id: 3, day: 'Thứ 6', time: '18:00 - 19:30', activity: 'Lớp Sơ cấp 1A' }
-    ]
-    safeStorage.setItem('sk_schedule', JSON.stringify(schedule.value))
-  }
 
   // Load from database if user is logged in
   if (user.value) {

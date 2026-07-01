@@ -42,6 +42,10 @@
           </div>
         </div>
         <div class="quiz-footer">
+          <div class="quiz-action-group">
+            <button class="action-btn text-link" @click.stop="triggerEditQuiz(quiz)">Sửa</button>
+            <button class="action-btn text-link danger-action" @click.stop="triggerDeleteQuiz(quiz)">Xóa</button>
+          </div>
           <button class="action-btn text-link" @click.stop="openEditQuestions(quiz)">Quản lý câu hỏi &rarr;</button>
         </div>
       </div>
@@ -79,12 +83,14 @@
                 <span>Có file âm thanh Nghe ({{ question.audioSource || 'TTS' }})</span>
               </div>
               <div v-if="question.questionType === 'MULTIPLE_CHOICE'" class="answers-grid">
-                <div class="answer-item correct">
-                  <span class="check-icon">&#10003;</span>
-                  <span>{{ question.correctAnswer }}</span>
-                </div>
-                <div v-for="wrong in question.wrongAnswers" :key="wrong" class="answer-item wrong">
-                  <span>{{ wrong }}</span>
+                <div 
+                  v-for="(opt, oIdx) in getQuestionOptions(question)" 
+                  :key="oIdx" 
+                  class="answer-item"
+                  :class="{ correct: opt.isCorrect, wrong: !opt.isCorrect }"
+                >
+                  <span v-if="opt.isCorrect" class="check-icon">&#10003;</span>
+                  <span>{{ String.fromCharCode(65 + oIdx) }}. {{ opt.text }}</span>
                 </div>
               </div>
               <div v-else class="essay-indicator">
@@ -130,6 +136,15 @@
           <div class="form-group">
             <label for="quizDueDate">Hạn nộp bài</label>
             <input type="date" id="quizDueDate" v-model="newQuizDueDate" required>
+          </div>
+          <div class="form-group">
+            <label for="quizClass">Giao cho lớp học</label>
+            <select id="quizClass" v-model="newQuizClassId">
+              <option :value="null">Không giao cho lớp nào (Luyện tập tự do)</option>
+              <option v-for="cls in classesList" :key="cls.id" :value="cls.id">
+                {{ cls.name }}
+              </option>
+            </select>
           </div>
           <div class="modal-actions">
             <button type="button" class="cancel-btn" @click="showCreateModal = false">Hủy bỏ</button>
@@ -183,22 +198,29 @@
 
           <!-- Multiple choice fields -->
           <div v-if="newQType === 'MULTIPLE_CHOICE'" class="form-group border-box">
-            <label>Thiết lập đáp án trắc nghiệm</label>
-            <div class="ans-input-row">
-              <span class="ans-label correct">&#10003; Đúng:</span>
-              <input type="text" v-model="newQCorrectAnswer" placeholder="Nhập đáp án đúng" required>
-            </div>
-            <div class="ans-input-row">
-              <span class="ans-label">Sai 1:</span>
-              <input type="text" v-model="newQWrong1" placeholder="Đáp án sai số 1" required>
-            </div>
-            <div class="ans-input-row">
-              <span class="ans-label">Sai 2:</span>
-              <input type="text" v-model="newQWrong2" placeholder="Đáp án sai số 2" required>
-            </div>
-            <div class="ans-input-row">
-              <span class="ans-label">Sai 3:</span>
-              <input type="text" v-model="newQWrong3" placeholder="Đáp án sai số 3" required>
+            <label style="margin-bottom: 0.5rem; display: block;">Thiết lập đáp án trắc nghiệm (Chọn nút tròn để đặt làm đáp án đúng)</label>
+            <div class="ans-input-row" v-for="(opt, optIdx) in 4" :key="optIdx">
+              <input 
+                type="radio" 
+                name="correct-opt-teacher" 
+                :value="optIdx" 
+                v-model="newQCorrectOptionIndex"
+                :id="'radio-teacher-' + optIdx"
+              >
+              <label 
+                :for="'radio-teacher-' + optIdx" 
+                class="ans-label"
+                :class="{ correct: newQCorrectOptionIndex === optIdx }"
+                style="cursor: pointer;"
+              >
+                {{ newQCorrectOptionIndex === optIdx ? '✓ Đúng:' : 'Sai:' }}
+              </label>
+              <input 
+                type="text" 
+                v-model="newQOptions[optIdx]" 
+                :placeholder="'Đáp án ' + String.fromCharCode(65 + optIdx)"
+                required
+              >
             </div>
           </div>
 
@@ -215,13 +237,84 @@
         </form>
       </div>
     </div>
+
+    <!-- Edit Quiz Modal -->
+    <div v-if="showEditQuizModal" class="modal-overlay">
+      <div class="modal-content animate-scale">
+        <div class="modal-header">
+          <h3>Sửa thông tin đề thi / bài tập</h3>
+          <button class="close-btn" @click="showEditQuizModal = false">&times;</button>
+        </div>
+        <form @submit.prevent="handleUpdateQuiz" class="modal-form">
+          <div class="form-group">
+            <label for="editQuizTitle">Tên đề thi / bài tập</label>
+            <input type="text" id="editQuizTitle" v-model="editQuizTitle" required>
+          </div>
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="editQuizLevel">Cấp độ (TOPIK)</label>
+              <select id="editQuizLevel" v-model="editQuizLevel">
+                <option value="TOPIK_I">TOPIK I (Sơ cấp)</option>
+                <option value="TOPIK_II">TOPIK II (Trung/Cao cấp)</option>
+                <option value="Lớp 1A">Lớp 1A</option>
+                <option value="Lớp 1B">Lớp 1B</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editQuizTime">Thời gian làm bài (phút)</label>
+              <input type="number" id="editQuizTime" v-model.number="editQuizTime" required min="5">
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="editQuizDueDate">Hạn nộp bài</label>
+            <input type="date" id="editQuizDueDate" v-model="editQuizDueDate" required>
+          </div>
+          <div class="form-group">
+            <label for="editQuizClass">Giao cho lớp học</label>
+            <select id="editQuizClass" v-model="editQuizClassId">
+              <option :value="null">Không giao (Luyện tập tự do)</option>
+              <option v-for="cls in classesList" :key="cls.id" :value="cls.id">
+                {{ cls.name }}
+              </option>
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" @click="showEditQuizModal = false">Hủy bỏ</button>
+            <button type="submit" class="submit-btn">Lưu thay đổi</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Delete Quiz Confirmation Modal -->
+    <div v-if="showDeleteQuizConfirmModal" class="modal-overlay">
+      <div class="modal-content animate-scale">
+        <div class="modal-header">
+          <h3 style="color: var(--danger);">Xác nhận xóa đề thi</h3>
+          <button class="close-btn" @click="showDeleteQuizConfirmModal = false">&times;</button>
+        </div>
+        <div class="modal-body" style="margin-bottom: 1.5rem;">
+          <p>Bạn có chắc chắn muốn xóa đề thi <strong>{{ quizToDelete?.title }}</strong>?</p>
+          <p style="color: var(--text-muted); font-size: 0.8rem; margin-top: 0.5rem;">
+            Lưu ý: Hành động này sẽ xóa vĩnh viễn đề thi cùng với toàn bộ câu hỏi và toàn bộ kết quả làm bài của học sinh liên quan. Hành động này không thể khôi phục.
+          </p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="cancel-btn" @click="showDeleteQuizConfirmModal = false">Hủy bỏ</button>
+          <button type="button" class="submit-btn" style="background-color: var(--danger);" @click="confirmDeleteQuiz">Đồng ý xóa</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
 import { useQuizStore } from '../../stores/quiz'
+import { useStudySetStore } from '../../stores/studySet'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 const props = defineProps({
   quizzes: {
@@ -231,6 +324,9 @@ const props = defineProps({
 })
 
 const quizStore = useQuizStore()
+const studySetStore = useStudySetStore()
+
+const classesList = computed(() => studySetStore.classes || [])
 
 const selectedQuiz = ref(null)
 const showCreateModal = ref(false)
@@ -241,6 +337,7 @@ const newQuizTitle = ref('')
 const newQuizLevel = ref('TOPIK_I')
 const newQuizTime = ref(100)
 const newQuizDueDate = ref('')
+const newQuizClassId = ref(null)
 
 // New Question Fields
 const newQSection = ref('LISTENING')
@@ -252,6 +349,8 @@ const newQCorrectAnswer = ref('')
 const newQWrong1 = ref('')
 const newQWrong2 = ref('')
 const newQWrong3 = ref('')
+const newQOptions = ref(['', '', '', ''])
+const newQCorrectOptionIndex = ref(0)
 
 const getSectionLabel = (sec) => {
   if (sec === 'LISTENING') return 'Nghe'
@@ -265,6 +364,7 @@ const openCreateQuizModal = () => {
   newQuizLevel.value = 'TOPIK_I'
   newQuizTime.value = 100
   newQuizDueDate.value = ''
+  newQuizClassId.value = classesList.value.length > 0 ? classesList.value[0].id : null
   showCreateModal.value = true
 }
 
@@ -277,10 +377,12 @@ const handleCreateQuiz = async () => {
       topikLevel: newQuizLevel.value,
       timeLimitMins: parseInt(newQuizTime.value),
       dueDate: newQuizDueDate.value + 'T23:59:59',
-      classId: 1 // Default classId
+      classId: newQuizClassId.value
     })
+    toast.success("Tạo đề thi/bài tập mới thành công!")
   } catch (e) {
     console.error("Failed to create quiz via API:", e)
+    toast.error("Tạo đề thi/bài tập thất bại.")
   }
 
   showCreateModal.value = false
@@ -296,6 +398,8 @@ const openAddQuestionModal = () => {
   newQWrong1.value = ''
   newQWrong2.value = ''
   newQWrong3.value = ''
+  newQOptions.value = ['', '', '', '']
+  newQCorrectOptionIndex.value = 0
   showAddQuestionModal.value = true
 }
 
@@ -303,19 +407,23 @@ const handleAddQuestion = async () => {
   if (!selectedQuiz.value || !newQText.value) return
 
   try {
-    const wrongAnswers = [
-      newQWrong1.value,
-      newQWrong2.value,
-      newQWrong3.value
-    ].filter(Boolean)
+    let correctAnswerText = ''
+    let wrongAnswers = []
+
+    if (newQType.value === 'MULTIPLE_CHOICE') {
+      correctAnswerText = newQOptions.value[newQCorrectOptionIndex.value] || ''
+      wrongAnswers = newQOptions.value.map(w => w || '')
+    } else {
+      correctAnswerText = newQCorrectAnswer.value || ''
+    }
 
     const questionPayload = {
       questionText: newQText.value,
       questionType: newQType.value,
       points: parseFloat(newQPoints.value),
       section: newQSection.value,
-      correctAnswer: newQCorrectAnswer.value,
-      wrongAnswers: newQType.value === 'MULTIPLE_CHOICE' ? wrongAnswers : [],
+      correctAnswer: correctAnswerText,
+      wrongAnswers: wrongAnswers,
       audioUrl: newQSection.value === 'LISTENING' ? newQAudio.value : null
     }
 
@@ -325,14 +433,17 @@ const handleAddQuestion = async () => {
       if (!selectedQuiz.value.questions) selectedQuiz.value.questions = []
       selectedQuiz.value.questions.push(newQuestion)
     }
+    toast.success("Thêm câu hỏi mới thành công!")
   } catch (e) {
     console.error("Failed to add question via API:", e)
+    toast.error("Thêm câu hỏi mới thất bại.")
   }
 
   showAddQuestionModal.value = false
 }
 
 const deleteQuestion = async (quiz, questionId) => {
+  if (!confirm("Bạn có chắc chắn muốn xóa câu hỏi này?")) return
   try {
     await quizStore.deleteQuestion(quiz.id, questionId)
     if (selectedQuiz.value && selectedQuiz.value.questions) {
@@ -341,13 +452,108 @@ const deleteQuestion = async (quiz, questionId) => {
         selectedQuiz.value.questions.splice(index, 1)
       }
     }
+    toast.success("Xóa câu hỏi thành công!")
   } catch (e) {
     console.error("Failed to delete question via API:", e)
+    toast.error("Xóa câu hỏi thất bại.")
   }
 }
 
 const openEditQuestions = (quiz) => {
   selectedQuiz.value = quiz
+}
+
+const getQuestionOptions = (question) => {
+  const opts = [];
+  
+  if (question.wrongAnswers && question.wrongAnswers.length === 4) {
+    question.wrongAnswers.forEach(opt => {
+      opts.push({
+        text: opt,
+        isCorrect: opt === question.correctAnswer
+      });
+    });
+  } else {
+    if (question.correctAnswer) {
+      opts.push({ text: question.correctAnswer, isCorrect: true });
+    }
+    if (question.wrongAnswers && Array.isArray(question.wrongAnswers)) {
+      question.wrongAnswers.forEach(w => {
+        opts.push({ text: w, isCorrect: false });
+      });
+    }
+  }
+  return opts;
+}
+
+// Edit Quiz state & handlers
+const showEditQuizModal = ref(false)
+const quizToEdit = ref(null)
+const editQuizTitle = ref('')
+const editQuizLevel = ref('TOPIK_I')
+const editQuizTime = ref(100)
+const editQuizDueDate = ref('')
+const editQuizClassId = ref(null)
+
+const showDeleteQuizConfirmModal = ref(false)
+const quizToDelete = ref(null)
+
+const triggerEditQuiz = (quiz) => {
+  quizToEdit.value = quiz
+  editQuizTitle.value = quiz.title
+  editQuizLevel.value = quiz.topikLevel || 'TOPIK_I'
+  editQuizTime.value = quiz.timeLimitMins || 100
+  editQuizDueDate.value = quiz.dueDate ? quiz.dueDate.substring(0, 10) : ''
+  editQuizClassId.value = quiz.classId || quiz.clazzId || null
+  showEditQuizModal.value = true
+}
+
+const handleUpdateQuiz = async () => {
+  if (!quizToEdit.value || !editQuizTitle.value || !editQuizTime.value || !editQuizDueDate.value) return
+
+  try {
+    await quizStore.updateQuiz(quizToEdit.value.id, {
+      title: editQuizTitle.value,
+      topikLevel: editQuizLevel.value,
+      timeLimitMins: parseInt(editQuizTime.value),
+      dueDate: editQuizDueDate.value + 'T23:59:59',
+      classId: editQuizClassId.value
+    })
+    toast.success("Cập nhật đề thi thành công!")
+    showEditQuizModal.value = false
+    
+    // Update active selection details if selectedQuiz matches
+    if (selectedQuiz.value && selectedQuiz.value.id === quizToEdit.value.id) {
+      selectedQuiz.value.title = editQuizTitle.value
+      selectedQuiz.value.topikLevel = editQuizLevel.value
+      selectedQuiz.value.timeLimitMins = editQuizTime.value
+    }
+  } catch (e) {
+    console.error("Failed to update quiz:", e)
+    toast.error("Cập nhật đề thi thất bại.")
+  }
+}
+
+const triggerDeleteQuiz = (quiz) => {
+  quizToDelete.value = quiz
+  showDeleteQuizConfirmModal.value = true
+}
+
+const confirmDeleteQuiz = async () => {
+  if (!quizToDelete.value) return
+  try {
+    await quizStore.deleteQuiz(quizToDelete.value.id)
+    toast.success("Xóa đề thi thành công!")
+    if (selectedQuiz.value && selectedQuiz.value.id === quizToDelete.value.id) {
+      selectedQuiz.value = null
+    }
+  } catch (e) {
+    console.error("Failed to delete quiz:", e)
+    toast.error("Xóa đề thi thất bại.")
+  } finally {
+    showDeleteQuizConfirmModal.value = false
+    quizToDelete.value = null
+  }
 }
 </script>
 
@@ -476,8 +682,16 @@ const openEditQuestions = (quiz) => {
 
 .quiz-footer {
   border-top: 1px solid var(--border-color);
-  padding-top: 0.5rem;
-  text-align: right;
+  padding-top: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quiz-action-group {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .action-btn.text-link {
@@ -491,6 +705,10 @@ const openEditQuestions = (quiz) => {
 
 .action-btn.text-link:hover {
   text-decoration: underline;
+}
+
+.action-btn.text-link.danger-action {
+  color: var(--danger);
 }
 
 .quiz-detail-panel {

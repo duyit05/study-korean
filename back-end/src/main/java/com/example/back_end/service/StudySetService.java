@@ -78,4 +78,25 @@ public class StudySetService {
         }
         cardRepository.delete(card);
     }
+
+    @Transactional
+    public StudySet updateStudySet(Long id, String title, String description, String category) {
+        log.info("Updating study set: id={}, title={}", id, title);
+        StudySet studySet = studySetRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+        studySet.setTitle(title);
+        studySet.setDescription(description);
+        studySet.setCategory(category);
+        return studySetRepository.save(studySet);
+    }
+
+    @Transactional
+    public void deleteStudySet(Long id) {
+        log.info("Deleting study set: id={}", id);
+        StudySet studySet = studySetRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+        List<Card> cards = cardRepository.findByStudySetId(id);
+        cardRepository.deleteAll(cards);
+        studySetRepository.delete(studySet);
+    }
 }

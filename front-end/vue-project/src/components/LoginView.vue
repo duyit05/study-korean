@@ -3,10 +3,10 @@
     <div class="login-card">
       <div class="login-header">
         <div class="logo-badge">
-          <span class="kr-char">한</span>
+          <span class="kr-char">애리</span>
         </div>
-        <h1>Study Korea</h1>
-        <p class="subtitle">{{ isRegisterMode ? 'Đăng ký tài khoản học viên mới' : 'Hệ thống học tiếng Hàn cho học viên' }}</p>
+        <h1>Learn Korean with Aeri</h1>
+        <p class="subtitle">5 phút mỗi ngày để chinh phục Hanguko</p>
       </div>
 
       <!-- Login Form -->
@@ -119,21 +119,6 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label for="reg-role">Vai trò</label>
-          <div class="input-wrapper">
-            <AppIcon name="profile" class="input-icon" size="18" />
-            <select 
-              id="reg-role" 
-              v-model="regRole" 
-              class="role-select" 
-              required
-            >
-              <option value="STUDENT">Học viên (Student)</option>
-              <option value="TEACHER">Giáo viên (Teacher)</option>
-            </select>
-          </div>
-        </div>
 
         <div class="form-group">
           <label for="reg-password">Mật khẩu</label>
@@ -200,7 +185,7 @@
       </form>
 
       <div class="login-footer">
-        <p>© 2026 Study Korea. Giao diện Cổng học viên.</p>
+        <p>© 2026 Learn Korean with Aeri.</p>
       </div>
     </div>
   </div>

@@ -500,6 +500,8 @@
 <script setup>
 import { ref, computed, onUnmounted, onMounted } from 'vue'
 import AppIcon from './icons/AppIcon.vue'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 const props = defineProps({
   quizzes: {
@@ -676,7 +678,7 @@ const playSpeech = (text) => {
     
     window.speechSynthesis.speak(utterance)
   } else {
-    alert("Trình duyệt không hỗ trợ phát âm thanh tự động.")
+    toast.error("Trình duyệt không hỗ trợ phát âm thanh tự động.")
   }
 }
 
@@ -703,7 +705,7 @@ const playCustomAudio = (url) => {
     isSpeaking.value = false
     playingKoreanText.value = ''
     currentAudio.value = null
-    alert("Không thể phát file âm thanh này. Hãy kiểm tra lại định dạng file hoặc liên kết đường dẫn.")
+    toast.error("Không thể phát file âm thanh này. Hãy kiểm tra lại định dạng file hoặc liên kết đường dẫn.")
   }
 }
 
@@ -720,17 +722,81 @@ const stopAudio = () => {
   playingKoreanText.value = ''
 }
 
+const shuffleArray = (array) => {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const temp = array[i];
+    array[i] = array[j];
+    array[j] = temp;
+  }
+  return array;
+}
+
+const cleanAnswer = (ans) => {
+  return (ans || '')
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/^[a-d]\.\s*/, ''); // strip "A. ", "B. ", "C. ", "D. " prefix
+}
+
 // Start a quiz - heavily guarded against undefined arrays
 const startQuiz = (quiz) => {
   if (!quiz) return
-  activeQuiz.value = quiz
+  
+  // Map backend quiz questions to the format expected by QuizView.vue
+  const mappedQuestions = (quiz.questions || []).map(q => {
+    // If it's already a frontend-style question, return it
+    if (q.options && q.question) return q;
+
+    // Build raw options list
+    let rawOptions = [];
+    if (q.wrongAnswers && q.wrongAnswers.length === 4) {
+      rawOptions = [...q.wrongAnswers];
+    } else {
+      if (q.correctAnswer) rawOptions.push(q.correctAnswer);
+      if (q.wrongAnswers && Array.isArray(q.wrongAnswers)) {
+        rawOptions.push(...q.wrongAnswers);
+      }
+    }
+
+    const optionsList = [...rawOptions];
+
+    // Determine the type
+    let type = 'choice';
+    if (q.questionType === 'ESSAY') {
+      type = 'fill';
+    } else if (q.audioUrl || q.section === 'LISTENING') {
+      type = 'listening';
+    }
+
+    return {
+      id: q.id,
+      type: type,
+      question: q.questionText || '',
+      koreanText: q.koreanText || '',
+      audioUrl: q.audioUrl || '',
+      audioSource: q.audioSource || 'tts',
+      options: optionsList,
+      correctAnswer: q.correctAnswer || '',
+      explanation: q.explanation || `Đáp án đúng là: ${q.correctAnswer}.`
+    };
+  });
+
+  const mappedQuiz = {
+    ...quiz,
+    timeLimit: quiz.timeLimitMins || quiz.timeLimit || 10,
+    questions: mappedQuestions
+  };
+
+  activeQuiz.value = mappedQuiz
   currentQuestionIndex.value = 0
   userAnswers.value = {}
   stopAudio()
 
   // Set default values for all inputs safely
-  if (quiz.questions && Array.isArray(quiz.questions)) {
-    quiz.questions.forEach(q => {
+  if (mappedQuiz.questions && Array.isArray(mappedQuiz.questions)) {
+    mappedQuiz.questions.forEach(q => {
       if (q && q.id) {
         userAnswers.value[q.id] = ''
       }
@@ -738,7 +804,7 @@ const startQuiz = (quiz) => {
   }
 
   // Start countdown timer
-  timerMinutes.value = quiz.timeLimit || 10
+  timerMinutes.value = mappedQuiz.timeLimit || 10
   timerSeconds.value = 0
   
   clearInterval(timerInterval)
@@ -792,7 +858,7 @@ const submitQuiz = () => {
     const correctAns = (q.correctAnswer || '').toString().trim().toLowerCase()
     
     if (q.type === 'choice' || q.type === 'match' || q.type === 'listening') {
-      if (studentAns === correctAns) {
+      if (cleanAnswer(studentAns) === cleanAnswer(correctAns)) {
         correctCount++
       }
     } else if (q.type === 'fill') {
@@ -800,7 +866,7 @@ const submitQuiz = () => {
       if (q.alternativeAnswers) {
         matchesAlternative = q.alternativeAnswers.some(alt => (alt || '').toString().trim().toLowerCase() === studentAns)
       }
-      if (studentAns === correctAns || matchesAlternative) {
+      if (cleanAnswer(studentAns) === cleanAnswer(correctAns) || matchesAlternative) {
         correctCount++
       }
     }
@@ -862,7 +928,7 @@ const isUserCorrect = (question) => {
   const correctAns = (question.correctAnswer || '').toString().trim().toLowerCase()
   
   if (question.type === 'choice' || question.type === 'match' || question.type === 'listening') {
-    return studentAns === correctAns
+    return cleanAnswer(studentAns) === cleanAnswer(correctAns)
   }
   
   if (question.type === 'fill') {
@@ -915,7 +981,7 @@ const handleAudioUpload = (event, idx) => {
   const file = event.target.files[0]
   if (file) {
     if (file.size > 1.2 * 1024 * 1024) {
-      alert("Lưu ý: Khuyên dùng file MP3 nhỏ dưới 1.2MB để đảm bảo lưu trữ nhanh trong trình duyệt.")
+      toast.warning("Lưu ý: Khuyên dùng file MP3 nhỏ dưới 1.2MB để đảm bảo lưu trữ nhanh trong trình duyệt.")
     }
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -927,7 +993,7 @@ const handleAudioUpload = (event, idx) => {
 
 const saveCustomQuiz = () => {
   if (!newQuizTitle.value.trim()) {
-    alert("Vui lòng nhập tên đề thi ôn tập.");
+    toast.warning("Vui lòng nhập tên đề thi ôn tập.")
     return
   }
 
@@ -935,22 +1001,22 @@ const saveCustomQuiz = () => {
   for (let i = 0; i < newQuizQuestions.value.length; i++) {
     const q = newQuizQuestions.value[i]
     if (!q.question.trim()) {
-      alert(`Vui lòng nhập câu hỏi phụ cho câu hỏi thứ ${i + 1}.`);
+      toast.warning(`Vui lòng nhập câu hỏi phụ cho câu hỏi thứ ${i + 1}.`)
       return
     }
     if (q.type === 'listening') {
       if (q.audioSource === 'tts' && (!q.koreanText || !q.koreanText.trim())) {
-        alert(`Vui lòng nhập đoạn tiếng Hàn để AI phát âm cho câu hỏi ${i + 1}.`);
+        toast.warning(`Vui lòng nhập đoạn tiếng Hàn để AI phát âm cho câu hỏi ${i + 1}.`)
         return
       }
       if (q.audioSource === 'file' && (!q.audioUrl || !q.audioUrl.trim())) {
-        alert(`Vui lòng tải lên file âm thanh MP3 hoặc chèn liên kết link cho câu hỏi ${i + 1}.`);
+        toast.warning(`Vui lòng tải lên file âm thanh MP3 hoặc chèn liên kết link cho câu hỏi ${i + 1}.`)
         return
       }
     }
     for (let j = 0; j < 4; j++) {
       if (!q.options[j] || !q.options[j].trim()) {
-        alert(`Vui lòng điền đáp án ${String.fromCharCode(65 + j)} cho câu hỏi thứ ${i + 1}.`);
+        toast.warning(`Vui lòng điền đáp án ${String.fromCharCode(65 + j)} cho câu hỏi thứ ${i + 1}.`)
         return
       }
     }

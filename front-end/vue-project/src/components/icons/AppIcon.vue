@@ -124,6 +124,11 @@
     <path v-if="name === 'edit'" d="M12 20h9" />
     <path v-if="name === 'edit'" d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
 
+    <!-- Trash -->
+    <path v-if="name === 'trash'" d="M3 6h18" />
+    <path v-if="name === 'trash'" d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+    <path v-if="name === 'trash'" d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+
     <!-- Thumbs up -->
     <path v-if="name === 'thumbs-up'" d="M7 10v12" />
     <path v-if="name === 'thumbs-up'" d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h3l3.15-7.15a1 1 0 0 1 1.42 0L15 5.88Z" />

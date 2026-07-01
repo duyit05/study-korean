@@ -81,4 +81,23 @@ public class QuizController {
                 .message("Xóa câu hỏi thành công.")
                 .build();
     }
+
+    @PutMapping("/{id}")
+    public ApiResponse<QuizResponse> updateQuiz(@PathVariable Long id, @Valid @RequestBody QuizRequest request) {
+        QuizResponse response = quizService.updateQuiz(id, request);
+        return ApiResponse.<QuizResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Cập nhật đề thi thành công.")
+                .data(response)
+                .build();
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteQuiz(@PathVariable Long id) {
+        quizService.deleteQuiz(id);
+        return ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("Xóa đề thi thành công.")
+                .build();
+    }
 }

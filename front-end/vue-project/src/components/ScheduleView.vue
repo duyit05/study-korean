@@ -98,6 +98,8 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AppIcon from './icons/AppIcon.vue'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 const props = defineProps({
   schedule: {
@@ -137,7 +139,14 @@ const isOnline = (locationStr) => {
 
 // Join Class Room simulation
 const mockJoinZoom = (item) => {
-  alert(`Đang mở liên kết tham gia lớp học: ${item.className}\nChủ đề: ${item.topic}\nĐịa điểm: ${item.location}`)
+  toast.success(`Đang mở phòng học Zoom của lớp ${item.className}...`)
+  setTimeout(() => {
+    if (item.location && (item.location.startsWith('http://') || item.location.startsWith('https://'))) {
+      window.open(item.location, '_blank')
+    } else {
+      window.open('https://zoom.us', '_blank')
+    }
+  }, 1000)
 }
 </script>
 

@@ -154,6 +154,39 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   };
 
+  const updateQuiz = async (quizId, payload) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      const response = await api.put(`/quizzes/${quizId}`, payload);
+      const updatedQuiz = response.data;
+      const idx = quizzes.value.findIndex(q => q.id === quizId);
+      if (idx !== -1) {
+        quizzes.value[idx] = updatedQuiz;
+      }
+      return updatedQuiz;
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const deleteQuiz = async (quizId) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      await api.delete(`/quizzes/${quizId}`);
+      quizzes.value = quizzes.value.filter(q => q.id !== quizId);
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     quizzes,
     pendingAttempts,
@@ -164,6 +197,8 @@ export const useQuizStore = defineStore('quiz', () => {
     fetchMyCreatedQuizzes,
     fetchQuizDetails,
     createQuiz,
+    updateQuiz,
+    deleteQuiz,
     addQuestion,
     deleteQuestion,
     submitQuizAttempt,

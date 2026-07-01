@@ -142,6 +142,8 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import AppIcon from './icons/AppIcon.vue'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
 
 const props = defineProps({
   user: {
@@ -204,7 +206,7 @@ const saveProfile = () => {
     email: editableUser.value.email,
     avatar: editableUser.value.avatar
   })
-  alert("Cập nhật thông tin cá nhân thành công!")
+  toast.success("Cập nhật thông tin cá nhân thành công!")
 }
 
 // XP calculations
