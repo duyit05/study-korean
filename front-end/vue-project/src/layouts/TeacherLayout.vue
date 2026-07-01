@@ -1,0 +1,333 @@
+<template>
+  <div class="teacher-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo-box">한</div>
+        <h2>Study Korea</h2>
+        <span class="admin-badge">TEACHER PORTAL</span>
+      </div>
+
+      <!-- Navigation links -->
+      <nav class="sidebar-nav">
+        <router-link to="/teacher/dashboard" class="sidebar-link" active-class="active">
+          <AppIcon name="dashboard" size="18" />
+          <span>Tổng quan</span>
+        </router-link>
+        
+        <router-link to="/teacher/classes" class="sidebar-link" active-class="active">
+          <AppIcon name="user" size="18" />
+          <span>Quản lý Lớp học</span>
+        </router-link>
+
+        <router-link to="/teacher/vocabulary" class="sidebar-link" active-class="active">
+          <AppIcon name="book" size="18" />
+          <span>Kho từ vựng</span>
+        </router-link>
+
+        <router-link to="/teacher/quizzes" class="sidebar-link" active-class="active">
+          <AppIcon name="quiz" size="18" />
+          <span>Đề thi & Bài tập</span>
+        </router-link>
+
+        <router-link to="/teacher/grading" class="sidebar-link" active-class="active">
+          <AppIcon name="edit" size="18" />
+          <span>Chấm điểm Viết</span>
+        </router-link>
+      </nav>
+
+      <!-- Sidebar Footer / Teacher Profile -->
+      <div class="sidebar-footer">
+        <div class="profile-info">
+          <img 
+            :src="user.avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=64'" 
+            alt="Teacher Avatar" 
+            class="avatar"
+          >
+          <div class="profile-text">
+            <strong>{{ user.name }}</strong>
+            <span>{{ user.level || 'Giáo viên' }}</span>
+          </div>
+        </div>
+        <button class="logout-btn" @click="handleLogout" title="Đăng xuất">
+          <AppIcon name="logout" size="18" />
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="main-container">
+      <header class="top-header">
+        <div class="view-title">
+          <h3>Hệ thống quản lý học tập</h3>
+        </div>
+        <div class="header-actions">
+          <button class="theme-btn" @click="toggleTheme" title="Chuyển chế độ Sáng/Tối">
+            <AppIcon :name="isDark ? 'sun' : 'moon'" size="20" />
+          </button>
+        </div>
+      </header>
+
+      <main class="content-view">
+        <router-view 
+          :study-sets="studySets"
+          :quizzes="quizzes"
+        />
+      </main>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '../stores/auth'
+import AppIcon from '../components/icons/AppIcon.vue'
+
+const props = defineProps({
+  studySets: Array,
+  quizzes: Array
+})
+
+const router = useRouter()
+const authStore = useAuthStore()
+const user = computed(() => authStore.user)
+
+const isDark = ref(false)
+
+const toggleTheme = () => {
+  isDark.value = !isDark.value
+  try {
+    localStorage.setItem('theme', isDark.value ? 'dark' : 'light')
+  } catch (e) {}
+  updateThemeClass()
+}
+
+const updateThemeClass = () => {
+  if (isDark.value) {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+}
+
+const handleLogout = () => {
+  if (confirm("Bạn có chắc chắn muốn đăng xuất khỏi trang giáo viên?")) {
+    authStore.logout()
+    router.push('/login')
+  }
+}
+
+onMounted(() => {
+  try {
+    const savedTheme = localStorage.getItem('theme')
+    isDark.value = savedTheme === 'dark'
+    updateThemeClass()
+  } catch (e) {}
+})
+</script>
+
+<style scoped>
+.teacher-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: var(--bg-body);
+  color: var(--text-title);
+}
+
+/* Sidebar Styling */
+.sidebar {
+  width: 260px;
+  background-color: var(--bg-card);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  box-shadow: var(--shadow-sm);
+  z-index: 10;
+}
+
+.sidebar-brand {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sidebar-brand .logo-box {
+  width: 32px;
+  height: 32px;
+  background-color: var(--primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+}
+
+.sidebar-brand h2 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-title);
+  letter-spacing: -0.5px;
+}
+
+.admin-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--primary);
+  background-color: var(--primary-glow);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  align-self: flex-start;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-nav {
+  flex-grow: 1;
+  padding: 1.25rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.9rem;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.sidebar-link:hover {
+  background-color: var(--bg-body);
+  color: var(--text-title);
+}
+
+.sidebar-link.active {
+  background-color: var(--primary-glow);
+  color: var(--primary);
+}
+
+.sidebar-footer {
+  padding: 1rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.profile-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.profile-info .avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-color);
+}
+
+.profile-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-text strong {
+  font-size: 0.85rem;
+  color: var(--text-title);
+}
+
+.profile-text span {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+
+.logout-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0.35rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-fast);
+}
+
+.logout-btn:hover {
+  background-color: var(--bg-body);
+  color: var(--danger);
+}
+
+/* Main Container Area */
+.main-container {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+.top-header {
+  height: 60px;
+  background-color: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+  padding: 0 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.view-title h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.theme-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-title);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.theme-btn:hover {
+  background-color: var(--bg-body);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.content-view {
+  flex-grow: 1;
+  padding: 0.5rem;
+  background-color: var(--bg-body);
+}
+</style>

@@ -2,77 +2,77 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
 
 :root {
-  /* HSL Color Tokens - Light Beige Theme */
-  --bg-app: hsl(36, 30%, 95%);            /* Soft warm cream/beige background */
-  --bg-card: hsl(36, 40%, 99%);           /* Pure warm ivory card background */
-  --bg-hover: hsl(36, 25%, 90%);          /* Sand hover background */
-  --bg-badge: hsl(36, 20%, 86%);          /* Soft sand badge background */
-  --border-color: hsl(36, 15%, 82%);      /* Mild beige border */
-  --border-color-hover: hsl(36, 15%, 72%);
+  /* Color Tokens - Light Warm Beige Theme */
+  --bg-app: #EADBC8;                      /* Soft warm beige/sand background */
+  --bg-card: #FDFBF7;                     /* Ivory/white card background for crisp contrast */
+  --bg-hover: #DFD0BD;                    /* Soft sand hover state */
+  --bg-badge: #E3D4C2;                    /* Warm badge background */
+  --border-color: #D6C6B4;                /* Sand border line */
+  --border-color-hover: #6C584C;          /* Prominent highlight border */
 
-  --text-title: hsl(24, 30%, 15%);        /* Deep espresso brown */
-  --text-body: hsl(24, 15%, 32%);         /* Roasted coffee brown */
-  --text-muted: hsl(24, 10%, 52%);        /* Soft taupe grey */
+  --text-title: #3E3026;                  /* Deep dark brown (roasted espresso) */
+  --text-body: #4E3E34;                   /* Coffee brown for readable body text */
+  --text-muted: #7E6C61;                  /* Muted taupe brown */
 
-  --primary: hsl(28, 75%, 48%);           /* Warm rich amber / terracotta */
-  --primary-hover: hsl(28, 80%, 42%);
-  --primary-light: hsl(30, 60%, 91%);     /* Soft amber light */
-  --primary-glow: hsla(28, 75%, 48%, 0.12);
+  --primary: #6C584C;                     /* Highlight color: Deep roasted coffee brown */
+  --primary-hover: #56453A;
+  --primary-light: #EADBC8;
+  --primary-glow: rgba(108, 88, 76, 0.15);
 
-  --success: hsl(135, 45%, 35%);          /* Muted leaf green */
-  --success-light: hsl(135, 40%, 93%);
-  --success-border: hsl(135, 40%, 85%);
+  --success: #60723A;                     /* Soft warm olive green */
+  --success-light: #E9EFE0;
+  --success-border: #CBD6B8;
 
-  --warning: hsl(42, 85%, 45%);           /* Ochre gold */
-  --warning-light: hsl(42, 85%, 93%);
+  --warning: #8C7030;                     /* Muted gold ochre */
+  --warning-light: #F7F3E6;
 
-  --danger: hsl(5, 75%, 52%);             /* Terracotta red */
-  --danger-light: hsl(5, 75%, 94%);
+  --danger: #9E4A3B;                      /* Terracotta red */
+  --danger-light: #F8EDED;
 
   --radius-sm: 8px;
   --radius-md: 16px;
   --radius-lg: 24px;
 
-  --shadow-sm: 0 2px 8px rgba(139, 129, 119, 0.05);
-  --shadow-md: 0 10px 30px rgba(139, 129, 119, 0.08);
-  --shadow-lg: 0 20px 45px rgba(139, 129, 119, 0.12);
+  --shadow-sm: 0 2px 8px rgba(108, 88, 76, 0.05);
+  --shadow-md: 0 10px 30px rgba(108, 88, 76, 0.08);
+  --shadow-lg: 0 20px 45px rgba(108, 88, 76, 0.12);
 
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Dark Mode Tokens - Warm Dark Bronze Theme */
+/* Dark Mode Tokens - Deep Roasted Cocoa Theme */
 .dark-theme {
-  --bg-app: hsl(24, 20%, 9%);            /* Dark espresso/ebony */
-  --bg-card: hsl(24, 20%, 13%);           /* Dark chocolate card */
-  --bg-hover: hsl(24, 15%, 18%);          /* Soft bronze hover */
-  --bg-badge: hsl(24, 15%, 22%);
-  --border-color: hsl(24, 12%, 24%);      /* Dark bronze border */
-  --border-color-hover: hsl(24, 12%, 32%);
+  --bg-app: #30241C;                      /* Deep cocoa dark background */
+  --bg-card: #3E3026;                     /* Dark roasted card background */
+  --bg-hover: #4E3E34;                    /* Bronze/brown hover */
+  --bg-badge: #5A493F;                    /* Muted brown badge */
+  --border-color: #4E3E34;                /* Dark border */
+  --border-color-hover: #EADBC8;
 
-  --text-title: hsl(38, 40%, 93%);        /* Creamy white */
-  --text-body: hsl(38, 20%, 78%);         /* Warm grey-beige */
-  --text-muted: hsl(38, 15%, 58%);        /* Muted sand */
+  --text-title: #FAF6F0;                  /* Soft cream white */
+  --text-body: #EADBC8;                   /* Soft warm beige */
+  --text-muted: #B4A497;                  /* Taupe gray-beige */
 
-  --primary: hsl(28, 75%, 54%);           /* Amber gold */
-  --primary-hover: hsl(28, 80%, 62%);
-  --primary-light: hsl(28, 40%, 20%);
-  --primary-glow: hsla(28, 75%, 54%, 0.25);
+  --primary: #EADBC8;                     /* Warm beige accent highlight */
+  --primary-hover: #FAF6F0;
+  --primary-light: #4E3E34;
+  --primary-glow: rgba(234, 219, 200, 0.2);
 
-  --success: hsl(135, 45%, 52%);
-  --success-light: hsl(135, 45%, 15%);
-  --success-border: hsl(135, 45%, 20%);
+  --success: #A3B57D;                     /* Lighter warm olive */
+  --success-light: #3E422C;
+  --success-border: #4E543A;
 
-  --warning: hsl(42, 85%, 52%);
-  --warning-light: hsl(42, 85%, 16%);
+  --warning: #D1B36E;
+  --warning-light: #443B27;
 
-  --danger: hsl(5, 75%, 58%);
-  --danger-light: hsl(5, 75%, 18%);
+  --danger: #D68678;
+  --danger-light: #4E2E2A;
 
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
-  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.6);
 }
 
 *, *::before, *::after {

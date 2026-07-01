@@ -1,0 +1,262 @@
+package com.example.back_end.service;
+
+import com.example.back_end.dto.request.GradeAttemptRequest;
+import com.example.back_end.dto.request.QuizSubmitRequest;
+import com.example.back_end.dto.response.QuizAttemptResponse;
+import com.example.back_end.entity.Quiz;
+import com.example.back_end.entity.QuizAnswer;
+import com.example.back_end.entity.QuizAttempt;
+import com.example.back_end.entity.QuizQuestion;
+import com.example.back_end.entity.User;
+import com.example.back_end.exception.AppException;
+import com.example.back_end.exception.ErrorCode;
+import com.example.back_end.repository.QuizAnswerRepository;
+import com.example.back_end.repository.QuizAttemptRepository;
+import com.example.back_end.repository.QuizQuestionRepository;
+import com.example.back_end.repository.QuizRepository;
+import com.example.back_end.repository.UserRepository;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class QuizAttemptService {
+
+    private final QuizAttemptRepository quizAttemptRepository;
+    private final QuizAnswerRepository quizAnswerRepository;
+    private final QuizRepository quizRepository;
+    private final QuizQuestionRepository quizQuestionRepository;
+    private final UserRepository userRepository;
+
+    private User getCurrentUser() {
+        String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    @Transactional
+    public QuizAttemptResponse submitAttempt(Long quizId, QuizSubmitRequest request) {
+        log.info("Submitting quiz attempt: quizId={}", quizId);
+        User student = getCurrentUser();
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        List<QuizQuestion> questions = quizQuestionRepository.findByQuizId(quizId);
+        
+        // Map submitted answers by questionId for fast retrieval
+        Map<Long, QuizSubmitRequest.AnswerSubmit> submittedMap = request.getAnswers().stream()
+                .collect(Collectors.toMap(
+                        QuizSubmitRequest.AnswerSubmit::getQuestionId,
+                        Function.identity(),
+                        (existing, replacement) -> existing
+                ));
+
+        // Create initial attempt record
+        boolean hasWritingQuestions = questions.stream()
+                .anyMatch(q -> "WRITING".equalsIgnoreCase(q.getQuestionType()));
+
+        QuizAttempt attempt = QuizAttempt.builder()
+                .quiz(quiz)
+                .student(student)
+                .startedAt(LocalDateTime.now().minusMinutes(quiz.getTimeLimitMins() != null ? quiz.getTimeLimitMins() : 10))
+                .submittedAt(LocalDateTime.now())
+                .totalQuestions(questions.size())
+                .correctCount(0)
+                .score(BigDecimal.ZERO)
+                .listeningScore(BigDecimal.ZERO)
+                .readingScore(BigDecimal.ZERO)
+                .writingScore(BigDecimal.ZERO)
+                .status(hasWritingQuestions ? "PENDING_GRADING" : "COMPLETED")
+                .build();
+
+        QuizAttempt savedAttempt = quizAttemptRepository.save(attempt);
+
+        BigDecimal listeningScore = BigDecimal.ZERO;
+        BigDecimal readingScore = BigDecimal.ZERO;
+        BigDecimal writingScore = BigDecimal.ZERO;
+        int correctCount = 0;
+        int totalTimeTakenMs = 0;
+
+        List<QuizAnswer> answersToSave = new ArrayList<>();
+
+        for (QuizQuestion question : questions) {
+            QuizSubmitRequest.AnswerSubmit subAnswer = submittedMap.get(question.getId());
+            String studentAnswerText = subAnswer != null ? subAnswer.getStudentAnswer() : "";
+            int timeTaken = subAnswer != null ? subAnswer.getTimeTakenMs() : 0;
+            totalTimeTakenMs += timeTaken;
+
+            QuizAnswer answer = QuizAnswer.builder()
+                    .attempt(savedAttempt)
+                    .question(question)
+                    .studentAnswer(studentAnswerText)
+                    .timeTakenMs(timeTaken)
+                    .build();
+
+            if ("MULTIPLE_CHOICE".equalsIgnoreCase(question.getQuestionType())) {
+                boolean isCorrect = question.getCorrectAnswer().trim().equalsIgnoreCase(studentAnswerText.trim());
+                answer.setIsCorrect(isCorrect);
+                BigDecimal points = isCorrect ? question.getPoints() : BigDecimal.ZERO;
+                answer.setPointsEarned(points);
+                
+                if (isCorrect) {
+                    correctCount++;
+                }
+
+                // Tallies
+                if ("LISTENING".equalsIgnoreCase(question.getSection())) {
+                    listeningScore = listeningScore.add(points);
+                } else if ("READING".equalsIgnoreCase(question.getSection())) {
+                    readingScore = readingScore.add(points);
+                } else if ("WRITING".equalsIgnoreCase(question.getSection())) {
+                    writingScore = writingScore.add(points);
+                }
+            } else {
+                // Essay needs grading
+                answer.setIsCorrect(null);
+                answer.setPointsEarned(null);
+            }
+
+            answersToSave.add(answer);
+        }
+
+        List<QuizAnswer> savedAnswers = quizAnswerRepository.saveAll(answersToSave);
+
+        // Update overall attempt stats
+        BigDecimal totalScore = listeningScore.add(readingScore).add(writingScore);
+        savedAttempt.setScore(totalScore);
+        savedAttempt.setListeningScore(listeningScore);
+        savedAttempt.setReadingScore(readingScore);
+        savedAttempt.setWritingScore(writingScore);
+        savedAttempt.setCorrectCount(correctCount);
+        savedAttempt.setTimeTakenSecs(totalTimeTakenMs / 1000);
+
+        QuizAttempt finalAttempt = quizAttemptRepository.save(savedAttempt);
+        return mapToResponse(finalAttempt, savedAnswers);
+    }
+
+    @Transactional
+    public QuizAttemptResponse gradeAttempt(Long attemptId, GradeAttemptRequest request) {
+        log.info("Grading attempt: id={}", attemptId);
+        QuizAttempt attempt = quizAttemptRepository.findById(attemptId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        Map<Long, QuizAnswer> answersMap = quizAnswerRepository.findByAttemptId(attemptId).stream()
+                .collect(Collectors.toMap(QuizAnswer::getId, Function.identity()));
+
+        for (GradeAttemptRequest.AnswerGrade grade : request.getGrades()) {
+            QuizAnswer answer = answersMap.get(grade.getAnswerId());
+            if (answer != null) {
+                answer.setPointsEarned(grade.getPointsEarned());
+                answer.setFeedback(grade.getFeedback());
+                // Mark correct if student earned any points
+                answer.setIsCorrect(grade.getPointsEarned().compareTo(BigDecimal.ZERO) > 0);
+                quizAnswerRepository.save(answer);
+            }
+        }
+
+        // Recalculate attempt scores
+        List<QuizAnswer> answers = quizAnswerRepository.findByAttemptId(attemptId);
+        BigDecimal listeningScore = BigDecimal.ZERO;
+        BigDecimal readingScore = BigDecimal.ZERO;
+        BigDecimal writingScore = BigDecimal.ZERO;
+        int correctCount = 0;
+
+        for (QuizAnswer ans : answers) {
+            BigDecimal points = ans.getPointsEarned() != null ? ans.getPointsEarned() : BigDecimal.ZERO;
+            if (Boolean.TRUE.equals(ans.getIsCorrect())) {
+                correctCount++;
+            }
+
+            if ("LISTENING".equalsIgnoreCase(ans.getQuestion().getSection())) {
+                listeningScore = listeningScore.add(points);
+            } else if ("READING".equalsIgnoreCase(ans.getQuestion().getSection())) {
+                readingScore = readingScore.add(points);
+            } else if ("WRITING".equalsIgnoreCase(ans.getQuestion().getSection())) {
+                writingScore = writingScore.add(points);
+            }
+        }
+
+        attempt.setListeningScore(listeningScore);
+        attempt.setReadingScore(readingScore);
+        attempt.setWritingScore(writingScore);
+        attempt.setScore(listeningScore.add(readingScore).add(writingScore));
+        attempt.setCorrectCount(correctCount);
+        attempt.setStatus("COMPLETED");
+
+        QuizAttempt gradedAttempt = quizAttemptRepository.save(attempt);
+        return mapToResponse(gradedAttempt, answers);
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuizAttemptResponse> getPendingAttempts() {
+        User teacher = getCurrentUser();
+        return quizAttemptRepository.findByQuizCreatorIdAndStatus(teacher.getId(), "PENDING_GRADING").stream()
+                .map(attempt -> {
+                    List<QuizAnswer> answers = quizAnswerRepository.findByAttemptId(attempt.getId());
+                    return mapToResponse(attempt, answers);
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuizAttemptResponse> getMyAttempts() {
+        User student = getCurrentUser();
+        return quizAttemptRepository.findByStudentId(student.getId()).stream()
+                .map(attempt -> {
+                    List<QuizAnswer> answers = quizAnswerRepository.findByAttemptId(attempt.getId());
+                    return mapToResponse(attempt, answers);
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public QuizAttemptResponse getAttemptDetails(Long attemptId) {
+        QuizAttempt attempt = quizAttemptRepository.findById(attemptId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+        List<QuizAnswer> answers = quizAnswerRepository.findByAttemptId(attemptId);
+        return mapToResponse(attempt, answers);
+    }
+
+    private QuizAttemptResponse mapToResponse(QuizAttempt attempt, List<QuizAnswer> answers) {
+        return QuizAttemptResponse.builder()
+                .id(attempt.getId())
+                .quizId(attempt.getQuiz().getId())
+                .quizTitle(attempt.getQuiz().getTitle())
+                .studentName(attempt.getStudent().getFullName() != null ? attempt.getStudent().getFullName() : attempt.getStudent().getUsername())
+                .score(attempt.getScore())
+                .totalQuestions(attempt.getTotalQuestions())
+                .correctCount(attempt.getCorrectCount())
+                .timeTakenSecs(attempt.getTimeTakenSecs())
+                .startedAt(attempt.getStartedAt())
+                .submittedAt(attempt.getSubmittedAt())
+                .listeningScore(attempt.getListeningScore())
+                .readingScore(attempt.getReadingScore())
+                .writingScore(attempt.getWritingScore())
+                .status(attempt.getStatus())
+                .answers(answers.stream().map(ans -> QuizAttemptResponse.AnswerResponse.builder()
+                        .id(ans.getId())
+                        .questionId(ans.getQuestion().getId())
+                        .questionText(ans.getQuestion().getQuestionText())
+                        .questionType(ans.getQuestion().getQuestionType())
+                        .studentAnswer(ans.getStudentAnswer())
+                        .isCorrect(ans.getIsCorrect())
+                        .timeTakenMs(ans.getTimeTakenMs())
+                        .pointsEarned(ans.getPointsEarned())
+                        .feedback(ans.getFeedback())
+                        .build()).collect(Collectors.toList()))
+                .build();
+    }
+}

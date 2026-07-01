@@ -6,54 +6,20 @@
           <span class="kr-char">한</span>
         </div>
         <h1>Study Korea</h1>
-        <p class="subtitle">Hệ thống học tiếng Hàn thông minh cho học viên</p>
+        <p class="subtitle">{{ isRegisterMode ? 'Đăng ký tài khoản học viên mới' : 'Hệ thống học tiếng Hàn cho học viên' }}</p>
       </div>
 
-      <!-- Quick Profiles Selection -->
-      <div class="profile-shortcuts">
-        <p class="section-label">Đăng nhập nhanh với tài khoản mẫu:</p>
-        <div class="shortcuts-grid">
-          <button 
-            type="button"
-            class="shortcut-btn" 
-            @click="selectQuickUser('student')"
-          >
-            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=128" alt="Nguyen Van An">
-            <div class="shortcut-info">
-              <span class="name">Nguyễn Văn An</span>
-              <span class="role">Học viên (Lớp 1A)</span>
-            </div>
-          </button>
-          
-          <button 
-            type="button" 
-            class="shortcut-btn"
-            @click="selectQuickUser('guest')"
-          >
-            <div class="guest-avatar">G</div>
-            <div class="shortcut-info">
-              <span class="name">Học viên Khách</span>
-              <span class="role">Tài khoản trải nghiệm</span>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <div class="divider">
-        <span>Hoặc nhập thông tin</span>
-      </div>
-
-      <!-- Credentials Form -->
-      <form @submit.prevent="handleLogin" class="login-form">
+      <!-- Login Form -->
+      <form v-if="!isRegisterMode" @submit.prevent="handleLogin" class="login-form">
         <div class="form-group">
-          <label for="email">Email học viên</label>
+          <label for="username">Tài khoản</label>
           <div class="input-wrapper">
-            <AppIcon name="email" class="input-icon" size="18" />
+            <AppIcon name="username" class="input-icon" size="18" />
             <input 
-              type="email" 
-              id="email" 
-              v-model="email" 
-              placeholder="tenhocvien@study-korea.edu.vn" 
+              type="text" 
+              id="username" 
+              v-model="username" 
+              placeholder="Hãy nhập tài khoản" 
               required
             >
           </div>
@@ -64,12 +30,20 @@
           <div class="input-wrapper">
             <AppIcon name="lock" class="input-icon" size="18" />
             <input 
-              type="password" 
+              :type="showPassword ? 'text' : 'password'" 
               id="password" 
               v-model="password" 
-              placeholder="••••••••" 
+              placeholder="Hãy nhập mật khẩu" 
               required
             >
+            <button 
+              type="button" 
+              class="eye-btn" 
+              @click="showPassword = !showPassword"
+              tabindex="-1"
+            >
+              <AppIcon :name="showPassword ? 'eye-off' : 'eye'" size="16" />
+            </button>
           </div>
         </div>
 
@@ -82,6 +56,147 @@
           <span v-if="!loading">Đăng Nhập</span>
           <span v-else class="loader"></span>
         </button>
+
+        <div class="toggle-mode">
+          Chưa có tài khoản? <a href="#" @click.prevent="toggleMode">Đăng ký ngay</a>
+        </div>
+      </form>
+
+      <!-- Register Form -->
+      <form v-else @submit.prevent="handleRegister" class="login-form">
+        <div class="form-group">
+          <label for="reg-fullName">Họ và tên</label>
+          <div class="input-wrapper">
+            <AppIcon name="user" class="input-icon" size="18" />
+            <input 
+              type="text" 
+              id="reg-fullName" 
+              v-model="regFullName" 
+              placeholder="Ví dụ: Nguyễn Văn An" 
+              required
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-username">Tên đăng nhập</label>
+          <div class="input-wrapper">
+            <AppIcon name="username" class="input-icon" size="18" />
+            <input 
+              type="text" 
+              id="reg-username" 
+              v-model="regUsername" 
+              placeholder="Ví dụ: vanan123" 
+              required
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-email">Email</label>
+          <div class="input-wrapper">
+            <AppIcon name="email" class="input-icon" size="18" />
+            <input 
+              type="email" 
+              id="reg-email" 
+              v-model="regEmail" 
+              placeholder="email@example.com" 
+              required
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-phone">Số điện thoại</label>
+          <div class="input-wrapper">
+            <AppIcon name="phone" class="input-icon" size="18" />
+            <input 
+              type="tel" 
+              id="reg-phone" 
+              v-model="regPhone" 
+              placeholder="Nhập số điện thoại (tùy chọn)"
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-role">Vai trò</label>
+          <div class="input-wrapper">
+            <AppIcon name="profile" class="input-icon" size="18" />
+            <select 
+              id="reg-role" 
+              v-model="regRole" 
+              class="role-select" 
+              required
+            >
+              <option value="STUDENT">Học viên (Student)</option>
+              <option value="TEACHER">Giáo viên (Teacher)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-password">Mật khẩu</label>
+          <div class="input-wrapper">
+            <AppIcon name="lock" class="input-icon" size="18" />
+            <input 
+              :type="showRegPassword ? 'text' : 'password'" 
+              id="reg-password" 
+              v-model="regPassword" 
+              placeholder="Tối thiểu 6 ký tự" 
+              required
+            >
+            <button 
+              type="button" 
+              class="eye-btn" 
+              @click="showRegPassword = !showRegPassword"
+              tabindex="-1"
+            >
+              <AppIcon :name="showRegPassword ? 'eye-off' : 'eye'" size="16" />
+            </button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="reg-confirm-password">Nhập lại mật khẩu</label>
+          <div class="input-wrapper">
+            <AppIcon name="lock" class="input-icon" size="18" />
+            <input 
+              :type="showRegConfirmPassword ? 'text' : 'password'" 
+              id="reg-confirm-password" 
+              v-model="regConfirmPassword" 
+              placeholder="Xác nhận mật khẩu của bạn" 
+              required
+            >
+            <button 
+              type="button" 
+              class="eye-btn" 
+              @click="showRegConfirmPassword = !showRegConfirmPassword"
+              tabindex="-1"
+            >
+              <AppIcon :name="showRegConfirmPassword ? 'eye-off' : 'eye'" size="16" />
+            </button>
+          </div>
+        </div>
+
+        <div v-if="errorMessage" class="error-box animate-scale">
+          <AppIcon name="alert" size="16" />
+          <span>{{ errorMessage }}</span>
+        </div>
+
+        <div v-if="successMessage" class="success-box animate-scale">
+          <AppIcon name="check" size="16" />
+          <span>{{ successMessage }}</span>
+        </div>
+
+        <button type="submit" class="submit-btn" :disabled="loading">
+          <span v-if="!loading">Đăng Ký</span>
+          <span v-else class="loader"></span>
+        </button>
+
+        <div class="toggle-mode">
+          Đã có tài khoản? <a href="#" @click.prevent="toggleMode">Đăng nhập</a>
+        </div>
       </form>
 
       <div class="login-footer">
@@ -92,62 +207,110 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import AppIcon from './icons/AppIcon.vue'
+import { useAuthStore } from '../stores/auth'
 
 const emit = defineEmits(['login-success'])
 
-const email = ref('')
-const password = ref('')
-const errorMessage = ref('')
-const loading = ref(false)
+const authStore = useAuthStore()
 
-const handleLogin = () => {
-  if (!email.value || !password.value) {
-    errorMessage.value = 'Vui lòng điền đầy đủ email và mật khẩu.'
+// Mode toggle
+const isRegisterMode = ref(false)
+const successMessage = ref('')
+
+// Password eye toggles
+const showPassword = ref(false)
+const showRegPassword = ref(false)
+const showRegConfirmPassword = ref(false)
+
+// Login fields
+const username = ref('')
+const password = ref('')
+
+// Register fields
+const regFullName = ref('')
+const regUsername = ref('')
+const regEmail = ref('')
+const regPhone = ref('')
+const regRole = ref('STUDENT')
+const regPassword = ref('')
+const regConfirmPassword = ref('')
+
+const errorMessage = computed(() => authStore.errorMessage)
+const loading = computed(() => authStore.loading)
+
+const toggleMode = () => {
+  isRegisterMode.value = !isRegisterMode.value
+  authStore.errorMessage = ''
+  successMessage.value = ''
+  // Clear fields
+  username.value = ''
+  password.value = ''
+  regFullName.value = ''
+  regUsername.value = ''
+  regEmail.value = ''
+  regPhone.value = ''
+  regRole.value = 'STUDENT'
+  regPassword.value = ''
+  regConfirmPassword.value = ''
+  
+  // Clear eye states
+  showPassword.value = false
+  showRegPassword.value = false
+  showRegConfirmPassword.value = false
+}
+
+const handleLogin = async () => {
+  if (!username.value || !password.value) {
+    authStore.errorMessage = 'Vui lòng điền đầy đủ tài khoản và mật khẩu.'
     return
   }
 
-  loading.value = true
-  errorMessage.value = ''
-
-  // Simulate api response
-  setTimeout(() => {
-    loading.value = false
-    if (email.value === 'vanan.student@study-korea.edu.vn') {
-      emit('login-success', {
-        name: "Nguyễn Văn An",
-        email: "vanan.student@study-korea.edu.vn",
-        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256",
-        level: "Sơ cấp 1A (Beginner)",
-        streak: 5,
-        xp: 1250,
-        isGuest: false
-      })
-    } else {
-      // Allow general logins for simulation
-      emit('login-success', {
-        name: email.value.split('@')[0],
-        email: email.value,
-        avatar: "",
-        level: "Tài khoản Khách",
-        streak: 1,
-        xp: 100,
-        isGuest: true
-      })
-    }
-  }, 1000)
+  try {
+    const userData = await authStore.login(username.value, password.value)
+    emit('login-success', userData)
+  } catch (error) {
+    console.error("Đăng nhập thất bại:", error)
+  }
 }
 
-const selectQuickUser = (role) => {
-  if (role === 'student') {
-    email.value = 'vanan.student@study-korea.edu.vn'
-    password.value = '123456'
-    handleLogin()
-  } else {
-    email.value = 'hocvien.khach@gmail.com'
-    password.value = '123456'
-    handleLogin()
+const handleRegister = async () => {
+  if (!regFullName.value || !regUsername.value || !regEmail.value || !regPassword.value || !regConfirmPassword.value) {
+    authStore.errorMessage = 'Vui lòng điền đầy đủ các thông tin bắt buộc.'
+    return
+  }
+
+  if (regPassword.value.length < 6) {
+    authStore.errorMessage = 'Mật khẩu phải có tối thiểu 6 ký tự.'
+    return
+  }
+
+  if (regPassword.value !== regConfirmPassword.value) {
+    authStore.errorMessage = 'Mật khẩu nhập lại không khớp.'
+    return
+  }
+
+  try {
+    const payload = {
+      fullName: regFullName.value,
+      username: regUsername.value,
+      email: regEmail.value,
+      phone: regPhone.value || null,
+      password: regPassword.value,
+      role: regRole.value
+    }
+
+    await authStore.register(payload)
+
+    successMessage.value = 'Đăng ký tài khoản thành công! Tự động chuyển về trang Đăng nhập...'
+    authStore.errorMessage = ''
+
+    setTimeout(() => {
+      toggleMode()
+    }, 2000)
+  } catch (error) {
+    console.error("Đăng ký thất bại:", error)
   }
 }
 </script>
@@ -333,16 +496,53 @@ h1 {
 
 .input-wrapper input {
   width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.5rem;
+  padding: 0.75rem 2.5rem 0.75rem 2.5rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   background-color: var(--bg-card);
+  color: var(--text-title);
   transition: all var(--transition-fast);
+}
+
+.role-select {
+  width: 100%;
+  padding: 0.75rem 2.5rem 0.75rem 2.5rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-title);
+  appearance: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.role-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-glow);
 }
 
 .input-wrapper input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-glow);
+}
+
+.eye-btn {
+  position: absolute;
+  right: 4px;
+  background: none;
+  border: none;
+  padding: 0 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  transition: color var(--transition-fast);
+}
+
+.eye-btn:hover {
+  color: var(--primary);
 }
 
 .error-box {
@@ -355,6 +555,37 @@ h1 {
   border-radius: var(--radius-md);
   color: var(--danger);
   font-size: 0.85rem;
+}
+
+.success-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgb(16, 185, 129);
+  border-radius: var(--radius-md);
+  color: rgb(16, 185, 129);
+  font-size: 0.85rem;
+}
+
+.toggle-mode {
+  text-align: center;
+  margin-top: 1.25rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.toggle-mode a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color var(--transition-fast);
+}
+
+.toggle-mode a:hover {
+  color: var(--primary-hover);
+  text-decoration: underline;
 }
 
 .submit-btn {

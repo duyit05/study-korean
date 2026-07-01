@@ -514,7 +514,70 @@ const emit = defineEmits(['submit-quiz'])
 const activeTab = ref('reading') // reading, listening, completed
 
 // Practice / Custom Quiz States
-const practiceQuizzes = ref([])
+const practiceQuizzes = ref([
+  {
+    id: "practice-seed-reading",
+    title: "Đề tự luyện Đọc: Từ vựng Động từ cơ bản 📖",
+    quizType: "reading",
+    status: "not_started",
+    points: 10,
+    score: null,
+    timeLimit: 10,
+    completedAt: null,
+    questions: [
+      {
+        id: "pq-reading-1",
+        type: "choice",
+        question: "Từ '일어나다' trong tiếng Hàn có nghĩa là gì?",
+        options: ["A. Đi làm", "B. Thức dậy", "C. Ăn cơm", "D. Thể dục"],
+        correctAnswer: "B. Thức dậy",
+        explanation: "일어나다 nghĩa là Thức dậy."
+      },
+      {
+        id: "pq-reading-2",
+        type: "choice",
+        question: "Từ nào có nghĩa là 'Học tập'?",
+        options: ["A. 운동하다", "B. 공부하다", "C. 세수하다", "D. 일하다"],
+        correctAnswer: "B. 공부하다",
+        explanation: "공부하다 nghĩa là Học tập."
+      }
+    ]
+  },
+  {
+    id: "practice-seed-listening",
+    title: "Đề thi thử Nghe: TOEIC Hàn ngữ Part 1 🎧",
+    quizType: "listening",
+    status: "not_started",
+    points: 10,
+    score: null,
+    timeLimit: 10,
+    completedAt: null,
+    questions: [
+      {
+        id: "pq-listening-1",
+        type: "listening",
+        question: "Hãy nghe đoạn âm thanh tiếng Hàn sau và chọn ý nghĩa chính xác:",
+        koreanText: "오늘 날씨가 아주 따뜻합니다",
+        audioSource: "tts",
+        audioUrl: "",
+        options: ["A. Thời tiết hôm nay rất lạnh.", "B. Thời tiết hôm nay rất ấm áp.", "C. Thời tiết hôm nay mát mẻ.", "D. Hôm nay trời mưa lớn."],
+        correctAnswer: "B. Thời tiết hôm nay rất ấm áp.",
+        explanation: "Âm thanh tiếng Hàn nói: '오늘 날씨가 아주 따뜻합니다' (Thời tiết hôm nay rất ấm áp)."
+      },
+      {
+        id: "pq-listening-2",
+        type: "listening",
+        question: "Hãy nghe phát âm và chọn động từ mô tả hành động tương ứng:",
+        koreanText: "세수하다",
+        audioSource: "tts",
+        audioUrl: "",
+        options: ["A. Rửa mặt", "B. Thức dậy", "C. Đi ngủ", "D. Ăn cơm"],
+        correctAnswer: "A. Rửa mặt",
+        explanation: "Từ nghe được là '세수하다', nghĩa là Rửa mặt."
+      }
+    ]
+  }
+])
 const isCreatingQuiz = ref(false)
 const creatorQuizType = ref('reading') // reading or listening
 const newQuizTitle = ref('')
@@ -546,95 +609,7 @@ const currentQuestion = computed(() => {
 })
 
 onMounted(() => {
-  // Load custom quizzes from localStorage
-  const savedPractice = localStorage.getItem('sk_practice_quizzes')
-  if (savedPractice) {
-    try {
-      const parsed = JSON.parse(savedPractice)
-      if (Array.isArray(parsed)) {
-        // Migrate old practice quizzes to have quizType if missing
-        practiceQuizzes.value = parsed.map(pq => {
-          if (!pq.quizType) {
-            const hasListening = pq.questions && pq.questions.some(q => q.type === 'listening')
-            pq.quizType = hasListening ? 'listening' : 'reading'
-          }
-          return pq
-        })
-      } else {
-        practiceQuizzes.value = []
-      }
-    } catch (e) {
-      practiceQuizzes.value = []
-    }
-  } else {
-    // Seed default custom practice quizzes
-    const seedPractice = [
-      {
-        id: "practice-seed-reading",
-        title: "Đề tự luyện Đọc: Từ vựng Động từ cơ bản 📖",
-        quizType: "reading",
-        status: "not_started",
-        points: 10,
-        score: null,
-        timeLimit: 10,
-        completedAt: null,
-        questions: [
-          {
-            id: "pq-reading-1",
-            type: "choice",
-            question: "Từ '일어나다' trong tiếng Hàn có nghĩa là gì?",
-            options: ["A. Đi làm", "B. Thức dậy", "C. Ăn cơm", "D. Thể dục"],
-            correctAnswer: "B. Thức dậy",
-            explanation: "일어나다 nghĩa là Thức dậy."
-          },
-          {
-            id: "pq-reading-2",
-            type: "choice",
-            question: "Từ nào có nghĩa là 'Học tập'?",
-            options: ["A. 운동하다", "B. 공부하다", "C. 세수하다", "D. 일하다"],
-            correctAnswer: "B. 공부하다",
-            explanation: "공부하다 nghĩa là Học tập."
-          }
-        ]
-      },
-      {
-        id: "practice-seed-listening",
-        title: "Đề thi thử Nghe: TOEIC Hàn ngữ Part 1 🎧",
-        quizType: "listening",
-        status: "not_started",
-        points: 10,
-        score: null,
-        timeLimit: 10,
-        completedAt: null,
-        questions: [
-          {
-            id: "pq-listening-1",
-            type: "listening",
-            question: "Hãy nghe đoạn âm thanh tiếng Hàn sau và chọn ý nghĩa chính xác:",
-            koreanText: "오늘 날씨가 아주 따뜻합니다",
-            audioSource: "tts",
-            audioUrl: "",
-            options: ["A. Thời tiết hôm nay rất lạnh.", "B. Thời tiết hôm nay rất ấm áp.", "C. Thời tiết hôm nay mát mẻ.", "D. Hôm nay trời mưa lớn."],
-            correctAnswer: "B. Thời tiết hôm nay rất ấm áp.",
-            explanation: "Âm thanh tiếng Hàn nói: '오늘 날씨가 아주 따뜻합니다' (Thời tiết hôm nay rất ấm áp)."
-          },
-          {
-            id: "pq-listening-2",
-            type: "listening",
-            question: "Hãy nghe phát âm và chọn động từ mô tả hành động tương ứng:",
-            koreanText: "세수하다",
-            audioSource: "tts",
-            audioUrl: "",
-            options: ["A. Rửa mặt", "B. Thức dậy", "C. Đi ngủ", "D. Ăn cơm"],
-            correctAnswer: "A. Rửa mặt",
-            explanation: "Từ nghe được là '세수하다', nghĩa là Rửa mặt."
-          }
-        ]
-      }
-    ]
-    practiceQuizzes.value = seedPractice
-    localStorage.setItem('sk_practice_quizzes', JSON.stringify(seedPractice))
-  }
+  // Practice quizzes are initialized directly in memory. LocalStorage access is bypassed to prevent sandbox browser security blocks.
 })
 
 // Categories lists - heavily guarded
@@ -1015,7 +990,6 @@ const saveCustomQuiz = () => {
   }
 
   practiceQuizzes.value.push(newQuiz)
-  localStorage.setItem('sk_practice_quizzes', JSON.stringify(practiceQuizzes.value))
 
   isCreatingQuiz.value = false
   activeTab.value = creatorQuizType.value
@@ -1024,7 +998,6 @@ const saveCustomQuiz = () => {
 const deletePracticeQuiz = (quizId) => {
   if (confirm("Bạn có chắc chắn muốn xóa bài thi tự luyện này không?")) {
     practiceQuizzes.value = practiceQuizzes.value.filter(q => q.id !== quizId)
-    localStorage.setItem('sk_practice_quizzes', JSON.stringify(practiceQuizzes.value))
   }
 }
 
@@ -1034,26 +1007,36 @@ onUnmounted(() => {
   stopAudio()
 })
 
-// Date formats
+// Date formats (safe guarded against RangeError)
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return date.toLocaleString('vi-VN', { 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    day: '2-digit', 
-    month: '2-digit'
-  })
+  try {
+    const date = new Date(dateStr)
+    if (isNaN(date.getTime())) return dateStr || ''
+    return date.toLocaleString('vi-VN', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      day: '2-digit', 
+      month: '2-digit'
+    })
+  } catch (e) {
+    return dateStr || ''
+  }
 }
 
 const formatDateShort = (dateStr) => {
   if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('vi-VN', { 
-    day: '2-digit', 
-    month: '2-digit',
-    year: 'numeric'
-  })
+  try {
+    const date = new Date(dateStr)
+    if (isNaN(date.getTime())) return dateStr || ''
+    return date.toLocaleDateString('vi-VN', { 
+      day: '2-digit', 
+      month: '2-digit',
+      year: 'numeric'
+    })
+  } catch (e) {
+    return dateStr || ''
+  }
 }
 </script>
 
@@ -1517,7 +1500,6 @@ const formatDateShort = (dateStr) => {
 .active-quiz-container {
   width: 100%;
   max-width: 680px;
-  height: 620px;
   margin: 0 auto;
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
