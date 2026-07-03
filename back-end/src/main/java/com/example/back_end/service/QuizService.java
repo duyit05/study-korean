@@ -18,7 +18,7 @@ import com.example.back_end.repository.QuizAttemptRepository;
 import com.example.back_end.repository.QuizAnswerRepository;
 import com.example.back_end.entity.QuizAttempt;
 import com.example.back_end.entity.QuizAnswer;
-import org.springframework.security.core.context.SecurityContextHolder;
+import com.example.back_end.mapper.QuizMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,20 +36,15 @@ public class QuizService {
     private final QuizRepository quizRepository;
     private final QuizQuestionRepository quizQuestionRepository;
     private final ClassRepository classRepository;
-    private final UserRepository userRepository;
     private final QuizAttemptRepository quizAttemptRepository;
     private final QuizAnswerRepository quizAnswerRepository;
-
-    private User getCurrentUser() {
-        String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-    }
+    private final UserService userService;
+    private final QuizMapper quizMapper;
 
     @Transactional
     public QuizResponse createQuiz(QuizRequest request) {
         log.info("Creating quiz: {}", request.getTitle());
-        User creator = getCurrentUser();
+        User creator = userService.getCurrentUser();
         Class clazz = null;
         if (request.getClassId() != null) {
             clazz = classRepository.findById(request.getClassId())
@@ -68,7 +63,7 @@ public class QuizService {
                 .build();
 
         Quiz savedQuiz = quizRepository.save(quiz);
-        return mapToQuizResponse(savedQuiz, List.of());
+        return quizMapper.toResponse(savedQuiz, List.of());
     }
 
     @Transactional
@@ -94,7 +89,7 @@ public class QuizService {
                 .build();
 
         QuizQuestion savedQuestion = quizQuestionRepository.save(question);
-        return mapToQuestionResponse(savedQuestion);
+        return quizMapper.toQuestionResponse(savedQuestion);
     }
 
     @Transactional(readOnly = true)
@@ -102,7 +97,7 @@ public class QuizService {
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
         List<QuizQuestion> questions = quizQuestionRepository.findByQuizIdOrderByOrderAsc(quizId);
-        return mapToQuizResponse(quiz, questions);
+        return quizMapper.toResponse(quiz, questions);
     }
 
     @Transactional(readOnly = true)
@@ -110,18 +105,18 @@ public class QuizService {
         return quizRepository.findByClazzId(classId).stream()
                 .map(quiz -> {
                     List<QuizQuestion> questions = quizQuestionRepository.findByQuizIdOrderByOrderAsc(quiz.getId());
-                    return mapToQuizResponse(quiz, questions);
+                    return quizMapper.toResponse(quiz, questions);
                 })
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<QuizResponse> getMyCreatedQuizzes() {
-        User creator = getCurrentUser();
+        User creator = userService.getCurrentUser();
         return quizRepository.findByCreatorId(creator.getId()).stream()
                 .map(quiz -> {
                     List<QuizQuestion> questions = quizQuestionRepository.findByQuizIdOrderByOrderAsc(quiz.getId());
-                    return mapToQuizResponse(quiz, questions);
+                    return quizMapper.toResponse(quiz, questions);
                 })
                 .collect(Collectors.toList());
     }
@@ -157,7 +152,7 @@ public class QuizService {
 
         Quiz savedQuiz = quizRepository.save(quiz);
         List<QuizQuestion> questions = quizQuestionRepository.findByQuizIdOrderByOrderAsc(id);
-        return mapToQuizResponse(savedQuiz, questions);
+        return quizMapper.toResponse(savedQuiz, questions);
     }
 
     @Transactional
@@ -184,34 +179,5 @@ public class QuizService {
         quizRepository.delete(quiz);
     }
 
-    private QuizResponse mapToQuizResponse(Quiz quiz, List<QuizQuestion> questions) {
-        return QuizResponse.builder()
-                .id(quiz.getId())
-                .title(quiz.getTitle())
-                .quizType(quiz.getQuizType() != null ? quiz.getQuizType().name() : null)
-                .topikLevel(quiz.getTopikLevel())
-                .timeLimitMins(quiz.getTimeLimitMins())
-                .totalScore(quiz.getTotalScore())
-                .dueDate(quiz.getDueDate())
-                .createdAt(quiz.getCreatedAt())
-                .questions(questions.stream().map(this::mapToQuestionResponse).collect(Collectors.toList()))
-                .build();
-    }
 
-    private QuizResponse.QuestionResponse mapToQuestionResponse(QuizQuestion q) {
-        return QuizResponse.QuestionResponse.builder()
-                .id(q.getId())
-                .questionText(q.getQuestionText())
-                .questionType(q.getQuestionType())
-                .order(q.getOrder())
-                .koreanText(q.getKoreanText())
-                .audioUrl(q.getAudioUrl())
-                .audioSource(q.getAudioSource())
-                .section(q.getSection())
-                .points(q.getPoints())
-                .explanation(q.getExplanation())
-                .correctAnswer(q.getCorrectAnswer())
-                .wrongAnswers(q.getWrongAnswers())
-                .build();
-    }
 }

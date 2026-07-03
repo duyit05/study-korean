@@ -100,7 +100,7 @@ public class UserService {
                 .build();
     }
 
-    private User getCurrentUser() {
+    public User getCurrentUser() {
         String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));

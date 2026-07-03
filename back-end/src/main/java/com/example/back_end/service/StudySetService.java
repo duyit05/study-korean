@@ -1,11 +1,15 @@
 package com.example.back_end.service;
 
+import com.example.back_end.dto.request.StudySetRequest;
+import com.example.back_end.dto.request.CardRequest;
+import com.example.back_end.dto.response.StudySetResponse;
 import com.example.back_end.entity.Card;
 import com.example.back_end.entity.StudySet;
 import com.example.back_end.entity.User;
 import com.example.back_end.enums.CardType;
 import com.example.back_end.exception.AppException;
 import com.example.back_end.exception.ErrorCode;
+import com.example.back_end.mapper.StudySetMapper;
 import com.example.back_end.repository.CardRepository;
 import com.example.back_end.repository.StudySetRepository;
 import org.springframework.stereotype.Service;
@@ -15,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,10 +28,17 @@ public class StudySetService {
 
     private final StudySetRepository studySetRepository;
     private final CardRepository cardRepository;
+    private final UserService userService;
+    private final StudySetMapper studySetMapper;
 
     @Transactional(readOnly = true)
-    public List<StudySet> getAllStudySets() {
-        return studySetRepository.findAll();
+    public List<StudySetResponse> getAllStudySets() {
+        return studySetRepository.findAll().stream()
+                .map(set -> {
+                    List<Card> cards = cardRepository.findByStudySetIdOrderByOrderAsc(set.getId());
+                    return studySetMapper.toResponse(set, cards);
+                })
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
@@ -35,20 +47,22 @@ public class StudySetService {
     }
 
     @Transactional
-    public StudySet createStudySet(String title, String description, String category, User creator) {
-        log.info("Creating study set: {}", title);
+    public StudySetResponse createStudySet(StudySetRequest request) {
+        User creator = userService.getCurrentUser();
+        log.info("Creating study set: {}", request.getTitle());
         StudySet studySet = StudySet.builder()
-                .title(title)
-                .description(description)
-                .category(category)
+                .title(request.getTitle())
+                .description(request.getDescription())
+                .category(request.getCategory())
                 .creator(creator)
                 .isPublic(true)
                 .build();
-        return studySetRepository.save(studySet);
+        StudySet saved = studySetRepository.save(studySet);
+        return studySetMapper.toResponse(saved, List.of());
     }
 
     @Transactional
-    public Card addCardToStudySet(Long studySetId, String frontText, String backText, String exampleSentence) {
+    public StudySetResponse.CardResponse addCardToStudySet(Long studySetId, CardRequest request) {
         log.info("Adding card to study set: {}", studySetId);
         StudySet studySet = studySetRepository.findById(studySetId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
@@ -59,14 +73,15 @@ public class StudySetService {
         Card card = Card.builder()
                 .studySet(studySet)
                 .cardType(CardType.VOCAB)
-                .frontText(frontText)
-                .backText(backText)
-                .exampleSentence(exampleSentence)
+                .frontText(request.getFrontText())
+                .backText(request.getBackText())
+                .exampleSentence(request.getExampleSentence())
                 .order(nextOrder)
                 .difficulty(1)
                 .build();
 
-        return cardRepository.save(card);
+        Card saved = cardRepository.save(card);
+        return studySetMapper.toCardResponse(saved);
     }
 
     @Transactional
@@ -80,14 +95,16 @@ public class StudySetService {
     }
 
     @Transactional
-    public StudySet updateStudySet(Long id, String title, String description, String category) {
-        log.info("Updating study set: id={}, title={}", id, title);
+    public StudySetResponse updateStudySet(Long id, StudySetRequest request) {
+        log.info("Updating study set: id={}, title={}", id, request.getTitle());
         StudySet studySet = studySetRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
-        studySet.setTitle(title);
-        studySet.setDescription(description);
-        studySet.setCategory(category);
-        return studySetRepository.save(studySet);
+        studySet.setTitle(request.getTitle());
+        studySet.setDescription(request.getDescription());
+        studySet.setCategory(request.getCategory());
+        StudySet saved = studySetRepository.save(studySet);
+        List<Card> cards = cardRepository.findByStudySetIdOrderByOrderAsc(id);
+        return studySetMapper.toResponse(saved, cards);
     }
 
     @Transactional

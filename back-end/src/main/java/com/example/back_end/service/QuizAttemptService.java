@@ -15,7 +15,7 @@ import com.example.back_end.repository.QuizAttemptRepository;
 import com.example.back_end.repository.QuizQuestionRepository;
 import com.example.back_end.repository.QuizRepository;
 import com.example.back_end.repository.UserRepository;
-import org.springframework.security.core.context.SecurityContextHolder;
+import com.example.back_end.mapper.QuizAttemptMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,30 +39,24 @@ public class QuizAttemptService {
     private final QuizAnswerRepository quizAnswerRepository;
     private final QuizRepository quizRepository;
     private final QuizQuestionRepository quizQuestionRepository;
-    private final UserRepository userRepository;
-
-    private User getCurrentUser() {
-        String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
-    }
+    private final UserService userService;
+    private final QuizAttemptMapper quizAttemptMapper;
 
     @Transactional
     public QuizAttemptResponse submitAttempt(Long quizId, QuizSubmitRequest request) {
         log.info("Submitting quiz attempt: quizId={}", quizId);
-        User student = getCurrentUser();
+        User student = userService.getCurrentUser();
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
         List<QuizQuestion> questions = quizQuestionRepository.findByQuizId(quizId);
-        
+
         // Map submitted answers by questionId for fast retrieval
         Map<Long, QuizSubmitRequest.AnswerSubmit> submittedMap = request.getAnswers().stream()
                 .collect(Collectors.toMap(
                         QuizSubmitRequest.AnswerSubmit::getQuestionId,
                         Function.identity(),
-                        (existing, replacement) -> existing
-                ));
+                        (existing, replacement) -> existing));
 
         // Create initial attempt record
         boolean hasWritingQuestions = questions.stream()
@@ -71,7 +65,8 @@ public class QuizAttemptService {
         QuizAttempt attempt = QuizAttempt.builder()
                 .quiz(quiz)
                 .student(student)
-                .startedAt(LocalDateTime.now().minusMinutes(quiz.getTimeLimitMins() != null ? quiz.getTimeLimitMins() : 10))
+                .startedAt(LocalDateTime.now()
+                        .minusMinutes(quiz.getTimeLimitMins() != null ? quiz.getTimeLimitMins() : 10))
                 .submittedAt(LocalDateTime.now())
                 .totalQuestions(questions.size())
                 .correctCount(0)
@@ -110,7 +105,7 @@ public class QuizAttemptService {
                 answer.setIsCorrect(isCorrect);
                 BigDecimal points = isCorrect ? question.getPoints() : BigDecimal.ZERO;
                 answer.setPointsEarned(points);
-                
+
                 if (isCorrect) {
                     correctCount++;
                 }
@@ -144,7 +139,7 @@ public class QuizAttemptService {
         savedAttempt.setTimeTakenSecs(totalTimeTakenMs / 1000);
 
         QuizAttempt finalAttempt = quizAttemptRepository.save(savedAttempt);
-        return mapToResponse(finalAttempt, savedAnswers);
+        return quizAttemptMapper.toResponse(finalAttempt, savedAnswers);
     }
 
     @Transactional
@@ -197,27 +192,27 @@ public class QuizAttemptService {
         attempt.setStatus("COMPLETED");
 
         QuizAttempt gradedAttempt = quizAttemptRepository.save(attempt);
-        return mapToResponse(gradedAttempt, answers);
+        return quizAttemptMapper.toResponse(gradedAttempt, answers);
     }
 
     @Transactional(readOnly = true)
     public List<QuizAttemptResponse> getPendingAttempts() {
-        User teacher = getCurrentUser();
+        User teacher = userService.getCurrentUser();
         return quizAttemptRepository.findByQuizCreatorIdAndStatus(teacher.getId(), "PENDING_GRADING").stream()
                 .map(attempt -> {
                     List<QuizAnswer> answers = quizAnswerRepository.findByAttemptId(attempt.getId());
-                    return mapToResponse(attempt, answers);
+                    return quizAttemptMapper.toResponse(attempt, answers);
                 })
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<QuizAttemptResponse> getMyAttempts() {
-        User student = getCurrentUser();
+        User student = userService.getCurrentUser();
         return quizAttemptRepository.findByStudentId(student.getId()).stream()
                 .map(attempt -> {
                     List<QuizAnswer> answers = quizAnswerRepository.findByAttemptId(attempt.getId());
-                    return mapToResponse(attempt, answers);
+                    return quizAttemptMapper.toResponse(attempt, answers);
                 })
                 .collect(Collectors.toList());
     }
@@ -227,36 +222,6 @@ public class QuizAttemptService {
         QuizAttempt attempt = quizAttemptRepository.findById(attemptId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
         List<QuizAnswer> answers = quizAnswerRepository.findByAttemptId(attemptId);
-        return mapToResponse(attempt, answers);
-    }
-
-    private QuizAttemptResponse mapToResponse(QuizAttempt attempt, List<QuizAnswer> answers) {
-        return QuizAttemptResponse.builder()
-                .id(attempt.getId())
-                .quizId(attempt.getQuiz().getId())
-                .quizTitle(attempt.getQuiz().getTitle())
-                .studentName(attempt.getStudent().getFullName() != null ? attempt.getStudent().getFullName() : attempt.getStudent().getUsername())
-                .score(attempt.getScore())
-                .totalQuestions(attempt.getTotalQuestions())
-                .correctCount(attempt.getCorrectCount())
-                .timeTakenSecs(attempt.getTimeTakenSecs())
-                .startedAt(attempt.getStartedAt())
-                .submittedAt(attempt.getSubmittedAt())
-                .listeningScore(attempt.getListeningScore())
-                .readingScore(attempt.getReadingScore())
-                .writingScore(attempt.getWritingScore())
-                .status(attempt.getStatus())
-                .answers(answers.stream().map(ans -> QuizAttemptResponse.AnswerResponse.builder()
-                        .id(ans.getId())
-                        .questionId(ans.getQuestion().getId())
-                        .questionText(ans.getQuestion().getQuestionText())
-                        .questionType(ans.getQuestion().getQuestionType())
-                        .studentAnswer(ans.getStudentAnswer())
-                        .isCorrect(ans.getIsCorrect())
-                        .timeTakenMs(ans.getTimeTakenMs())
-                        .pointsEarned(ans.getPointsEarned())
-                        .feedback(ans.getFeedback())
-                        .build()).collect(Collectors.toList()))
-                .build();
+        return quizAttemptMapper.toResponse(attempt, answers);
     }
 }
