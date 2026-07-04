@@ -19,6 +19,7 @@ import TeacherClasses from '../components/teacher/TeacherClasses.vue';
 import TeacherVocabulary from '../components/teacher/TeacherVocabulary.vue';
 import TeacherQuizzes from '../components/teacher/TeacherQuizzes.vue';
 import TeacherGrading from '../components/teacher/TeacherGrading.vue';
+import TeacherTopikLevels from '../components/teacher/TeacherTopikLevels.vue';
 
 const routes = [
   {
@@ -58,7 +59,8 @@ const routes = [
       { path: 'classes', name: 'TeacherClasses', component: TeacherClasses },
       { path: 'vocabulary', name: 'TeacherVocabulary', component: TeacherVocabulary },
       { path: 'quizzes', name: 'TeacherQuizzes', component: TeacherQuizzes },
-      { path: 'grading', name: 'TeacherGrading', component: TeacherGrading }
+      { path: 'grading', name: 'TeacherGrading', component: TeacherGrading },
+      { path: 'topik-levels', name: 'TeacherTopikLevels', component: TeacherTopikLevels }
     ]
   },
   {

@@ -123,10 +123,10 @@
           </div>
           <div class="form-group">
             <label for="quizLevel">Dạng đề thi (TOPIK)</label>
-            <select id="quizLevel" v-model="newQuizLevel">
-              <option value="TOPIK_I">TOPIK I (Nghe & Đọc - 200đ)</option>
-              <option value="TOPIK_II">TOPIK II (Nghe, Đọc & Viết - 300đ)</option>
-              <option value="NORMAL">Luyện tập thường</option>
+            <select id="quizLevel" v-model="newQuizLevelId">
+              <option v-for="level in topikLevels" :key="level.id" :value="level.id">
+                {{ level.name }}
+              </option>
             </select>
           </div>
           <div class="form-group">
@@ -253,11 +253,10 @@
           <div class="form-row-2">
             <div class="form-group">
               <label for="editQuizLevel">Cấp độ (TOPIK)</label>
-              <select id="editQuizLevel" v-model="editQuizLevel">
-                <option value="TOPIK_I">TOPIK I (Sơ cấp)</option>
-                <option value="TOPIK_II">TOPIK II (Trung/Cao cấp)</option>
-                <option value="Lớp 1A">Lớp 1A</option>
-                <option value="Lớp 1B">Lớp 1B</option>
+              <select id="editQuizLevel" v-model="editQuizLevelId">
+                <option v-for="level in topikLevels" :key="level.id" :value="level.id">
+                  {{ level.name }}
+                </option>
               </select>
             </div>
             <div class="form-group">
@@ -309,10 +308,11 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
 import { useQuizStore } from '../../stores/quiz'
 import { useStudySetStore } from '../../stores/studySet'
+import { useTopikLevelStore } from '../../stores/topikLevel'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
@@ -325,6 +325,7 @@ const props = defineProps({
 
 const quizStore = useQuizStore()
 const studySetStore = useStudySetStore()
+const topikLevelStore = useTopikLevelStore()
 
 const classesList = computed(() => studySetStore.classes || [])
 
@@ -332,9 +333,25 @@ const selectedQuiz = ref(null)
 const showCreateModal = ref(false)
 const showAddQuestionModal = ref(false)
 
+// TOPIK levels loaded from Pinia Store
+const topikLevels = computed(() => (topikLevelStore.levels || []).filter(l => l.groupType === 'QUIZ'))
+const newQuizLevelId = ref(null)
+const editQuizLevelId = ref(null)
+
+onMounted(async () => {
+  try {
+    await topikLevelStore.fetchLevels()
+    if (topikLevels.value.length > 0) {
+      newQuizLevelId.value = topikLevels.value[0].id
+      editQuizLevelId.value = topikLevels.value[0].id
+    }
+  } catch (err) {
+    console.error("Failed to load TOPIK levels:", err)
+  }
+})
+
 // New Quiz Fields
 const newQuizTitle = ref('')
-const newQuizLevel = ref('TOPIK_I')
 const newQuizTime = ref(100)
 const newQuizDueDate = ref('')
 const newQuizClassId = ref(null)
@@ -361,7 +378,7 @@ const getSectionLabel = (sec) => {
 
 const openCreateQuizModal = () => {
   newQuizTitle.value = ''
-  newQuizLevel.value = 'TOPIK_I'
+  newQuizLevelId.value = topikLevels.value[0]?.id || null
   newQuizTime.value = 100
   newQuizDueDate.value = ''
   newQuizClassId.value = classesList.value.length > 0 ? classesList.value[0].id : null
@@ -374,7 +391,7 @@ const handleCreateQuiz = async () => {
   try {
     await quizStore.createQuiz({
       title: newQuizTitle.value,
-      topikLevel: newQuizLevel.value,
+      topikLevelId: newQuizLevelId.value,
       timeLimitMins: parseInt(newQuizTime.value),
       dueDate: newQuizDueDate.value + 'T23:59:59',
       classId: newQuizClassId.value
@@ -490,7 +507,6 @@ const getQuestionOptions = (question) => {
 const showEditQuizModal = ref(false)
 const quizToEdit = ref(null)
 const editQuizTitle = ref('')
-const editQuizLevel = ref('TOPIK_I')
 const editQuizTime = ref(100)
 const editQuizDueDate = ref('')
 const editQuizClassId = ref(null)
@@ -501,7 +517,10 @@ const quizToDelete = ref(null)
 const triggerEditQuiz = (quiz) => {
   quizToEdit.value = quiz
   editQuizTitle.value = quiz.title
-  editQuizLevel.value = quiz.topikLevel || 'TOPIK_I'
+  
+  const matched = topikLevels.value.find(l => l.name === quiz.topikLevel || l.code === quiz.topikLevel)
+  editQuizLevelId.value = matched ? matched.id : (topikLevels.value[0]?.id || null)
+  
   editQuizTime.value = quiz.timeLimitMins || 100
   editQuizDueDate.value = quiz.dueDate ? quiz.dueDate.substring(0, 10) : ''
   editQuizClassId.value = quiz.classId || quiz.clazzId || null
@@ -514,7 +533,7 @@ const handleUpdateQuiz = async () => {
   try {
     await quizStore.updateQuiz(quizToEdit.value.id, {
       title: editQuizTitle.value,
-      topikLevel: editQuizLevel.value,
+      topikLevelId: editQuizLevelId.value,
       timeLimitMins: parseInt(editQuizTime.value),
       dueDate: editQuizDueDate.value + 'T23:59:59',
       classId: editQuizClassId.value
@@ -522,10 +541,13 @@ const handleUpdateQuiz = async () => {
     toast.success("Cập nhật đề thi thành công!")
     showEditQuizModal.value = false
     
+    const matched = topikLevels.value.find(l => l.id === editQuizLevelId.value)
+    const levelName = matched ? matched.name : ''
+    
     // Update active selection details if selectedQuiz matches
     if (selectedQuiz.value && selectedQuiz.value.id === quizToEdit.value.id) {
       selectedQuiz.value.title = editQuizTitle.value
-      selectedQuiz.value.topikLevel = editQuizLevel.value
+      selectedQuiz.value.topikLevel = levelName
       selectedQuiz.value.timeLimitMins = editQuizTime.value
     }
   } catch (e) {
@@ -1015,7 +1037,7 @@ input:focus, select:focus, textarea:focus {
 
 .modal-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 0.75rem;
 }
 

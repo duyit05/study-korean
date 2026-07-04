@@ -1,0 +1,656 @@
+<template>
+  <div class="teacher-levels animate-fade">
+    <div class="header-section">
+      <div class="title-area">
+        <h2>Quản lý mức độ học tập</h2>
+        <p>Quản lý danh sách các cấp độ TOPIK dùng để phân loại Kho từ vựng và Đề thi.</p>
+      </div>
+      <button class="primary-btn" @click="openCreateModal">
+        <AppIcon name="settings" size="18" />
+        <span>Thêm cấp độ mới</span>
+      </button>
+    </div>
+
+    <!-- Search and filter -->
+    <div class="filter-bar border-box">
+      <div class="search-box">
+        <AppIcon name="search" size="16" class="search-icon" />
+        <input 
+          type="text" 
+          v-model="searchQuery" 
+          placeholder="Tìm kiếm cấp độ (theo tên hoặc mã)..."
+        >
+      </div>
+      <div class="filter-options">
+        <label for="groupFilter">Lọc theo loại:</label>
+        <select id="groupFilter" v-model="selectedGroupFilter">
+          <option value="ALL_GROUPS">Tất cả các nhóm</option>
+          <option value="VOCAB">Kho từ vựng (VOCAB)</option>
+          <option value="QUIZ">Đề thi & Bài tập (QUIZ)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Levels Table -->
+    <div class="table-container border-box">
+      <div v-if="topikLevelStore.loading" class="loading-state">
+        <AppIcon name="refresh" class="spin" size="32" />
+        <p>Đang tải danh sách cấp độ...</p>
+      </div>
+
+      <div v-else-if="filteredLevels.length === 0" class="empty-state">
+        <AppIcon name="alert" size="48" />
+        <p>Không tìm thấy cấp độ nào phù hợp.</p>
+      </div>
+
+      <table v-else class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Tên cấp độ</th>
+            <th>Mã định danh (Code)</th>
+            <th>Nhóm áp dụng</th>
+            <th class="text-right">Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="level in filteredLevels" :key="level.id">
+            <td><strong>#{{ level.id }}</strong></td>
+            <td>
+              <div class="level-name-cell">
+                <span class="level-badge">한</span>
+                <span class="name-text">{{ level.name }}</span>
+              </div>
+            </td>
+            <td><code>{{ level.code }}</code></td>
+            <td>
+              <span class="group-badge" :class="level.groupType.toLowerCase()">
+                {{ level.groupType }}
+              </span>
+            </td>
+            <td class="text-right Actions">
+              <button class="action-btnedit" @click="openEditModal(level)" title="Sửa">
+                <AppIcon name="edit" size="16" />
+              </button>
+              <button class="action-btndelete" @click="triggerDelete(level)" title="Xóa">
+                <AppIcon name="trash" size="16" />
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Create / Edit Modal -->
+    <div v-if="showModal" class="modal-overlay" @click.self="showModal = false">
+      <div class="modal-content animate-scale">
+        <div class="modal-header">
+          <h3>{{ isEditMode ? 'Cập nhật cấp độ' : 'Thêm cấp độ mới' }}</h3>
+          <button class="close-btn" @click="showModal = false">&times;</button>
+        </div>
+        <form @submit.prevent="handleSubmit" class="modal-form">
+          <div class="form-group">
+            <label for="levelName">Tên cấp độ</label>
+            <input 
+              type="text" 
+              id="levelName" 
+              v-model="form.name" 
+              placeholder="Ví dụ: Sơ cấp 1A" 
+              required
+            >
+          </div>
+          <div class="form-group">
+            <label for="levelCode">Mã định danh (Code)</label>
+            <input 
+              type="text" 
+              id="levelCode" 
+              v-model="form.code" 
+              placeholder="Ví dụ: SO_CAP_1A" 
+              required
+            >
+          </div>
+          <div class="form-group">
+            <label for="levelGroup">Nhóm áp dụng</label>
+            <select id="levelGroup" v-model="form.groupType">
+              <option value="VOCAB">Kho từ vựng (VOCAB)</option>
+              <option value="QUIZ">Đề thi & Bài tập (QUIZ)</option>
+            </select>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" @click="showModal = false">Hủy bỏ</button>
+            <button type="submit" class="submit-btn" :disabled="submitting">
+              {{ isEditMode ? 'Lưu thay đổi' : 'Tạo cấp độ' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteConfirm" class="modal-overlay" @click.self="showDeleteConfirm = false">
+      <div class="modal-content delete-confirm animate-scale">
+        <div class="modal-header">
+          <h3>Xác nhận xóa cấp độ</h3>
+          <button class="close-btn" @click="showDeleteConfirm = false">&times;</button>
+        </div>
+        <div class="modal-body text-center">
+          <div class="alert-icon-wrapper">
+            <AppIcon name="alert" size="48" class="warning-color" />
+          </div>
+          <p class="warning-text">
+            Bạn có chắc chắn muốn xóa cấp độ <strong>{{ levelToDelete?.name }}</strong>?
+          </p>
+          <p class="sub-text">
+            Hành động này không thể hoàn tác và có thể ảnh hưởng đến các đề thi hoặc bộ từ vựng đang liên kết.
+          </p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="cancel-btn" @click="showDeleteConfirm = false">Hủy bỏ</button>
+          <button type="button" class="submit-btn danger-btn" @click="confirmDelete" :disabled="submitting">
+            Xác nhận xóa
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useTopikLevelStore } from '../../stores/topikLevel'
+import AppIcon from '../icons/AppIcon.vue'
+import { toast } from 'vue3-toastify'
+import 'vue3-toastify/dist/index.css'
+
+const topikLevelStore = useTopikLevelStore()
+
+const searchQuery = ref('')
+const selectedGroupFilter = ref('ALL_GROUPS')
+
+const showModal = ref(false)
+const isEditMode = ref(false)
+const selectedLevelId = ref(null)
+const submitting = ref(false)
+
+const form = ref({
+  name: '',
+  code: '',
+  groupType: 'VOCAB'
+})
+
+const showDeleteConfirm = ref(false)
+const levelToDelete = ref(null)
+
+onMounted(async () => {
+  try {
+    await topikLevelStore.fetchLevels()
+  } catch (err) {
+    toast.error("Không thể tải danh sách cấp độ từ máy chủ.")
+  }
+})
+
+// Filter levels based on search query and group type
+const filteredLevels = computed(() => {
+  let list = topikLevelStore.levels || []
+  
+  if (selectedGroupFilter.value !== 'ALL_GROUPS') {
+    list = list.filter(l => l.groupType === selectedGroupFilter.value)
+  }
+  
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.toLowerCase().trim()
+    list = list.filter(l => 
+      l.name.toLowerCase().includes(q) || 
+      l.code.toLowerCase().includes(q)
+    )
+  }
+  
+  return list
+})
+
+const openCreateModal = () => {
+  isEditMode.value = false
+  selectedLevelId.value = null
+  form.value = {
+    name: '',
+    code: '',
+    groupType: 'VOCAB'
+  }
+  showModal.value = true
+}
+
+const openEditModal = (level) => {
+  isEditMode.value = true
+  selectedLevelId.value = level.id
+  form.value = {
+    name: level.name,
+    code: level.code,
+    groupType: level.groupType
+  }
+  showModal.value = true
+}
+
+const handleSubmit = async () => {
+  if (!form.value.name.trim() || !form.value.code.trim()) return
+  
+  submitting.value = true
+  try {
+    if (isEditMode.value) {
+      await topikLevelStore.updateLevel(selectedLevelId.value, form.value)
+      toast.success("Cập nhật cấp độ thành công!")
+    } else {
+      await topikLevelStore.createLevel(form.value)
+      toast.success("Tạo cấp độ mới thành công!")
+    }
+    showModal.value = false
+  } catch (err) {
+    console.error(err)
+    toast.error("Đã xảy ra lỗi khi lưu thông tin cấp độ.")
+  } finally {
+    submitting.value = false
+  }
+}
+
+const triggerDelete = (level) => {
+  levelToDelete.value = level
+  showDeleteConfirm.value = true
+}
+
+const confirmDelete = async () => {
+  if (!levelToDelete.value) return
+  submitting.value = true
+  try {
+    await topikLevelStore.deleteLevel(levelToDelete.value.id)
+    toast.success("Xóa cấp độ thành công!")
+    showDeleteConfirm.value = false
+    levelToDelete.value = null
+  } catch (err) {
+    console.error(err)
+    toast.error("Không thể xóa cấp độ này. Vui lòng thử lại sau.")
+  } finally {
+    submitting.value = false
+  }
+}
+</script>
+
+<style scoped>
+.teacher-levels {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.header-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.title-area h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-title);
+  letter-spacing: -0.5px;
+}
+
+.title-area p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.primary-btn {
+  background-color: var(--primary);
+  color: #fff;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-fast);
+}
+
+.primary-btn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-1px);
+}
+
+.border-box {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  flex-grow: 1;
+  max-width: 480px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.search-box input {
+  width: 100%;
+  padding: 0.65rem 0.75rem 0.65rem 2.25rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-body);
+  color: var(--text-title);
+}
+
+.filter-options {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.filter-options label {
+  font-weight: 600;
+  color: var(--text-title);
+  font-size: 0.9rem;
+}
+
+.filter-options select {
+  padding: 0.6rem 1.5rem 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-body);
+  color: var(--text-title);
+}
+
+.table-container {
+  overflow-x: auto;
+  min-height: 250px;
+}
+
+.loading-state, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 4rem 1rem;
+  color: var(--text-muted);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.data-table th, .data-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.data-table th {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.data-table tbody tr:hover {
+  background-color: var(--bg-hover);
+}
+
+.level-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.level-badge {
+  width: 30px;
+  height: 30px;
+  background-color: var(--primary-glow);
+  color: var(--primary);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+
+.name-text {
+  font-weight: 600;
+  color: var(--text-title);
+}
+
+code {
+  font-family: monospace;
+  background-color: var(--bg-badge);
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  color: var(--primary);
+  font-size: 0.85rem;
+}
+
+.group-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.group-badge.vocab {
+  background-color: var(--success-light);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+.group-badge.quiz {
+  background-color: var(--primary-glow);
+  color: var(--primary);
+  border: 1px solid var(--border-color);
+}
+
+.text-right {
+  text-align: right;
+}
+
+.action-btnedit, .action-btndelete {
+  padding: 0.4rem;
+  border-radius: 6px;
+  margin-left: 0.5rem;
+  transition: all var(--transition-fast);
+}
+
+.action-btnedit {
+  color: var(--primary);
+}
+
+.action-btnedit:hover {
+  background-color: var(--primary-glow);
+}
+
+.action-btndelete {
+  color: var(--danger);
+}
+
+.action-btndelete:hover {
+  background-color: var(--danger-light);
+}
+
+/* Modals */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(2px);
+}
+
+.modal-content {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  width: 90%;
+  max-width: 500px;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-title);
+}
+
+.close-btn {
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.close-btn:hover {
+  color: var(--text-title);
+}
+
+.modal-form {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.form-group label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-title);
+}
+
+.form-group input, .form-group select {
+  padding: 0.65rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-body);
+  color: var(--text-title);
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom:15px
+}
+
+.cancel-btn {
+  background-color: var(--bg-body);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.cancel-btn:hover {
+  background-color: var(--bg-hover);
+}
+
+.submit-btn {
+  background-color: var(--primary);
+  color: #fff;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+
+.submit-btn:hover:not(:disabled) {
+  background-color: var(--primary-hover);
+}
+
+.submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Delete Confirm Modal */
+.delete-confirm {
+  max-width: 440px;
+}
+
+.modal-body {
+  padding: 2rem 1.5rem;
+}
+
+.alert-icon-wrapper {
+  margin-bottom: 1rem;
+}
+
+.warning-color {
+  color: var(--danger);
+}
+
+.warning-text {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-title);
+  margin-bottom: 0.5rem;
+}
+
+.sub-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.danger-btn {
+  background-color: var(--danger);
+}
+
+.danger-btn:hover:not(:disabled) {
+  background-color: #83392c;
+}
+</style>

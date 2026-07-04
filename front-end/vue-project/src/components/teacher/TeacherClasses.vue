@@ -657,7 +657,7 @@ const handleDeleteClass = async (classId) => {
 
 .modal-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 0.75rem;
   margin-top: 0.5rem;
 }

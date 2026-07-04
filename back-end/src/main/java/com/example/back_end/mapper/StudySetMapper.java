@@ -17,7 +17,7 @@ public class StudySetMapper {
                 .id(s.getId())
                 .title(s.getTitle())
                 .description(s.getDescription())
-                .category(s.getCategory())
+                .category(s.getTopikLevel() != null ? s.getTopikLevel().getName() : null)
                 .creatorName(s.getCreator().getFullName() != null ? s.getCreator().getFullName() : s.getCreator().getUsername())
                 .words(cards != null ? cards.stream().map(this::toCardResponse).collect(Collectors.toList()) : List.of())
                 .build();

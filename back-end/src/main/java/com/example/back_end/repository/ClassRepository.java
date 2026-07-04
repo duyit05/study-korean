@@ -12,4 +12,6 @@ public interface ClassRepository extends JpaRepository<Class, Long> {
     List<Class> findByStudentId(Long studentId);
     List<Class> findByTeacherId(Long teacherId);
     List<Class> findByStudentIdAndStatus(Long studentId, ClassStatus status);
+    List<Class> findByTeacherIdAndStudentIsNull(Long teacherId);
+    List<Class> findByTeacherIdAndNotesAndStudentIsNotNull(Long teacherId, String notes);
 }

@@ -9,5 +9,5 @@ import lombok.*;
 public class StudySetRequest {
     private String title;
     private String description;
-    private String category;
+    private Long topikLevelId;
 }

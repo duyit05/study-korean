@@ -5,6 +5,7 @@ import com.example.back_end.dto.request.CardRequest;
 import com.example.back_end.dto.response.StudySetResponse;
 import com.example.back_end.entity.Card;
 import com.example.back_end.entity.StudySet;
+import com.example.back_end.entity.TopikLevel;
 import com.example.back_end.entity.User;
 import com.example.back_end.enums.CardType;
 import com.example.back_end.exception.AppException;
@@ -12,6 +13,7 @@ import com.example.back_end.exception.ErrorCode;
 import com.example.back_end.mapper.StudySetMapper;
 import com.example.back_end.repository.CardRepository;
 import com.example.back_end.repository.StudySetRepository;
+import com.example.back_end.repository.TopikLevelRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,7 @@ public class StudySetService {
     private final CardRepository cardRepository;
     private final UserService userService;
     private final StudySetMapper studySetMapper;
+    private final TopikLevelRepository topikLevelRepository;
 
     @Transactional(readOnly = true)
     public List<StudySetResponse> getAllStudySets() {
@@ -50,10 +53,17 @@ public class StudySetService {
     public StudySetResponse createStudySet(StudySetRequest request) {
         User creator = userService.getCurrentUser();
         log.info("Creating study set: {}", request.getTitle());
+
+        TopikLevel level = null;
+        if (request.getTopikLevelId() != null) {
+            level = topikLevelRepository.findById(request.getTopikLevelId())
+                    .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+        }
+
         StudySet studySet = StudySet.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
-                .category(request.getCategory())
+                .topikLevel(level)
                 .creator(creator)
                 .isPublic(true)
                 .build();
@@ -99,9 +109,16 @@ public class StudySetService {
         log.info("Updating study set: id={}, title={}", id, request.getTitle());
         StudySet studySet = studySetRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        TopikLevel level = null;
+        if (request.getTopikLevelId() != null) {
+            level = topikLevelRepository.findById(request.getTopikLevelId())
+                    .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+        }
+
         studySet.setTitle(request.getTitle());
         studySet.setDescription(request.getDescription());
-        studySet.setCategory(request.getCategory());
+        studySet.setTopikLevel(level);
         StudySet saved = studySetRepository.save(studySet);
         List<Card> cards = cardRepository.findByStudySetIdOrderByOrderAsc(id);
         return studySetMapper.toResponse(saved, cards);

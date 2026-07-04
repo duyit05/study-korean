@@ -29,8 +29,9 @@ public class StudySet {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(length = 100)
-    private String category;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "topik_level_id")
+    private TopikLevel topikLevel;
 
     @Column(name = "is_public")
     @Builder.Default

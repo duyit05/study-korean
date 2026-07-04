@@ -40,9 +40,9 @@ public class Quiz {
     @Column(name = "time_limit_mins")
     private Integer timeLimitMins;
 
-    @Column(name = "topik_level", length = 20)
-    @Builder.Default
-    private String topikLevel = "NORMAL";
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "topik_level_id")
+    private TopikLevel topikLevel;
 
     @Column(name = "total_score")
     private Integer totalScore;

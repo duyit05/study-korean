@@ -17,7 +17,7 @@ public class QuizMapper {
                 .id(quiz.getId())
                 .title(quiz.getTitle())
                 .quizType(quiz.getQuizType() != null ? quiz.getQuizType().name() : null)
-                .topikLevel(quiz.getTopikLevel())
+                .topikLevel(quiz.getTopikLevel() != null ? quiz.getTopikLevel().getName() : null)
                 .timeLimitMins(quiz.getTimeLimitMins())
                 .totalScore(quiz.getTotalScore())
                 .dueDate(quiz.getDueDate())

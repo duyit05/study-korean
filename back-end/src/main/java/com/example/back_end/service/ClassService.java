@@ -29,8 +29,13 @@ public class ClassService {
     @Transactional(readOnly = true)
     public List<ClassResponse> getTeacherClasses() {
         User teacher = userService.getCurrentUser();
-        return classRepository.findByTeacherId(teacher.getId()).stream()
-                .map(classMapper::toResponse)
+        // Return only classes where student is null (master class rows)
+        return classRepository.findByTeacherIdAndStudentIsNull(teacher.getId()).stream()
+                .map(clazz -> {
+                    // Fetch all actual student enrollment rows for this class code/notes
+                    List<Class> enrollments = classRepository.findByTeacherIdAndNotesAndStudentIsNotNull(teacher.getId(), clazz.getNotes());
+                    return classMapper.toResponse(clazz, enrollments);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -38,7 +43,10 @@ public class ClassService {
     public List<ClassResponse> getStudentClasses() {
         User student = userService.getCurrentUser();
         return classRepository.findByStudentId(student.getId()).stream()
-                .map(classMapper::toResponse)
+                .map(clazz -> {
+                    List<Class> enrollments = classRepository.findByTeacherIdAndNotesAndStudentIsNotNull(clazz.getTeacher().getId(), clazz.getNotes());
+                    return classMapper.toResponse(clazz, enrollments);
+                })
                 .collect(Collectors.toList());
     }
 
@@ -53,7 +61,7 @@ public class ClassService {
                 .notes(request.getName() + " | " + request.getSchedule() + " | " + request.getRoom() + " | " + request.getNotes())
                 .build();
         Class saved = classRepository.save(clazz);
-        return classMapper.toResponse(saved);
+        return classMapper.toResponse(saved, List.of());
     }
 
     @Transactional
@@ -61,6 +69,11 @@ public class ClassService {
         log.info("Deleting class: {}", id);
         Class clazz = classRepository.findById(id)
                 .orElseThrow(() -> new com.example.back_end.exception.AppException(com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
+        
+        // Also delete any student enrollment records that have the same teacher and notes
+        List<Class> enrollments = classRepository.findByTeacherIdAndNotesAndStudentIsNotNull(clazz.getTeacher().getId(), clazz.getNotes());
+        classRepository.deleteAll(enrollments);
+        
         classRepository.delete(clazz);
     }
 }

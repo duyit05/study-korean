@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Builder
 public class QuizRequest {
     private String title;
-    private String topikLevel;
+    private Long topikLevelId;
     private Integer timeLimitMins;
     private Integer totalScore;
     private LocalDateTime dueDate;

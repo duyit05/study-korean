@@ -34,6 +34,11 @@
           <AppIcon name="edit" size="18" />
           <span>Chấm điểm Viết</span>
         </router-link>
+
+        <router-link to="/teacher/topik-levels" class="sidebar-link" active-class="active">
+          <AppIcon name="settings" size="18" />
+          <span>Quản lý level</span>
+        </router-link>
       </nav>
 
       <!-- Sidebar Footer / Teacher Profile -->

@@ -103,11 +103,10 @@
           </div>
           <div class="form-group">
             <label for="setRange">Cấp độ (TOPIK)</label>
-            <select id="setRange" v-model="newSetLevel">
-              <option value="Sơ cấp 1A">Sơ cấp 1A</option>
-              <option value="Sơ cấp 1B">Sơ cấp 1B</option>
-              <option value="Trung cấp (3-4)">Trung cấp (3-4)</option>
-              <option value="Cao cấp (5-6)">Cao cấp (5-6)</option>
+            <select id="setRange" v-model="newSetLevelId">
+              <option v-for="level in topikLevels" :key="level.id" :value="level.id">
+                {{ level.name }}
+              </option>
             </select>
           </div>
           <div class="modal-actions">
@@ -163,11 +162,10 @@
           </div>
           <div class="form-group">
             <label for="editRange">Cấp độ (TOPIK)</label>
-            <select id="editRange" v-model="editSetLevel">
-              <option value="Sơ cấp 1A">Sơ cấp 1A</option>
-              <option value="Sơ cấp 1B">Sơ cấp 1B</option>
-              <option value="Trung cấp (3-4)">Trung cấp (3-4)</option>
-              <option value="Cao cấp (5-6)">Cao cấp (5-6)</option>
+            <select id="editRange" v-model="editSetLevelId">
+              <option v-for="level in topikLevels" :key="level.id" :value="level.id">
+                {{ level.name }}
+              </option>
             </select>
           </div>
           <div class="modal-actions">
@@ -201,9 +199,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
 import { useStudySetStore } from '../../stores/studySet'
+import { useTopikLevelStore } from '../../stores/topikLevel'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
@@ -215,6 +214,7 @@ const props = defineProps({
 })
 
 const studySetStore = useStudySetStore()
+const topikLevelStore = useTopikLevelStore()
 
 const selectedSet = ref(null)
 const showCreateModal = ref(false)
@@ -222,16 +222,31 @@ const showEditModal = ref(false)
 const showDeleteConfirmModal = ref(false)
 const showAddCardModal = ref(false)
 
+// TOPIK Levels loaded from Pinia Store
+const topikLevels = computed(() => (topikLevelStore.levels || []).filter(l => l.groupType === 'VOCAB'))
+const newSetLevelId = ref(null)
+const editSetLevelId = ref(null)
+
+onMounted(async () => {
+  try {
+    await topikLevelStore.fetchLevels()
+    if (topikLevels.value.length > 0) {
+      newSetLevelId.value = topikLevels.value[0].id
+      editSetLevelId.value = topikLevels.value[0].id
+    }
+  } catch (err) {
+    console.error("Failed to load TOPIK levels:", err)
+  }
+})
+
 // New Set Fields
 const newSetTitle = ref('')
 const newSetDescription = ref('')
-const newSetLevel = ref('Sơ cấp 1A')
 
 // Edit Set Fields
 const editSetId = ref(null)
 const editSetTitle = ref('')
 const editSetDescription = ref('')
-const editSetLevel = ref('Sơ cấp 1A')
 
 // Delete Set Fields
 const setToDelete = ref(null)
@@ -248,7 +263,7 @@ const handleCreateSet = async () => {
     await studySetStore.createStudySet({
       title: newSetTitle.value,
       description: newSetDescription.value,
-      category: newSetLevel.value
+      topikLevelId: newSetLevelId.value
     })
     toast.success("Tạo bộ từ vựng thành công!")
   } catch (e) {
@@ -258,7 +273,7 @@ const handleCreateSet = async () => {
 
   newSetTitle.value = ''
   newSetDescription.value = ''
-  newSetLevel.value = 'Sơ cấp 1A'
+  newSetLevelId.value = topikLevels.value[0]?.id || null
   showCreateModal.value = false
 }
 
@@ -266,7 +281,10 @@ const openEditSetModal = (set) => {
   editSetId.value = set.id
   editSetTitle.value = set.title
   editSetDescription.value = set.description
-  editSetLevel.value = set.category || set.level || 'Sơ cấp 1A'
+  
+  const matched = topikLevels.value.find(l => l.name === set.category || l.code === set.category)
+  editSetLevelId.value = matched ? matched.id : (topikLevels.value[0]?.id || null)
+  
   showEditModal.value = true
 }
 
@@ -277,8 +295,11 @@ const handleUpdateSet = async () => {
     await studySetStore.updateStudySet(editSetId.value, {
       title: editSetTitle.value,
       description: editSetDescription.value,
-      category: editSetLevel.value
+      topikLevelId: editSetLevelId.value
     })
+    
+    const matched = topikLevels.value.find(l => l.id === editSetLevelId.value)
+    const levelName = matched ? matched.name : ''
     
     // Update selectedSet if it's currently selected
     if (selectedSet.value && selectedSet.value.id === editSetId.value) {
@@ -286,8 +307,8 @@ const handleUpdateSet = async () => {
         ...selectedSet.value,
         title: editSetTitle.value,
         description: editSetDescription.value,
-        category: editSetLevel.value,
-        level: editSetLevel.value
+        category: levelName,
+        level: levelName
       }
     }
     toast.success("Cập nhật bộ từ vựng thành công!")
@@ -769,7 +790,7 @@ const openEditCards = (set) => {
 
 .modal-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 0.75rem;
   margin-top: 0.5rem;
 }

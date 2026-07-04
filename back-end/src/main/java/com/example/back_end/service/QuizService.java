@@ -16,6 +16,8 @@ import com.example.back_end.repository.QuizRepository;
 import com.example.back_end.repository.UserRepository;
 import com.example.back_end.repository.QuizAttemptRepository;
 import com.example.back_end.repository.QuizAnswerRepository;
+import com.example.back_end.repository.TopikLevelRepository;
+import com.example.back_end.entity.TopikLevel;
 import com.example.back_end.entity.QuizAttempt;
 import com.example.back_end.entity.QuizAnswer;
 import com.example.back_end.mapper.QuizMapper;
@@ -40,6 +42,7 @@ public class QuizService {
     private final QuizAnswerRepository quizAnswerRepository;
     private final UserService userService;
     private final QuizMapper quizMapper;
+    private final TopikLevelRepository topikLevelRepository;
 
     @Transactional
     public QuizResponse createQuiz(QuizRequest request) {
@@ -51,9 +54,15 @@ public class QuizService {
                     .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
         }
 
+        TopikLevel level = null;
+        if (request.getTopikLevelId() != null) {
+            level = topikLevelRepository.findById(request.getTopikLevelId())
+                    .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+        }
+
         Quiz quiz = Quiz.builder()
                 .title(request.getTitle())
-                .topikLevel(request.getTopikLevel() != null ? request.getTopikLevel() : "NORMAL")
+                .topikLevel(level)
                 .quizType(QuizType.MIXED)
                 .timeLimitMins(request.getTimeLimitMins())
                 .totalScore(request.getTotalScore())
@@ -143,8 +152,14 @@ public class QuizService {
                     .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
         }
 
+        TopikLevel level = null;
+        if (request.getTopikLevelId() != null) {
+            level = topikLevelRepository.findById(request.getTopikLevelId())
+                    .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+        }
+
         quiz.setTitle(request.getTitle());
-        quiz.setTopikLevel(request.getTopikLevel() != null ? request.getTopikLevel() : "NORMAL");
+        quiz.setTopikLevel(level);
         quiz.setTimeLimitMins(request.getTimeLimitMins());
         quiz.setTotalScore(request.getTotalScore());
         quiz.setDueDate(request.getDueDate());
