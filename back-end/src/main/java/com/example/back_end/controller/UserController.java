@@ -1,14 +1,14 @@
 package com.example.back_end.controller;
 
+import com.example.back_end.dto.request.UserProfileUpdateRequest;
 import com.example.back_end.dto.response.ApiResponse;
 import com.example.back_end.dto.response.UserResponse;
+import com.example.back_end.entity.User;
 import com.example.back_end.enums.UserRole;
 import com.example.back_end.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -29,6 +29,7 @@ public class UserController {
                         .username(u.getUsername())
                         .fullName(u.getFullName())
                         .phone(u.getPhone())
+                        .avatarUrl(u.getAvatarUrl())
                         .role(u.getRole())
                         .build())
                 .collect(Collectors.toList());
@@ -37,6 +38,25 @@ public class UserController {
                 .code(HttpStatus.OK.value())
                 .message("Lấy danh sách học viên thành công.")
                 .data(list)
+                .build();
+    }
+
+    @PutMapping("/profile")
+    public ApiResponse<UserResponse> updateProfile(@RequestBody UserProfileUpdateRequest request) {
+        User updated = userService.updateProfile(request.getFullName(), request.getEmail(), request.getAvatarUrl());
+        UserResponse response = UserResponse.builder()
+                .id(updated.getId())
+                .email(updated.getEmail())
+                .username(updated.getUsername())
+                .fullName(updated.getFullName())
+                .phone(updated.getPhone())
+                .avatarUrl(updated.getAvatarUrl())
+                .role(updated.getRole())
+                .build();
+        return ApiResponse.<UserResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Cập nhật thông tin cá nhân thành công.")
+                .data(response)
                 .build();
     }
 }

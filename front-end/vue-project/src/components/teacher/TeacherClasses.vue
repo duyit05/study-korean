@@ -64,7 +64,14 @@
           :class="{ active: activeTab === 'students' }" 
           @click="activeTab = 'students'"
         >
-          Danh sách Học viên ({{ selectedClass.students.length }})
+          Danh sách học viên ({{ selectedClass.students.length }})
+        </button>
+        <button 
+          class="tab-btn" 
+          :class="{ active: activeTab === 'materials' }" 
+          @click="activeTab = 'materials'"
+        >
+          File Sách ({{ materials.length }})
         </button>
         <button 
           class="tab-btn" 
@@ -120,6 +127,98 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Tab Content: File Sách / Materials -->
+      <div v-if="activeTab === 'materials'" class="tab-content materials-tab" style="padding: 1.5rem 0;">
+        <div class="tab-actions-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; gap: 1rem; flex-wrap: wrap;">
+          <div class="materials-filter-box">
+            <AppIcon name="search" size="16" class="filter-search-icon" />
+            <input 
+              type="text" 
+              v-model="materialSearchQuery" 
+              placeholder="Tìm kiếm tài liệu..."
+              class="filter-search-input"
+            >
+            <select v-model="materialTypeFilter" class="filter-select">
+              <option value="">Tất cả định dạng</option>
+              <option value="pdf">Sách / PDF</option>
+              <option value="audio">Âm thanh / Audio</option>
+              <option value="image">Hình ảnh / Ảnh</option>
+              <option value="other">Tài liệu khác</option>
+            </select>
+          </div>
+          <button class="primary-btn-sm" @click="triggerFileInput">
+            <AppIcon name="plus" size="14" />
+            Tải tài liệu lên
+          </button>
+          <input 
+            type="file" 
+            ref="fileInputRef" 
+            @change="handleFileUpload" 
+            style="display: none;"
+          >
+        </div>
+
+        <!-- Timeline Grouped List of Materials -->
+        <div v-if="materialStore.loading && materials.length === 0" class="select-loading-spinner" style="padding: 4rem 1rem;">
+          <div class="spinner"></div>
+          <span>Đang tải danh sách tài liệu...</span>
+        </div>
+
+        <div v-else-if="groupedMaterials.length === 0" class="empty-state">
+          Không có tài liệu nào được tải lên hoặc không tìm thấy kết quả phù hợp.
+        </div>
+
+        <div v-else class="materials-timeline">
+          <div 
+            v-for="group in groupedMaterials" 
+            :key="group.dateLabel" 
+            class="timeline-group"
+          >
+            <div class="timeline-header" @click="toggleGroup(group.dateLabel)">
+              <span class="timeline-date-label">
+                {{ group.dateLabel }}
+              </span>
+              <span class="timeline-count">({{ group.items.length }} tài liệu)</span>
+              <span class="timeline-toggle-icon">
+                {{ collapsedGroups[group.dateLabel] ? '▶' : '▼' }}
+              </span>
+            </div>
+
+            <div v-show="!collapsedGroups[group.dateLabel]" class="timeline-items">
+              <div 
+                v-for="item in group.items" 
+                :key="item.id" 
+                class="material-item"
+              >
+                <div class="material-info-area">
+                  <div class="material-icon-box" :class="getFileIconClass(item.contentType)">
+                    <AppIcon :name="getFileIcon(item.contentType)" size="20" />
+                  </div>
+                  <div class="material-details">
+                    <a :href="item.downloadUrl" target="_blank" class="material-title-link">
+                      {{ item.title }}
+                    </a>
+                    <div class="material-meta">
+                      <span>{{ formatBytes(item.fileSize) }}</span>
+                      <span class="dot">•</span>
+                      <span>Tải lên lúc {{ formatTime(item.createdAt) }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="material-actions">
+                  <a :href="item.downloadUrl" target="_blank" class="download-link-btn" title="Tải xuống">
+                    Tải xuống
+                  </a>
+                  <button class="delete-btn-sm" @click="handleDeleteMaterial(item.id)" title="Xóa tài liệu">
+                    Xóa
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Tab Content: Assignments -->
@@ -243,7 +342,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, reactive } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -262,12 +361,15 @@ const props = defineProps({
 import { useStudySetStore } from '../../stores/studySet'
 import { useQuizStore } from '../../stores/quiz'
 import { useTopikLevelStore } from '../../stores/topikLevel'
+import { useMaterialStore } from '../../stores/material'
 
 const studySetStore = useStudySetStore()
 const quizStore = useQuizStore()
 const topikLevelStore = useTopikLevelStore()
+const materialStore = useMaterialStore()
 
 const topikLevels = computed(() => topikLevelStore.levels)
+const materials = computed(() => materialStore.materials)
 
 onMounted(async () => {
   try {
@@ -289,6 +391,151 @@ const classes = computed(() => {
 const selectedClass = ref(null)
 const activeTab = ref('students')
 const showCreateModal = ref(false)
+
+// Materials states
+const materialSearchQuery = ref('')
+const materialTypeFilter = ref('')
+const fileInputRef = ref(null)
+const collapsedGroups = reactive({})
+
+watch(selectedClass, (newClass) => {
+  if (newClass) {
+    materialStore.fetchMaterials(newClass.id)
+  }
+})
+
+const triggerFileInput = () => {
+  if (fileInputRef.value) {
+    fileInputRef.value.click()
+  }
+}
+
+const handleFileUpload = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  if (file.size > 50 * 1024 * 1024) {
+    toast.warning("Dung lượng file không được vượt quá 50MB.")
+    return
+  }
+
+  try {
+    await materialStore.uploadMaterial(selectedClass.value.id, file)
+    toast.success("Tải tài liệu lên thành công!")
+    if (fileInputRef.value) {
+      fileInputRef.value.value = ''
+    }
+  } catch (e) {
+    console.error("Upload error:", e)
+    toast.error("Tải tài liệu lên thất bại.")
+  }
+}
+
+const handleDeleteMaterial = async (materialId) => {
+  if (!confirm("Bạn có chắc chắn muốn xóa tài liệu này?")) return
+  try {
+    await materialStore.deleteMaterial(selectedClass.value.id, materialId)
+    toast.success("Xóa tài liệu thành công!")
+  } catch (e) {
+    console.error("Delete material error:", e)
+    toast.error("Xóa tài liệu thất bại.")
+  }
+}
+
+const toggleGroup = (label) => {
+  collapsedGroups[label] = !collapsedGroups[label]
+}
+
+const formatDateLabel = (dateStr) => {
+  if (!dateStr) return 'Không rõ thời gian'
+  const date = new Date(dateStr)
+  const today = new Date()
+  const yesterday = new Date()
+  yesterday.setDate(today.getDate() - 1)
+
+  const isToday = date.toDateString() === today.toDateString()
+  const isYesterday = date.toDateString() === yesterday.toDateString()
+
+  if (isToday) return 'Hôm nay'
+  if (isYesterday) return 'Hôm qua'
+
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+  return `${day}/${month}/${year}`
+}
+
+const groupedMaterials = computed(() => {
+  let list = materials.value || []
+
+  if (materialSearchQuery.value.trim()) {
+    const q = materialSearchQuery.value.toLowerCase()
+    list = list.filter(m => (m.title || '').toLowerCase().includes(q))
+  }
+
+  if (materialTypeFilter.value) {
+    const filter = materialTypeFilter.value
+    list = list.filter(m => {
+      const type = (m.contentType || '').toLowerCase()
+      if (filter === 'pdf') return type.includes('pdf') || type.includes('document')
+      if (filter === 'audio') return type.includes('audio') || type.includes('mpeg') || type.includes('mp3')
+      if (filter === 'image') return type.includes('image')
+      if (filter === 'other') {
+        return !type.includes('pdf') && !type.includes('document') &&
+               !type.includes('audio') && !type.includes('mpeg') && !type.includes('mp3') &&
+               !type.includes('image')
+      }
+      return true
+    })
+  }
+
+  const groups = {}
+  list.forEach(item => {
+    const datePart = item.createdAt ? item.createdAt.substring(0, 10) : 'unknown'
+    const label = formatDateLabel(datePart)
+    if (!groups[label]) {
+      groups[label] = []
+    }
+    groups[label].push(item)
+  })
+
+  return Object.keys(groups).map(label => ({
+    dateLabel: label,
+    items: groups[label]
+  }))
+})
+
+const getFileIcon = (contentType) => {
+  const type = (contentType || '').toLowerCase()
+  if (type.includes('pdf') || type.includes('document') || type.includes('epub')) return 'book'
+  if (type.includes('audio')) return 'play'
+  if (type.includes('image')) return 'eye'
+  return 'quiz'
+}
+
+const getFileIconClass = (contentType) => {
+  const type = (contentType || '').toLowerCase()
+  if (type.includes('pdf')) return 'pdf-type'
+  if (type.includes('audio')) return 'audio-type'
+  if (type.includes('image')) return 'image-type'
+  return 'other-type'
+}
+
+const formatBytes = (bytes) => {
+  if (!bytes) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+}
+
+const formatTime = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${hours}:${minutes}`
+}
 
 // New Class Fields
 const newClassLevelId = ref('')
@@ -989,5 +1236,241 @@ const handleEnrollStudent = async () => {
   padding: 3rem 1rem;
   color: var(--text-muted);
   font-size: 0.9rem;
+}
+
+/* Materials tab styles */
+.materials-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.materials-filter-box {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.filter-search-icon {
+  color: var(--text-muted);
+}
+
+.filter-search-input {
+  flex: 1;
+  max-width: 320px;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-body);
+  color: var(--text-title);
+  font-size: 0.85rem;
+}
+
+.filter-search-input:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+.filter-select {
+  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-body);
+  color: var(--text-title);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.filter-select:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+/* Materials Timeline */
+.materials-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.timeline-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-color);
+  cursor: pointer;
+  user-select: none;
+}
+
+.timeline-date-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-title);
+}
+
+.timeline-count {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.timeline-toggle-icon {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  transition: transform 0.2s;
+}
+
+.timeline-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-left: 0.5rem;
+}
+
+.material-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem 1.25rem;
+  background-color: var(--bg-body);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  transition: all 0.2s;
+}
+
+.material-item:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.material-info-area {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.material-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pdf-type {
+  background-color: rgba(239, 68, 68, 0.08);
+  color: #ef4444;
+}
+
+.audio-type {
+  background-color: rgba(59, 130, 246, 0.08);
+  color: #3b82f6;
+}
+
+.image-type {
+  background-color: rgba(16, 185, 129, 0.08);
+  color: #10b981;
+}
+
+.other-type {
+  background-color: rgba(107, 114, 128, 0.08);
+  color: #6b7280;
+}
+
+.material-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.material-title-link {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-title);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.material-title-link:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.material-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.material-meta .dot {
+  font-size: 0.5rem;
+  vertical-align: middle;
+}
+
+.material-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.download-link-btn {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  transition: all 0.2s;
+}
+
+.download-link-btn:hover {
+  background-color: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.delete-btn-sm {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ef4444;
+  background: transparent;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.delete-btn-sm:hover {
+  background-color: #ef4444;
+  color: #fff;
+  border-color: #ef4444;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
 }
 </style>

@@ -6,12 +6,19 @@
         <div class="avatar-section">
           <div class="avatar-wrapper">
             <img :src="editableUser.avatar || defaultAvatar" alt="User Avatar" class="avatar-img">
-            <button class="change-avatar-btn" @click="changeAvatar" title="Đổi ảnh đại diện">
+            <button class="change-avatar-btn" @click="triggerAvatarInput" title="Đổi ảnh đại diện">
               <AppIcon name="edit" size="14" />
             </button>
+            <input 
+              type="file" 
+              ref="avatarInputRef" 
+              accept="image/*" 
+              @change="handleAvatarUpload" 
+              style="display: none;"
+            >
           </div>
           <h3>{{ user.name }}</h3>
-          <p class="role-level">{{ user.level }}</p>
+          <p class="role-level">{{ user.role === 'TEACHER' ? 'Giáo viên / Quản trị viên' : user.level }}</p>
         </div>
 
         <form @submit.prevent="saveProfile" class="profile-form">
@@ -36,10 +43,10 @@
           </div>
 
           <div class="form-group">
-            <label>Cấp độ học tập</label>
+            <label>{{ user.role === 'TEACHER' ? 'Vai trò tài khoản' : 'Cấp độ học tập' }}</label>
             <input 
               type="text" 
-              :value="user.level" 
+              :value="user.role === 'TEACHER' ? 'Giáo viên / Quản trị viên' : user.level" 
               disabled 
               class="disabled-input"
             >
@@ -55,9 +62,23 @@
       <div class="right-column-grid">
         <!-- Stats summary -->
         <div class="profile-card stats-overview">
-          <h3 class="card-title">Thống kê học tập</h3>
+          <h3 class="card-title">{{ user.role === 'TEACHER' ? 'Thống kê giảng dạy' : 'Thống kê học tập' }}</h3>
           
-          <div class="stats-meters-grid">
+          <div v-if="user.role === 'TEACHER'" class="teacher-stats-summary" style="display: flex; gap: 1rem; flex-direction: column; padding: 1rem 0;">
+            <div class="hw-summary-panel" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin-top: 1rem;">
+              <div class="hw-stat-item" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: var(--bg-body); border-radius: var(--radius-md); padding: 1.25rem; border: 1px solid var(--border-color);">
+                <span class="val" style="font-size: 1.8rem; font-weight: 800; color: var(--primary);">{{ studySets.length }}</span>
+                <span class="lbl" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Bộ từ vựng đã tạo</span>
+              </div>
+              <div class="hw-stat-item" style="display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: var(--bg-body); border-radius: var(--radius-md); padding: 1.25rem; border: 1px solid var(--border-color);">
+                <span class="val" style="font-size: 1.8rem; font-weight: 800; color: var(--primary);">{{ quizzes.length }}</span>
+                <span class="lbl" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">Đề thi & Bài tập</span>
+              </div>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.85rem; text-align: center; margin-top: 1rem;">Tài khoản giáo viên có đầy đủ quyền quản trị học liệu và học viên.</p>
+          </div>
+
+          <div v-else class="stats-meters-grid">
             <!-- XP Milestone -->
             <div class="meter-box">
               <div class="meter-header">
@@ -108,10 +129,10 @@
 
         <!-- System Preferences -->
         <div class="profile-card preferences-box">
-          <h3 class="card-title">Cài đặt học tập</h3>
+          <h3 class="card-title">Cài đặt tài khoản</h3>
           
           <div class="prefs-list">
-            <div class="pref-row">
+            <div v-if="user.role !== 'TEACHER'" class="pref-row">
               <div class="pref-text">
                 <span class="pref-label">Tự động phát âm thanh khi lật thẻ</span>
                 <span class="pref-desc">Phát âm từ vựng tiếng Hàn tự động trong chế độ Flashcard.</span>
@@ -125,7 +146,7 @@
             <div class="pref-row">
               <div class="pref-text">
                 <span class="pref-label">Nhận thông báo qua Email</span>
-                <span class="pref-desc">Nhận tin nhắn nhắc nhở khi giáo viên giao bài tập mới hoặc thay đổi lịch.</span>
+                <span class="pref-desc">{{ user.role === 'TEACHER' ? 'Nhận thông báo tự động khi có học viên đăng ký hoặc nộp bài.' : 'Nhận tin nhắn nhắc nhở khi giáo viên giao bài tập mới hoặc thay đổi lịch.' }}</span>
               </div>
               <label class="switch">
                 <input type="checkbox" v-model="prefs.emailNotif">
@@ -144,6 +165,7 @@ import { ref, computed, watch } from 'vue'
 import AppIcon from './icons/AppIcon.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
+import api from '../services/axios'
 
 const props = defineProps({
   user: {
@@ -166,9 +188,9 @@ const defaultAvatar = "https://images.unsplash.com/photo-1535713875002-d1d0cf377
 
 // Editable states
 const editableUser = ref({
-  name: props.user.name,
-  email: props.user.email,
-  avatar: props.user.avatar
+  name: props.user?.name || '',
+  email: props.user?.email || '',
+  avatar: props.user?.avatar || ''
 })
 
 // Preferences states
@@ -179,9 +201,11 @@ const prefs = ref({
 
 // Watch for prop changes to update local model
 watch(() => props.user, (newUser) => {
-  editableUser.value.name = newUser.name
-  editableUser.value.email = newUser.email
-  editableUser.value.avatar = newUser.avatar
+  if (newUser) {
+    editableUser.value.name = newUser.name || ''
+    editableUser.value.email = newUser.email || ''
+    editableUser.value.avatar = newUser.avatar || ''
+  }
 }, { deep: true })
 
 // Check if changed
@@ -191,11 +215,42 @@ const isModified = computed(() => {
          editableUser.value.avatar !== props.user.avatar
 })
 
-// Avatar url mock updater
-const changeAvatar = () => {
-  const newUrl = prompt("Nhập địa chỉ URL hình ảnh avatar mới của bạn:", editableUser.value.avatar)
-  if (newUrl !== null) {
-    editableUser.value.avatar = newUrl
+const avatarInputRef = ref(null)
+
+const triggerAvatarInput = () => {
+  if (avatarInputRef.value) {
+    avatarInputRef.value.click()
+  }
+}
+
+const handleAvatarUpload = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  if (file.size > 5 * 1024 * 1024) {
+    toast.warning("Dung lượng ảnh đại diện không được vượt quá 5MB.")
+    return
+  }
+
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('prefix', 'avatar')
+
+    const response = await api.post('/files/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+
+    if (response && response.key) {
+      // Store absolute endpoint path so it loads without token expiry issues
+      editableUser.value.avatar = 'http://localhost:8080/api/files/download/' + response.key
+      toast.success("Tải ảnh đại diện lên thành công! Nhấp 'Lưu thay đổi' để hoàn tất.")
+    }
+  } catch (error) {
+    console.error("Failed to upload avatar:", error)
+    toast.error("Tải ảnh đại diện lên thất bại.")
   }
 }
 

@@ -2,8 +2,8 @@
   <div class="teacher-dashboard animate-fade">
     <div class="welcome-banner">
       <div class="banner-content">
-        <h2>Xin chào, Giáo viên! 👋</h2>
-        <p>Chào mừng cô trở lại hệ thống quản trị học liệu và học viên tiếng Hàn. Hôm nay cô muốn làm gì?</p>
+        <h2>안녕하세요, 애리 선생님! 👋</h2>
+        <p>Hôm nay cô muốn làm gì?</p>
       </div>
       <div class="banner-badge">
         <span class="kr-char">한</span>

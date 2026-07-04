@@ -115,4 +115,13 @@ public class UserService {
     public List<User> getUsersByRole(UserRole role) {
         return userRepository.findByRole(role);
     }
+
+    @Transactional
+    public User updateProfile(String fullName, String email, String avatarUrl) {
+        User user = getCurrentUser();
+        if (fullName != null) user.setFullName(fullName);
+        if (email != null) user.setEmail(email);
+        if (avatarUrl != null) user.setAvatarUrl(avatarUrl);
+        return userRepository.save(user);
+    }
 }

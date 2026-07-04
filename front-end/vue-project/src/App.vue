@@ -19,7 +19,7 @@ import TeacherGrading from './components/teacher/TeacherGrading.vue'
 import { useAuthStore } from './stores/auth'
 import { useQuizStore } from './stores/quiz'
 import { useStudySetStore } from './stores/studySet'
-import { globalLoading } from './services/axios'
+import api, { globalLoading } from './services/axios'
 
 
 
@@ -229,12 +229,22 @@ const handleMarkNotificationRead = (notifId) => {
   }
 }
 
-const handleSaveProfile = ({ name, email, avatar }) => {
-  if (user.value) {
-    user.value.name = name
-    user.value.email = email
-    user.value.avatar = avatar
-    safeStorage.setItem('sk_user', JSON.stringify(user.value))
+const handleSaveProfile = async ({ name, email, avatar }) => {
+  try {
+    const response = await api.put('/users/profile', {
+      fullName: name,
+      email: email,
+      avatarUrl: avatar
+    })
+    if (user.value && response.data) {
+      const updated = response.data
+      user.value.name = updated.fullName
+      user.value.email = updated.email
+      user.value.avatar = updated.avatarUrl
+      safeStorage.setItem('sk_user', JSON.stringify(user.value))
+    }
+  } catch (error) {
+    console.error("Failed to save profile:", error)
   }
 }
 </script>

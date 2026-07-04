@@ -62,7 +62,8 @@ const routes = [
       { path: 'quizzes', name: 'TeacherQuizzes', component: TeacherQuizzes },
       { path: 'grading', name: 'TeacherGrading', component: TeacherGrading },
       { path: 'topik-levels', name: 'TeacherTopikLevels', component: TeacherTopikLevels },
-      { path: 'students', name: 'TeacherStudents', component: TeacherStudents }
+      { path: 'students', name: 'TeacherStudents', component: TeacherStudents },
+      { path: 'profile', name: 'TeacherProfile', component: ProfileView }
     ]
   },
   {

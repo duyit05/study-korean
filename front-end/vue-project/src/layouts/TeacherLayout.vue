@@ -48,7 +48,7 @@
 
       <!-- Sidebar Footer / Teacher Profile -->
       <div class="sidebar-footer">
-        <div class="profile-info">
+        <div class="profile-info" @click="navigateToProfile" style="cursor: pointer;" title="Xem hồ sơ cá nhân">
           <img 
             :src="user.avatar || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=64'" 
             alt="Teacher Avatar" 
@@ -80,8 +80,10 @@
 
       <main class="content-view">
         <router-view 
+          :user="user"
           :study-sets="studySets"
           :quizzes="quizzes"
+          @save-profile="$emit('save-profile', $event)"
         />
       </main>
     </div>
@@ -98,6 +100,8 @@ const props = defineProps({
   studySets: Array,
   quizzes: Array
 })
+
+defineEmits(['save-profile'])
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -126,6 +130,10 @@ const handleLogout = () => {
     authStore.logout()
     router.push('/login')
   }
+}
+
+const navigateToProfile = () => {
+  router.push('/teacher/profile')
 }
 
 onMounted(() => {
