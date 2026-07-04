@@ -19,6 +19,7 @@ import TeacherGrading from './components/teacher/TeacherGrading.vue'
 import { useAuthStore } from './stores/auth'
 import { useQuizStore } from './stores/quiz'
 import { useStudySetStore } from './stores/studySet'
+import { globalLoading } from './services/axios'
 
 
 
@@ -249,6 +250,15 @@ const handleSaveProfile = ({ name, email, avatar }) => {
     @mark-read="handleMarkNotificationRead"
     @login-success="handleLoginSuccess"
   />
+
+  <!-- Global Duck Loading Overlay -->
+  <div v-if="globalLoading" class="global-duck-loading">
+    <div class="duck-wrapper">
+      <img src="./assets/duck-loading.png" alt="Duck Loading" class="duck-img">
+      <div class="shadow"></div>
+      <p class="loading-text">Đang xử lý, vui lòng đợi...</p>
+    </div>
+  </div>
 </template>
 
 <style>
@@ -271,5 +281,75 @@ const handleSaveProfile = ({ name, email, avatar }) => {
 @keyframes scaleIn {
   from { opacity: 0; transform: scale(0.95); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* Global Duck Loading Overlay Styles */
+.global-duck-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  z-index: 99999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.duck-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.duck-img {
+  width: 120px;
+  height: 120px;
+  animation: duckJump 0.8s infinite ease-in-out;
+}
+
+.shadow {
+  width: 60px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  margin-top: 10px;
+  animation: shadowScale 0.8s infinite ease-in-out;
+}
+
+.loading-text {
+  margin-top: 1.5rem;
+  font-family: 'Inter', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-title, #2d3748);
+}
+
+@keyframes duckJump {
+  0%, 100% {
+    transform: translateY(0) scaleY(1) scaleX(1);
+  }
+  40% {
+    transform: translateY(-40px) scaleY(1.08) scaleX(0.95);
+  }
+  50% {
+    transform: translateY(-40px) scaleY(1.08) scaleX(0.95);
+  }
+  85% {
+    transform: translateY(0) scaleY(0.9) scaleX(1.1);
+  }
+}
+
+@keyframes shadowScale {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  45%, 50% {
+    transform: scale(0.4);
+    opacity: 0.3;
+  }
 }
 </style>

@@ -51,7 +51,7 @@ export const useAuthStore = defineStore('auth', () => {
         throw new Error("Không nhận được dữ liệu phản hồi hợp lệ.");
       }
     } catch (error) {
-      console.error("Login action error:", error);
+      // console.error("Login action error:", error);
       errorMessage.value = error.message || 'Đăng nhập không thành công. Vui lòng kiểm tra lại.';
       throw error;
     } finally {

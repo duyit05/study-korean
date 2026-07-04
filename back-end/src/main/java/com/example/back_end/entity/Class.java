@@ -32,6 +32,16 @@ public class Class {
     @JoinColumn(name = "student_id")
     private User student;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "topik_level_id")
+    private TopikLevel topikLevel;
+
+    @Column(length = 200)
+    private String schedule;
+
+    @Column(length = 200)
+    private String room;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     @Builder.Default

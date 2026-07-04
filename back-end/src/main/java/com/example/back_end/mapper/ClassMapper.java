@@ -29,16 +29,23 @@ public class ClassMapper {
         String room = "";
         String notes = c.getNotes();
 
-        if (notes != null && notes.contains("|")) {
-            String[] parts = notes.split("\\|", -1);
-            if (parts.length >= 3) {
-                name = parts[0].trim();
-                schedule = parts[1].trim();
-                room = parts[2].trim();
-                notes = parts.length > 3 ? parts[3].trim() : "";
+        if (c.getTopikLevel() != null) {
+            name = c.getTopikLevel().getName();
+            schedule = c.getSchedule() != null ? c.getSchedule() : "";
+            room = c.getRoom() != null ? c.getRoom() : "";
+        } else {
+            // Backward compatibility fallback
+            if (notes != null && notes.contains("|")) {
+                String[] parts = notes.split("\\|", -1);
+                if (parts.length >= 3) {
+                    name = parts[0].trim();
+                    schedule = parts[1].trim();
+                    room = parts[2].trim();
+                    notes = parts.length > 3 ? parts[3].trim() : "";
+                }
+            } else if (notes != null) {
+                name = notes;
             }
-        } else if (notes != null) {
-            name = notes;
         }
 
         String randomCode = "KOR-" + c.getId() + "-" + (100 + c.getId() * 3);

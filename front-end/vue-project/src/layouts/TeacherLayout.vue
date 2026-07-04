@@ -39,6 +39,11 @@
           <AppIcon name="settings" size="18" />
           <span>Quản lý level</span>
         </router-link>
+
+        <router-link to="/teacher/students" class="sidebar-link" active-class="active">
+          <AppIcon name="profile" size="18" />
+          <span>Quản lý học viên</span>
+        </router-link>
       </nav>
 
       <!-- Sidebar Footer / Teacher Profile -->

@@ -77,6 +77,12 @@
 
       <!-- Tab Content: Students -->
       <div v-if="activeTab === 'students'" class="tab-content students-tab">
+        <div class="tab-actions-row">
+          <button class="primary-btn-sm" @click="openEnrollModal">
+            <AppIcon name="plus" size="14" />
+            Thêm học viên vào lớp
+          </button>
+        </div>
         <table class="data-table">
           <thead>
             <tr>
@@ -148,7 +154,12 @@
         <form @submit.prevent="handleCreateClass" class="modal-form">
           <div class="form-group">
             <label for="className">Tên lớp học</label>
-            <input type="text" id="className" v-model="newClassName" placeholder="Ví dụ: Tiếng Hàn Sơ cấp 1B" required>
+            <select id="className" v-model="newClassLevelId" required style="padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background-color: var(--bg-body); color: var(--text-title); font-size: 0.9rem;">
+              <option value="" disabled>-- Chọn lớp học từ Cấp độ TOPIK --</option>
+              <option v-for="lvl in topikLevels" :key="lvl.id" :value="lvl.id">
+                {{ lvl.name }}
+              </option>
+            </select>
           </div>
           <div class="form-group">
             <label for="classSchedule">Lịch học</label>
@@ -165,11 +176,74 @@
         </form>
       </div>
     </div>
+
+    <!-- Add Student Modal -->
+    <div v-if="showEnrollModal" class="modal-overlay">
+      <div class="modal-content animate-scale">
+        <div class="modal-header">
+          <h3>Thêm học viên vào lớp</h3>
+          <button class="close-btn" @click="showEnrollModal = false">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 1.5rem 0 0 0;">
+          <div class="search-box-group">
+            <label for="studentSearch">Tìm kiếm học viên</label>
+            <input 
+              type="text" 
+              id="studentSearch" 
+              v-model="studentSearchQuery" 
+              placeholder="Nhập tên hoặc email..." 
+              class="search-input"
+            >
+          </div>
+          
+          <div class="students-select-list">
+            <div v-if="loadingStudents" class="select-loading-spinner">
+              <div class="spinner"></div>
+              <span>Đang tải danh sách học viên...</span>
+            </div>
+            <template v-else>
+              <div 
+                v-for="st in filteredStudents" 
+                :key="st.id" 
+                class="student-select-item"
+                :class="{ selected: selectedStudentId === st.id }"
+                @click="selectedStudentId = st.id"
+              >
+                <div class="student-select-info">
+                  <strong>{{ st.fullName || st.username }}</strong>
+                  <span>{{ st.email }}</span>
+                </div>
+                <div class="select-indicator">
+                  <span v-if="selectedStudentId === st.id" class="check-icon">&#10004;</span>
+                </div>
+              </div>
+              <div v-if="filteredStudents.length === 0" class="empty-select-list">
+                Không tìm thấy học viên phù hợp hoặc tất cả đã tham gia lớp.
+              </div>
+            </template>
+          </div>
+          
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" @click="showEnrollModal = false">Hủy bỏ</button>
+            <button 
+              type="button" 
+              class="submit-btn" 
+              :disabled="!selectedStudentId || enrolling" 
+              @click="handleEnrollStudent"
+              style="display: flex; align-items: center; justify-content: center; gap: 0.5rem;"
+            >
+              <div v-if="enrolling" class="spinner-sm"></div>
+              {{ enrolling ? 'Đang thêm...' : 'Thêm vào lớp' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
@@ -187,9 +261,21 @@ const props = defineProps({
 
 import { useStudySetStore } from '../../stores/studySet'
 import { useQuizStore } from '../../stores/quiz'
+import { useTopikLevelStore } from '../../stores/topikLevel'
 
 const studySetStore = useStudySetStore()
 const quizStore = useQuizStore()
+const topikLevelStore = useTopikLevelStore()
+
+const topikLevels = computed(() => topikLevelStore.levels)
+
+onMounted(async () => {
+  try {
+    await topikLevelStore.fetchLevels()
+  } catch (e) {
+    console.error("Failed to fetch topik levels:", e)
+  }
+})
 
 const classes = computed(() => {
   const dbClasses = studySetStore.classes || []
@@ -205,7 +291,7 @@ const activeTab = ref('students')
 const showCreateModal = ref(false)
 
 // New Class Fields
-const newClassName = ref('')
+const newClassLevelId = ref('')
 const newClassSchedule = ref('')
 const newClassRoom = ref('')
 
@@ -215,11 +301,11 @@ const assignedQuizzes = computed(() => {
 })
 
 const handleCreateClass = async () => {
-  if (!newClassName.value || !newClassSchedule.value || !newClassRoom.value) return
+  if (!newClassLevelId.value || !newClassSchedule.value || !newClassRoom.value) return
 
   try {
     await studySetStore.createClass({
-      name: newClassName.value,
+      topikLevelId: newClassLevelId.value,
       schedule: newClassSchedule.value,
       room: newClassRoom.value,
       notes: ''
@@ -231,7 +317,7 @@ const handleCreateClass = async () => {
   }
 
   // Reset fields
-  newClassName.value = ''
+  newClassLevelId.value = ''
   newClassSchedule.value = ''
   newClassRoom.value = ''
   showCreateModal.value = false
@@ -246,6 +332,60 @@ const handleDeleteClass = async (classId) => {
   } catch (e) {
     console.error("Failed to delete class:", e)
     toast.error("Có lỗi xảy ra khi xóa lớp học.")
+  }
+}
+
+// Add Student Enrollment state and actions
+const showEnrollModal = ref(false)
+const studentSearchQuery = ref('')
+const selectedStudentId = ref(null)
+const enrolling = ref(false)
+const loadingStudents = ref(false)
+
+const openEnrollModal = async () => {
+  loadingStudents.value = true
+  showEnrollModal.value = true
+  try {
+    await studySetStore.fetchStudents()
+    studentSearchQuery.value = ''
+    selectedStudentId.value = null
+  } catch (err) {
+    console.error(err)
+    toast.error("Không thể tải danh sách học viên")
+  } finally {
+    loadingStudents.value = false
+  }
+}
+
+const filteredStudents = computed(() => {
+  const list = studySetStore.studentsList || []
+  const enrolledIds = (selectedClass.value?.students || []).map(s => s.id)
+  return list.filter(st => {
+    if (enrolledIds.includes(st.id)) return false
+    const q = studentSearchQuery.value.toLowerCase()
+    return (st.fullName || '').toLowerCase().includes(q) || 
+           (st.username || '').toLowerCase().includes(q) || 
+           (st.email || '').toLowerCase().includes(q)
+  })
+})
+
+const handleEnrollStudent = async () => {
+  if (!selectedStudentId.value || !selectedClass.value) return
+  enrolling.value = true
+  try {
+    const updated = await studySetStore.enrollStudent(selectedClass.value.id, selectedStudentId.value)
+    selectedClass.value = {
+      ...selectedClass.value,
+      students: updated.students || [],
+      studentsCount: updated.studentsCount || 0
+    }
+    toast.success("Thêm học viên vào lớp thành công!")
+    showEnrollModal.value = false
+  } catch (err) {
+    console.error(err)
+    toast.error("Thêm học viên vào lớp thất bại.")
+  } finally {
+    enrolling.value = false
   }
 }
 </script>
@@ -710,5 +850,144 @@ const handleDeleteClass = async (classId) => {
 .delete-btn-sm:hover {
   background-color: #ef4444;
   color: #fff;
+}
+
+.tab-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
+.primary-btn-sm {
+  background-color: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 0.45rem 0.9rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s;
+}
+
+.primary-btn-sm:hover {
+  background-color: var(--primary-hover);
+}
+
+.search-box-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
+
+.search-box-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-title);
+}
+
+.search-input {
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-body);
+  color: var(--text-title);
+}
+
+.students-select-list {
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-bottom: 1.5rem;
+}
+
+.student-select-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.student-select-item:last-child {
+  border-bottom: none;
+}
+
+.student-select-item:hover {
+  background-color: var(--bg-card);
+}
+
+.student-select-item.selected {
+  background-color: rgba(219, 142, 113, 0.1);
+}
+
+.student-select-info {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.student-select-info strong {
+  color: var(--text-title);
+  font-size: 0.9rem;
+}
+
+.student-select-info span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.select-indicator {
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+.empty-select-list {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* Spinner Animations */
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.spinner-sm {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.select-loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 </style>

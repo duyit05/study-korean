@@ -7,7 +7,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class ClassRequest {
-    private String name;
+    private Long topikLevelId;
     private String schedule;
     private String room;
     private String notes;

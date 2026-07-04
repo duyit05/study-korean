@@ -22,6 +22,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -81,6 +83,10 @@ public class UserService {
                     return new AppException(ErrorCode.USER_NOT_FOUND);
                 });
 
+        if (user.getIsActive() != null && !user.getIsActive()) {
+            throw new AppException(ErrorCode.USER_BLOCKED);
+        }
+
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new AppException(ErrorCode.INVALID_PASSWORD);
         }
@@ -104,5 +110,9 @@ public class UserService {
         String username = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+    }
+
+    public List<User> getUsersByRole(UserRole role) {
+        return userRepository.findByRole(role);
     }
 }

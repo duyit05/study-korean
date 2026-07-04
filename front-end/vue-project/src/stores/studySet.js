@@ -5,6 +5,7 @@ import api from '../services/axios';
 export const useStudySetStore = defineStore('studySet', () => {
   const studySets = ref([]);
   const classes = ref([]);
+  const studentsList = ref([]);
   const loading = ref(false);
   const errorMessage = ref('');
 
@@ -145,6 +146,40 @@ export const useStudySetStore = defineStore('studySet', () => {
     }
   };
 
+  const fetchStudents = async () => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      const response = await api.get('/users/students');
+      studentsList.value = response.data || [];
+      return studentsList.value;
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const enrollStudent = async (classId, studentId) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      const response = await api.post(`/classes/${classId}/students/${studentId}`);
+      const updatedClass = response.data;
+      const idx = classes.value.findIndex(c => c.id === classId);
+      if (idx !== -1) {
+        classes.value[idx] = updatedClass;
+      }
+      return updatedClass;
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     studySets,
     classes,
@@ -158,6 +193,9 @@ export const useStudySetStore = defineStore('studySet', () => {
     deleteCard,
     fetchClasses,
     createClass,
-    deleteClass
+    deleteClass,
+    studentsList,
+    fetchStudents,
+    enrollStudent
   };
 });

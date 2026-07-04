@@ -50,6 +50,16 @@ public class ClassController {
                 .build();
     }
 
+    @PostMapping("/{classId}/students/{studentId}")
+    public ApiResponse<ClassResponse> enrollStudent(@PathVariable Long classId, @PathVariable Long studentId) {
+        ClassResponse data = classService.enrollStudent(classId, studentId);
+        return ApiResponse.<ClassResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Thêm học viên vào lớp thành công.")
+                .data(data)
+                .build();
+    }
+
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteClass(@PathVariable Long id) {
         classService.deleteClass(id);

@@ -256,7 +256,7 @@ const handleLogin = async () => {
     const userData = await authStore.login(username.value, password.value)
     emit('login-success', userData)
   } catch (error) {
-    console.error("Đăng nhập thất bại:", error)
+    // console.error("Đăng nhập thất bại:", error)
   }
 }
 
