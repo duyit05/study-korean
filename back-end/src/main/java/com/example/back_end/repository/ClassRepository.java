@@ -9,10 +9,7 @@ import java.util.List;
 
 @Repository
 public interface ClassRepository extends JpaRepository<Class, Long> {
-    List<Class> findByStudentId(Long studentId);
+    List<Class> findByStudentsId(Long studentId);
     List<Class> findByTeacherId(Long teacherId);
-    List<Class> findByStudentIdAndStatus(Long studentId, ClassStatus status);
-    List<Class> findByTeacherIdAndStudentIsNull(Long teacherId);
-    List<Class> findByTeacherIdAndNotesAndStudentIsNotNull(Long teacherId, String notes);
-    List<Class> findByTeacherIdAndTopikLevelIdAndScheduleAndRoomAndStudentIsNotNull(Long teacherId, Long topikLevelId, String schedule, String room);
+    List<Class> findByStudentsIdAndStatus(Long studentId, ClassStatus status);
 }

@@ -7,6 +7,8 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "classes")
@@ -28,9 +30,14 @@ public class Class {
     @JoinColumn(name = "teacher_id")
     private User teacher;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_id")
-    private User student;
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "class_students",
+        joinColumns = @JoinColumn(name = "class_id"),
+        inverseJoinColumns = @JoinColumn(name = "student_id")
+    )
+    @Builder.Default
+    private List<User> students = new ArrayList<>();
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "topik_level_id")

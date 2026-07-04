@@ -33,36 +33,16 @@ public class ClassService {
     @Transactional(readOnly = true)
     public List<ClassResponse> getTeacherClasses() {
         User teacher = userService.getCurrentUser();
-        // Return only classes where student is null (master class rows)
-        return classRepository.findByTeacherIdAndStudentIsNull(teacher.getId()).stream()
-                .map(clazz -> {
-                    // Fetch all actual student enrollment rows for this class code/notes
-                    List<Class> enrollments;
-                    if (clazz.getTopikLevel() != null) {
-                        enrollments = classRepository.findByTeacherIdAndTopikLevelIdAndScheduleAndRoomAndStudentIsNotNull(
-                            teacher.getId(), clazz.getTopikLevel().getId(), clazz.getSchedule(), clazz.getRoom());
-                    } else {
-                        enrollments = classRepository.findByTeacherIdAndNotesAndStudentIsNotNull(teacher.getId(), clazz.getNotes());
-                    }
-                    return classMapper.toResponse(clazz, enrollments);
-                })
+        return classRepository.findByTeacherId(teacher.getId()).stream()
+                .map(classMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     public List<ClassResponse> getStudentClasses() {
         User student = userService.getCurrentUser();
-        return classRepository.findByStudentId(student.getId()).stream()
-                .map(clazz -> {
-                    List<Class> enrollments;
-                    if (clazz.getTopikLevel() != null) {
-                        enrollments = classRepository.findByTeacherIdAndTopikLevelIdAndScheduleAndRoomAndStudentIsNotNull(
-                            clazz.getTeacher().getId(), clazz.getTopikLevel().getId(), clazz.getSchedule(), clazz.getRoom());
-                    } else {
-                        enrollments = classRepository.findByTeacherIdAndNotesAndStudentIsNotNull(clazz.getTeacher().getId(), clazz.getNotes());
-                    }
-                    return classMapper.toResponse(clazz, enrollments);
-                })
+        return classRepository.findByStudentsId(student.getId()).stream()
+                .map(classMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -84,12 +64,12 @@ public class ClassService {
                 .notes(request.getNotes())
                 .build();
         Class saved = classRepository.save(clazz);
-        return classMapper.toResponse(saved, List.of());
+        return classMapper.toResponse(saved);
     }
 
     @Transactional
     public ClassResponse enrollStudent(Long classId, Long studentId) {
-        Class masterClass = classRepository.findById(classId)
+        Class clazz = classRepository.findById(classId)
                 .orElseThrow(() -> new com.example.back_end.exception.AppException(com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
 
         User student = userRepository.findById(studentId)
@@ -100,42 +80,13 @@ public class ClassService {
         }
 
         // Check if student is already enrolled in this class
-        boolean exists;
-        List<Class> enrollments;
-        if (masterClass.getTopikLevel() != null) {
-            enrollments = classRepository.findByTeacherIdAndTopikLevelIdAndScheduleAndRoomAndStudentIsNotNull(
-                masterClass.getTeacher().getId(), masterClass.getTopikLevel().getId(), masterClass.getSchedule(), masterClass.getRoom());
-            exists = enrollments.stream().anyMatch(c -> c.getStudent().getId().equals(studentId));
-        } else {
-            enrollments = classRepository.findByTeacherIdAndNotesAndStudentIsNotNull(masterClass.getTeacher().getId(), masterClass.getNotes());
-            exists = enrollments.stream().anyMatch(c -> c.getStudent().getId().equals(studentId));
+        boolean exists = clazz.getStudents().stream().anyMatch(s -> s.getId().equals(studentId));
+        if (!exists) {
+            clazz.getStudents().add(student);
+            classRepository.save(clazz);
         }
 
-        if (exists) {
-            return classMapper.toResponse(masterClass, enrollments);
-        }
-
-        Class enrollment = Class.builder()
-                .teacher(masterClass.getTeacher())
-                .student(student)
-                .topikLevel(masterClass.getTopikLevel())
-                .schedule(masterClass.getSchedule())
-                .room(masterClass.getRoom())
-                .status(ClassStatus.ACTIVE)
-                .startedAt(LocalDate.now())
-                .notes(masterClass.getNotes())
-                .build();
-
-        classRepository.save(enrollment);
-
-        List<Class> updatedEnrollments;
-        if (masterClass.getTopikLevel() != null) {
-            updatedEnrollments = classRepository.findByTeacherIdAndTopikLevelIdAndScheduleAndRoomAndStudentIsNotNull(
-                masterClass.getTeacher().getId(), masterClass.getTopikLevel().getId(), masterClass.getSchedule(), masterClass.getRoom());
-        } else {
-            updatedEnrollments = classRepository.findByTeacherIdAndNotesAndStudentIsNotNull(masterClass.getTeacher().getId(), masterClass.getNotes());
-        }
-        return classMapper.toResponse(masterClass, updatedEnrollments);
+        return classMapper.toResponse(clazz);
     }
 
     @Transactional
@@ -144,16 +95,8 @@ public class ClassService {
         Class clazz = classRepository.findById(id)
                 .orElseThrow(() -> new com.example.back_end.exception.AppException(com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
         
-        // Also delete any student enrollment records that have the same teacher and matching identifiers
-        List<Class> enrollments;
-        if (clazz.getTopikLevel() != null) {
-            enrollments = classRepository.findByTeacherIdAndTopikLevelIdAndScheduleAndRoomAndStudentIsNotNull(
-                clazz.getTeacher().getId(), clazz.getTopikLevel().getId(), clazz.getSchedule(), clazz.getRoom());
-        } else {
-            enrollments = classRepository.findByTeacherIdAndNotesAndStudentIsNotNull(clazz.getTeacher().getId(), clazz.getNotes());
-        }
-        classRepository.deleteAll(enrollments);
-        
+        // Since it is @ManyToMany, clear the list of students to remove rows in the join table
+        clazz.getStudents().clear();
         classRepository.delete(clazz);
     }
 }

@@ -148,8 +148,12 @@ public class StudentService {
         // 4. Delete payments
         paymentRepository.deleteAll(paymentRepository.findByStudentId(user.getId()));
 
-        // 5. Delete student classes
-        classRepository.deleteAll(classRepository.findByStudentId(user.getId()));
+        // 5. Remove student from all classes they are enrolled in
+        List<Class> studentClasses = classRepository.findByStudentsId(user.getId());
+        for (Class sc : studentClasses) {
+            sc.getStudents().remove(user);
+            classRepository.save(sc);
+        }
 
         // 6. Delete quiz attempts and their quiz answers
         List<QuizAttempt> attempts = quizAttemptRepository.findByStudentId(user.getId());

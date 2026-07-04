@@ -21,7 +21,7 @@ public class ClassMapper {
     private final CardRepository cardRepository;
     private final QuizAttemptRepository quizAttemptRepository;
 
-    public ClassResponse toResponse(Class c, List<Class> enrollments) {
+    public ClassResponse toResponse(Class c) {
         if (c == null) return null;
 
         String name = "";
@@ -34,7 +34,7 @@ public class ClassMapper {
             schedule = c.getSchedule() != null ? c.getSchedule() : "";
             room = c.getRoom() != null ? c.getRoom() : "";
         } else {
-            // Backward compatibility fallback
+            // Backward compatibility fallback for legacy notes-encoded classes
             if (notes != null && notes.contains("|")) {
                 String[] parts = notes.split("\\|", -1);
                 if (parts.length >= 3) {
@@ -51,12 +51,11 @@ public class ClassMapper {
         String randomCode = "KOR-" + c.getId() + "-" + (100 + c.getId() * 3);
 
         List<ClassResponse.StudentDto> studentDtos = List.of();
-        if (enrollments != null) {
+        if (c.getStudents() != null) {
             long totalCards = cardRepository.count();
-            studentDtos = enrollments.stream()
-                .filter(e -> e.getStudent() != null)
-                .map(e -> {
-                    Long studentId = e.getStudent().getId();
+            studentDtos = c.getStudents().stream()
+                .map(student -> {
+                    Long studentId = student.getId();
                     
                     // vocabProgress calculation based on repetitions > 0
                     List<CardProgress> progressList = cardProgressRepository.findByStudentId(studentId);
@@ -78,8 +77,8 @@ public class ClassMapper {
 
                     return ClassResponse.StudentDto.builder()
                         .id(studentId)
-                        .name(e.getStudent().getFullName() != null ? e.getStudent().getFullName() : e.getStudent().getUsername())
-                        .email(e.getStudent().getEmail())
+                        .name(student.getFullName() != null ? student.getFullName() : student.getUsername())
+                        .email(student.getEmail())
                         .vocabProgress(vocabProgress)
                         .avgScore(avgScore)
                         .build();
