@@ -21,6 +21,7 @@ import TeacherQuizzes from '../components/teacher/TeacherQuizzes.vue';
 import TeacherGrading from '../components/teacher/TeacherGrading.vue';
 import TeacherTopikLevels from '../components/teacher/TeacherTopikLevels.vue';
 import TeacherStudents from '../components/teacher/TeacherStudents.vue';
+import TeacherCourses from '../components/teacher/TeacherCourses.vue';
 
 const routes = [
   {
@@ -57,6 +58,7 @@ const routes = [
     children: [
       { path: '', redirect: '/teacher/dashboard' },
       { path: 'dashboard', name: 'TeacherDashboard', component: TeacherDashboard },
+      { path: 'courses', name: 'TeacherCourses', component: TeacherCourses },
       { path: 'classes', name: 'TeacherClasses', component: TeacherClasses },
       { path: 'vocabulary', name: 'TeacherVocabulary', component: TeacherVocabulary },
       { path: 'quizzes', name: 'TeacherQuizzes', component: TeacherQuizzes },

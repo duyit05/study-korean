@@ -23,11 +23,7 @@
       </div>
       <div class="filter-options">
         <label for="groupFilter">Lọc theo loại:</label>
-        <select id="groupFilter" v-model="selectedGroupFilter">
-          <option value="ALL_GROUPS">Tất cả các nhóm</option>
-          <option value="VOCAB">Kho từ vựng (VOCAB)</option>
-          <option value="QUIZ">Đề thi & Bài tập (QUIZ)</option>
-        </select>
+        <AppSelect id="groupFilter" v-model="selectedGroupFilter" :options="groupFilterOptions" style="min-width: 220px;" />
       </div>
     </div>
 
@@ -111,10 +107,7 @@
           </div>
           <div class="form-group">
             <label for="levelGroup">Nhóm áp dụng</label>
-            <select id="levelGroup" v-model="form.groupType">
-              <option value="VOCAB">Kho từ vựng (VOCAB)</option>
-              <option value="QUIZ">Đề thi & Bài tập (QUIZ)</option>
-            </select>
+            <AppSelect id="levelGroup" v-model="form.groupType" :options="groupTypeOptions" />
           </div>
           <div class="modal-actions">
             <button type="button" class="cancel-btn" @click="showModal = false">Hủy bỏ</button>
@@ -159,10 +152,31 @@
 import { ref, computed, onMounted } from 'vue'
 import { useTopikLevelStore } from '../../stores/topikLevel'
 import AppIcon from '../icons/AppIcon.vue'
+import AppSelect from '../AppSelect.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
 const topikLevelStore = useTopikLevelStore()
+
+const groupLabels = {
+  'VOCAB': 'Kho từ vựng (VOCAB)',
+  'QUIZ': 'Đề thi & Bài tập (QUIZ)'
+}
+
+const groupFilterOptions = computed(() => {
+  const list = (topikLevelStore.groups || []).map(group => ({
+    label: groupLabels[group] || group,
+    value: group
+  }))
+  return [{ label: 'Tất cả các nhóm', value: 'ALL_GROUPS' }, ...list]
+})
+
+const groupTypeOptions = computed(() => {
+  return (topikLevelStore.groups || []).map(group => ({
+    label: groupLabels[group] || group,
+    value: group
+  }))
+})
 
 const searchQuery = ref('')
 const selectedGroupFilter = ref('ALL_GROUPS')
@@ -184,6 +198,7 @@ const levelToDelete = ref(null)
 onMounted(async () => {
   try {
     await topikLevelStore.fetchLevels()
+    await topikLevelStore.fetchTopikGroups()
   } catch (err) {
     toast.error("Không thể tải danh sách cấp độ từ máy chủ.")
   }
@@ -368,14 +383,6 @@ const confirmDelete = async () => {
   font-size: 0.9rem;
 }
 
-.filter-options select {
-  padding: 0.6rem 1.5rem 0.6rem 0.75rem;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-color);
-  background-color: var(--bg-body);
-  color: var(--text-title);
-}
-
 .table-container {
   overflow-x: auto;
   min-height: 250px;
@@ -556,6 +563,7 @@ code {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  height: 400px;
 }
 
 .form-group {
@@ -570,7 +578,7 @@ code {
   color: var(--text-title);
 }
 
-.form-group input, .form-group select {
+.form-group input {
   padding: 0.65rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);

@@ -80,6 +80,13 @@
         >
           Bài tập & Đề thi đã giao ({{ assignedQuizzes.length }})
         </button>
+        <button 
+          class="tab-btn" 
+          :class="{ active: activeTab === 'sessions' }" 
+          @click="activeTab = 'sessions'"
+        >
+          Lịch trình & Buổi học ({{ sessions.length }})
+        </button>
       </div>
 
       <!-- Tab Content: Students -->
@@ -140,13 +147,7 @@
               placeholder="Tìm kiếm tài liệu..."
               class="filter-search-input"
             >
-            <select v-model="materialTypeFilter" class="filter-select">
-              <option value="">Tất cả định dạng</option>
-              <option value="pdf">Sách / PDF</option>
-              <option value="audio">Âm thanh / Audio</option>
-              <option value="image">Hình ảnh / Ảnh</option>
-              <option value="other">Tài liệu khác</option>
-            </select>
+            <AppSelect v-model="materialTypeFilter" :options="materialTypeOptions" placeholder="Tất cả định dạng" style="max-width: 200px;" />
           </div>
           <button class="primary-btn-sm" @click="triggerFileInput">
             <AppIcon name="plus" size="14" />
@@ -241,6 +242,75 @@
           </div>
         </div>
       </div>
+
+      <!-- Tab Content: Sessions (Quản lý Buổi học) -->
+      <div v-else-if="activeTab === 'sessions'" class="tab-content sessions-tab" style="padding: 1.5rem 0;">
+        <div class="tab-actions-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; gap: 1rem; flex-wrap: wrap;">
+          <div class="sessions-info-box">
+            <span class="info-lbl" style="font-size: 0.85rem; color: var(--text-muted);">Quản lý lịch trình, bài tập về nhà và link Zoom cho từng buổi học.</span>
+          </div>
+          <button class="primary-btn-sm" @click="openCreateSessionModal">
+            <AppIcon name="plus" size="14" />
+            Thêm buổi học mới
+          </button>
+        </div>
+
+        <div v-if="sessionStore.loading" class="select-loading-spinner" style="padding: 4rem 1rem;">
+          <div class="spinner"></div>
+          <span>Đang tải danh sách buổi học...</span>
+        </div>
+
+        <div v-else-if="sessions.length === 0" class="empty-state">
+          Lớp học này chưa có buổi học nào được lên lịch trình.
+        </div>
+
+        <div v-else class="sessions-list-wrapper">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Buổi số</th>
+                <th>Chủ đề bài học</th>
+                <th>Thời gian / Trạng thái</th>
+                <th>Bài tập về nhà</th>
+                <th>Link phòng học</th>
+                <th class="text-right">Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="session in sessions" :key="session.id">
+                <td><strong>Buổi {{ session.sessionNumber }}</strong></td>
+                <td>
+                  <div class="topic-title" style="font-weight: 700; color: var(--text-title);">{{ session.topic || 'Chưa soạn chủ đề' }}</div>
+                  <span class="teacher-notes" v-if="session.teacherNotes" style="font-size: 0.75rem; color: var(--primary); display: block; margin-top: 0.25rem;">📝 Ghi chú GV: {{ session.teacherNotes }}</span>
+                </td>
+                <td>
+                  <div class="time-sched" style="font-size: 0.8rem; color: var(--text-body); font-weight: 600;">{{ formatSessionDateTime(session.scheduledAt) }}</div>
+                  <span class="status-badge-sm" :class="session.status ? session.status.toLowerCase() : 'scheduled'" style="display: inline-block; padding: 0.15rem 0.4rem; font-size: 0.7rem; font-weight: 700; border-radius: var(--radius-sm); margin-top: 0.25rem;">
+                    {{ getStatusLabel(session.status) }}
+                  </span>
+                </td>
+                <td>
+                  <div class="homework-txt" :title="session.homework" style="font-size: 0.8rem; color: var(--text-muted); max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ session.homework || 'Không có bài tập' }}</div>
+                </td>
+                <td>
+                  <a v-if="session.meetingUrl" :href="session.meetingUrl" target="_blank" class="meeting-link-badge" style="display: inline-block; padding: 0.2rem 0.5rem; background-color: var(--primary-light); color: var(--primary); font-size: 0.75rem; font-weight: 700; border-radius: var(--radius-sm); text-decoration: none;">
+                    Vào Zoom
+                  </a>
+                  <span v-else class="no-meeting" style="font-size: 0.75rem; color: var(--text-muted);">Offline / Phòng học</span>
+                </td>
+                <td class="text-right">
+                  <button class="action-btn-sm edit" @click="openEditSessionModal(session)" title="Chỉnh sửa buổi học" style="margin-right: 0.25rem; border: none; background: transparent; cursor: pointer; color: var(--text-body);">
+                    <AppIcon name="edit" size="14" />
+                  </button>
+                  <button class="action-btn-sm delete" @click="handleDeleteSession(session.id)" title="Xóa buổi học" style="border: none; background: transparent; cursor: pointer; color: var(--danger);">
+                    <AppIcon name="trash" size="14" />
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- Create Class Modal -->
@@ -253,12 +323,11 @@
         <form @submit.prevent="handleCreateClass" class="modal-form">
           <div class="form-group">
             <label for="className">Tên lớp học</label>
-            <select id="className" v-model="newClassLevelId" required style="padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background-color: var(--bg-body); color: var(--text-title); font-size: 0.9rem;">
-              <option value="" disabled>-- Chọn lớp học từ Cấp độ TOPIK --</option>
-              <option v-for="lvl in topikLevels" :key="lvl.id" :value="lvl.id">
-                {{ lvl.name }}
-              </option>
-            </select>
+            <AppSelect id="className" v-model="newClassLevelId" :options="levelOptions" placeholder="-- Chọn lớp học từ Cấp độ TOPIK --" />
+          </div>
+          <div class="form-group">
+            <label for="classCourse">Khóa học liên kết</label>
+            <AppSelect id="classCourse" v-model="newClassCourseId" :options="courseOptions" placeholder="-- Không liên kết khóa học --" />
           </div>
           <div class="form-group">
             <label for="classSchedule">Lịch học</label>
@@ -338,12 +407,78 @@
         </div>
       </div>
     </div>
+    <!-- Create / Edit Session Modal -->
+    <div v-if="showSessionModal" class="modal-overlay" @click.self="showSessionModal = false">
+      <div class="modal-content animate-scale">
+        <div class="modal-header">
+          <h3>{{ isEditSessionMode ? 'Cập nhật buổi học' : 'Thêm buổi học mới' }}</h3>
+          <button class="close-btn" @click="showSessionModal = false">&times;</button>
+        </div>
+        <form @submit.prevent="handleSessionSubmit" class="modal-form">
+          <div class="form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="form-group">
+              <label for="sessionNum">Buổi học số <span class="required">*</span></label>
+              <input type="number" id="sessionNum" v-model.number="sessionForm.sessionNumber" min="1" required style="width: 100%; padding: 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.9rem;">
+            </div>
+            <div class="form-group">
+              <label for="sessionStatus">Trạng thái</label>
+              <AppSelect id="sessionStatus" v-model="sessionForm.status" :options="sessionStatusOptions" />
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-top: 1rem;">
+            <label for="sessionTopic">Chủ đề bài học <span class="required">*</span></label>
+            <input type="text" id="sessionTopic" v-model="sessionForm.topic" placeholder="Ví dụ: Giới thiệu bản thân và bảng chữ cái Hangeul" required style="width: 100%; padding: 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.9rem;">
+          </div>
+
+          <div class="form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+            <div class="form-group">
+              <label for="sessionDate">Thời gian học <span class="required">*</span></label>
+              <input type="datetime-local" id="sessionDate" v-model="sessionForm.scheduledAt" required style="width: 100%; padding: 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.9rem;">
+            </div>
+            <div class="form-group">
+              <label for="sessionMeeting">Link Zoom / Google Meet</label>
+              <input type="text" id="sessionMeeting" v-model="sessionForm.meetingUrl" placeholder="Ví dụ: https://zoom.us/j/..." style="width: 100%; padding: 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.9rem;">
+            </div>
+          </div>
+
+          <div class="form-group" v-if="sessionForm.status === 'CANCELLED'" style="margin-top: 1rem;">
+            <label for="cancelReason">Lý do hủy buổi học</label>
+            <input type="text" id="cancelReason" v-model="sessionForm.cancelledReason" placeholder="Ví dụ: Giáo viên bị ốm đột xuất" style="width: 100%; padding: 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.9rem;">
+          </div>
+
+          <div class="form-group" style="margin-top: 1rem;">
+            <label for="sessionHomework">Bài tập về nhà</label>
+            <textarea id="sessionHomework" v-model="sessionForm.homework" placeholder="Nhập yêu cầu bài tập cho học viên..." rows="2" style="width: 100%; padding: 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.9rem; resize: vertical;"></textarea>
+          </div>
+
+          <div class="form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+            <div class="form-group">
+              <label for="teacherNotes">Ghi chú cho giáo viên (Nội bộ)</label>
+              <textarea id="teacherNotes" v-model="sessionForm.teacherNotes" placeholder="Chuẩn bị tài liệu ôn tập..." rows="2" style="width: 100%; padding: 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.9rem; resize: vertical;"></textarea>
+            </div>
+            <div class="form-group">
+              <label for="studentNotes">Ghi chú cho học viên</label>
+              <textarea id="studentNotes" v-model="sessionForm.studentNotes" placeholder="Đọc trước giáo trình bài số 2..." rows="2" style="width: 100%; padding: 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.9rem; resize: vertical;"></textarea>
+            </div>
+          </div>
+
+          <div class="modal-actions" style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <button type="button" class="cancel-btn" @click="showSessionModal = false">Hủy bỏ</button>
+            <button type="submit" class="submit-btn" :disabled="sessionSubmitting">
+              {{ isEditSessionMode ? 'Lưu thay đổi' : 'Tạo buổi học' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch, reactive } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
+import AppSelect from '../AppSelect.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
@@ -362,20 +497,66 @@ import { useStudySetStore } from '../../stores/studySet'
 import { useQuizStore } from '../../stores/quiz'
 import { useTopikLevelStore } from '../../stores/topikLevel'
 import { useMaterialStore } from '../../stores/material'
+import { useCourseStore } from '../../stores/course'
+import { useSessionStore } from '../../stores/session'
 
 const studySetStore = useStudySetStore()
 const quizStore = useQuizStore()
 const topikLevelStore = useTopikLevelStore()
 const materialStore = useMaterialStore()
+const courseStore = useCourseStore()
+const sessionStore = useSessionStore()
 
 const topikLevels = computed(() => topikLevelStore.levels)
+const courses = computed(() => courseStore.courses)
+const sessions = computed(() => sessionStore.sessions)
 const materials = computed(() => materialStore.materials)
+
+const levelOptions = computed(() => {
+  return topikLevels.value.map(lvl => ({ label: lvl.name, value: lvl.id }))
+})
+const courseOptions = computed(() => {
+  const list = courses.value.map(c => ({ label: `${c.title} (${c.level})`, value: c.id }))
+  return [{ label: '-- Không liên kết khóa học --', value: '' }, ...list]
+})
+const sessionStatusLabels = {
+  'SCHEDULED': 'Chờ diễn ra (Scheduled)',
+  'ONGOING': 'Đang diễn ra (Ongoing)',
+  'COMPLETED': 'Đã kết thúc (Completed)',
+  'CANCELLED': 'Đã hủy (Cancelled)',
+  'RESCHEDULED': 'Lên lịch lại (Rescheduled)'
+}
+
+const sessionStatusOptions = computed(() => {
+  return (sessionStore.statuses || []).map(status => ({
+    label: sessionStatusLabels[status] || status,
+    value: status
+  }))
+})
+
+const materialTypeLabels = {
+  'PDF': 'Sách / PDF',
+  'AUDIO': 'Âm thanh / Audio',
+  'IMAGE': 'Hình ảnh / Ảnh',
+  'OTHER': 'Tài liệu khác'
+}
+
+const materialTypeOptions = computed(() => {
+  const list = (materialStore.materialTypes || []).map(type => ({
+    label: materialTypeLabels[type] || type,
+    value: type.toLowerCase()
+  }))
+  return [{ label: 'Tất cả định dạng', value: '' }, ...list]
+})
 
 onMounted(async () => {
   try {
     await topikLevelStore.fetchLevels()
+    await courseStore.fetchCourses()
+    await sessionStore.fetchStatuses()
+    await materialStore.fetchMaterialTypes()
   } catch (e) {
-    console.error("Failed to fetch topik levels:", e)
+    console.error("Failed to fetch topics, courses, or metadata enums:", e)
   }
 })
 
@@ -401,6 +582,7 @@ const collapsedGroups = reactive({})
 watch(selectedClass, (newClass) => {
   if (newClass) {
     materialStore.fetchMaterials(newClass.id)
+    sessionStore.fetchSessionsByClass(newClass.id)
   }
 })
 
@@ -539,6 +721,7 @@ const formatTime = (dateStr) => {
 
 // New Class Fields
 const newClassLevelId = ref('')
+const newClassCourseId = ref('')
 const newClassSchedule = ref('')
 const newClassRoom = ref('')
 
@@ -553,6 +736,7 @@ const handleCreateClass = async () => {
   try {
     await studySetStore.createClass({
       topikLevelId: newClassLevelId.value,
+      courseId: newClassCourseId.value || null,
       schedule: newClassSchedule.value,
       room: newClassRoom.value,
       notes: ''
@@ -565,6 +749,7 @@ const handleCreateClass = async () => {
 
   // Reset fields
   newClassLevelId.value = ''
+  newClassCourseId.value = ''
   newClassSchedule.value = ''
   newClassRoom.value = ''
   showCreateModal.value = false
@@ -634,6 +819,138 @@ const handleEnrollStudent = async () => {
   } finally {
     enrolling.value = false
   }
+}
+
+// Session states and actions
+const showSessionModal = ref(false)
+const isEditSessionMode = ref(false)
+const sessionSubmitting = ref(false)
+const selectedSessionId = ref(null)
+
+const sessionForm = ref({
+  sessionNumber: 1,
+  topic: '',
+  scheduledAt: '',
+  meetingUrl: '',
+  homework: '',
+  status: 'SCHEDULED',
+  cancelledReason: '',
+  teacherNotes: '',
+  studentNotes: ''
+})
+
+const openCreateSessionModal = () => {
+  isEditSessionMode.value = false
+  selectedSessionId.value = null
+  
+  // Calculate next session number
+  const nextNum = sessions.value.length > 0 
+    ? Math.max(...sessions.value.map(s => s.sessionNumber || 0)) + 1 
+    : 1
+
+  sessionForm.value = {
+    sessionNumber: nextNum,
+    topic: '',
+    scheduledAt: new Date().toISOString().substring(0, 16),
+    meetingUrl: '',
+    homework: '',
+    status: 'SCHEDULED',
+    cancelledReason: '',
+    teacherNotes: '',
+    studentNotes: ''
+  }
+  showSessionModal.value = true
+}
+
+const openEditSessionModal = (session) => {
+  isEditSessionMode.value = true
+  selectedSessionId.value = session.id
+  
+  // Convert ISO string to datetime-local format (YYYY-MM-DDTHH:mm)
+  let formattedDate = ''
+  if (session.scheduledAt) {
+    formattedDate = session.scheduledAt.substring(0, 16)
+  }
+
+  sessionForm.value = {
+    sessionNumber: session.sessionNumber,
+    topic: session.topic || '',
+    scheduledAt: formattedDate,
+    meetingUrl: session.meetingUrl || '',
+    homework: session.homework || '',
+    status: session.status || 'SCHEDULED',
+    cancelledReason: session.cancelledReason || '',
+    teacherNotes: session.teacherNotes || '',
+    studentNotes: session.studentNotes || ''
+  }
+  showSessionModal.value = true
+}
+
+const handleSessionSubmit = async () => {
+  if (!selectedClass.value) return
+  sessionSubmitting.value = true
+  try {
+    const payload = {
+      classId: selectedClass.value.id,
+      sessionNumber: sessionForm.value.sessionNumber,
+      topic: sessionForm.value.topic,
+      scheduledAt: sessionForm.value.scheduledAt ? new Date(sessionForm.value.scheduledAt).toISOString() : null,
+      meetingUrl: sessionForm.value.meetingUrl,
+      homework: sessionForm.value.homework,
+      status: sessionForm.value.status,
+      cancelledReason: sessionForm.value.status === 'CANCELLED' ? sessionForm.value.cancelledReason : '',
+      teacherNotes: sessionForm.value.teacherNotes,
+      studentNotes: sessionForm.value.studentNotes
+    }
+
+    if (isEditSessionMode.value) {
+      await sessionStore.updateSession(selectedSessionId.value, payload)
+      toast.success('Cập nhật buổi học thành công!')
+    } else {
+      await sessionStore.createSession(payload)
+      toast.success('Tạo buổi học mới thành công!')
+    }
+    showSessionModal.value = false
+  } catch (err) {
+    console.error(err)
+    toast.error('Có lỗi xảy ra: ' + err.message)
+  } finally {
+    sessionSubmitting.value = false
+  }
+}
+
+const handleDeleteSession = async (sessionId) => {
+  if (!confirm('Bạn có chắc chắn muốn xóa buổi học này?')) return
+  try {
+    await sessionStore.deleteSession(sessionId)
+    toast.success('Xóa buổi học thành công!')
+  } catch (err) {
+    console.error(err)
+    toast.error('Xóa buổi học thất bại.')
+  }
+}
+
+const getStatusLabel = (status) => {
+  if (!status) return 'Chờ diễn ra'
+  switch (status.toUpperCase()) {
+    case 'SCHEDULED': return 'Chờ diễn ra'
+    case 'ONGOING': return 'Đang diễn ra'
+    case 'COMPLETED': return 'Đã kết thúc'
+    case 'CANCELLED': return 'Đã hủy'
+    case 'RESCHEDULED': return 'Thay đổi lịch'
+    default: return status
+  }
+}
+
+const formatSessionDateTime = (dateStr) => {
+  if (!dateStr) return 'Chưa xếp lịch'
+  const date = new Date(dateStr)
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${hours}:${minutes} - ${day}/${month}/${year}`
 }
 </script>
 

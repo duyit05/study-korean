@@ -8,6 +8,7 @@ import lombok.*;
 @Builder
 public class ClassRequest {
     private Long topikLevelId;
+    private Long courseId;
     private String schedule;
     private String room;
     private String notes;

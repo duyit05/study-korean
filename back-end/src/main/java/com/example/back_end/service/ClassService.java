@@ -9,6 +9,8 @@ import com.example.back_end.mapper.ClassMapper;
 import com.example.back_end.repository.ClassRepository;
 import com.example.back_end.repository.UserRepository;
 import com.example.back_end.repository.TopikLevelRepository;
+import com.example.back_end.repository.CourseRepository;
+import com.example.back_end.entity.Course;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ public class ClassService {
     private final ClassMapper classMapper;
     private final UserRepository userRepository;
     private final TopikLevelRepository topikLevelRepository;
+    private final CourseRepository courseRepository;
 
     @Transactional(readOnly = true)
     public List<ClassResponse> getTeacherClasses() {
@@ -54,9 +57,16 @@ public class ClassService {
         com.example.back_end.entity.TopikLevel topikLevel = topikLevelRepository.findById(request.getTopikLevelId())
                 .orElseThrow(() -> new com.example.back_end.exception.AppException(com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
 
+        Course course = null;
+        if (request.getCourseId() != null) {
+            course = courseRepository.findById(request.getCourseId())
+                    .orElseThrow(() -> new com.example.back_end.exception.AppException(com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
+        }
+
         Class clazz = Class.builder()
                 .teacher(teacher)
                 .topikLevel(topikLevel)
+                .course(course)
                 .schedule(request.getSchedule())
                 .room(request.getRoom())
                 .status(ClassStatus.ACTIVE)

@@ -123,11 +123,7 @@
           </div>
           <div class="form-group">
             <label for="quizLevel">Dạng đề thi (TOPIK)</label>
-            <select id="quizLevel" v-model="newQuizLevelId">
-              <option v-for="level in topikLevels" :key="level.id" :value="level.id">
-                {{ level.name }}
-              </option>
-            </select>
+            <AppSelect id="quizLevel" v-model="newQuizLevelId" :options="levelOptions" />
           </div>
           <div class="form-group">
             <label for="quizTime">Thời gian làm bài (phút)</label>
@@ -139,12 +135,7 @@
           </div>
           <div class="form-group">
             <label for="quizClass">Giao cho lớp học</label>
-            <select id="quizClass" v-model="newQuizClassId">
-              <option :value="null">Không giao cho lớp nào (Luyện tập tự do)</option>
-              <option v-for="cls in classesList" :key="cls.id" :value="cls.id">
-                {{ cls.name }}
-              </option>
-            </select>
+            <AppSelect id="quizClass" v-model="newQuizClassId" :options="classOptions" placeholder="-- Không giao cho lớp nào --" />
           </div>
           <div class="modal-actions">
             <button type="button" class="cancel-btn" @click="showCreateModal = false">Hủy bỏ</button>
@@ -165,11 +156,7 @@
           <div class="form-row-2">
             <div class="form-group">
               <label for="qSection">Kỹ năng / Phần thi</label>
-              <select id="qSection" v-model="newQSection" required>
-                <option value="LISTENING">Nghe (듣기)</option>
-                <option value="READING">Đọc (읽기)</option>
-                <option value="WRITING">Viết (쓰기 - Tự luận)</option>
-              </select>
+              <AppSelect id="qSection" v-model="newQSection" :options="qSectionOptions" />
             </div>
             <div class="form-group">
               <label for="qPoints">Điểm số câu này</label>
@@ -190,10 +177,7 @@
 
           <div class="form-group">
             <label for="qType">Dạng câu trả lời</label>
-            <select id="qType" v-model="newQType" required>
-              <option value="MULTIPLE_CHOICE">Trắc nghiệm chọn 1 đáp án</option>
-              <option value="WRITING">Tự luận nhập văn bản (Viết)</option>
-            </select>
+            <AppSelect id="qType" v-model="newQType" :options="qTypeOptions" />
           </div>
 
           <!-- Multiple choice fields -->
@@ -253,11 +237,7 @@
           <div class="form-row-2">
             <div class="form-group">
               <label for="editQuizLevel">Cấp độ (TOPIK)</label>
-              <select id="editQuizLevel" v-model="editQuizLevelId">
-                <option v-for="level in topikLevels" :key="level.id" :value="level.id">
-                  {{ level.name }}
-                </option>
-              </select>
+              <AppSelect id="editQuizLevel" v-model="editQuizLevelId" :options="levelOptions" />
             </div>
             <div class="form-group">
               <label for="editQuizTime">Thời gian làm bài (phút)</label>
@@ -270,12 +250,7 @@
           </div>
           <div class="form-group">
             <label for="editQuizClass">Giao cho lớp học</label>
-            <select id="editQuizClass" v-model="editQuizClassId">
-              <option :value="null">Không giao (Luyện tập tự do)</option>
-              <option v-for="cls in classesList" :key="cls.id" :value="cls.id">
-                {{ cls.name }}
-              </option>
-            </select>
+            <AppSelect id="editQuizClass" v-model="editQuizClassId" :options="classOptions" placeholder="-- Không giao cho lớp nào --" />
           </div>
           <div class="modal-actions">
             <button type="button" class="cancel-btn" @click="showEditQuizModal = false">Hủy bỏ</button>
@@ -310,6 +285,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
+import AppSelect from '../AppSelect.vue'
 import { useQuizStore } from '../../stores/quiz'
 import { useStudySetStore } from '../../stores/studySet'
 import { useTopikLevelStore } from '../../stores/topikLevel'
@@ -338,15 +314,52 @@ const topikLevels = computed(() => (topikLevelStore.levels || []).filter(l => l.
 const newQuizLevelId = ref(null)
 const editQuizLevelId = ref(null)
 
+const levelOptions = computed(() => {
+  return topikLevels.value.map(lvl => ({ label: lvl.name, value: lvl.id }))
+})
+
+const classOptions = computed(() => {
+  const list = classesList.value.map(c => ({ label: `${c.name || 'Lớp học'} (${c.schedule || 'Lịch học'})`, value: c.id }))
+  return [{ label: '-- Không giao cho lớp nào --', value: '' }, ...list]
+})
+
+const sectionLabels = {
+  'LISTENING': 'Nghe (듣기)',
+  'READING': 'Đọc (읽기)',
+  'WRITING': 'Viết (쓰기 - Tự luận)'
+}
+
+const qSectionOptions = computed(() => {
+  return (quizStore.questionSections || []).map(sec => ({
+    label: sectionLabels[sec] || sec,
+    value: sec
+  }))
+})
+
+const typeLabels = {
+  'MULTIPLE_CHOICE': 'Trắc nghiệm chọn 1 đáp án',
+  'WRITING': 'Tự luận nhập văn bản (Viết)'
+}
+
+const qTypeOptions = computed(() => {
+  return (quizStore.questionTypes || []).map(type => ({
+    label: typeLabels[type] || type,
+    value: type
+  }))
+})
+
 onMounted(async () => {
   try {
     await topikLevelStore.fetchLevels()
+    await quizStore.fetchQuestionTypes()
+    await quizStore.fetchQuestionSections()
+    await studySetStore.fetchClasses()
     if (topikLevels.value.length > 0) {
       newQuizLevelId.value = topikLevels.value[0].id
       editQuizLevelId.value = topikLevels.value[0].id
     }
   } catch (err) {
-    console.error("Failed to load TOPIK levels:", err)
+    console.error("Failed to load TOPIK levels or enums:", err)
   }
 })
 
@@ -354,7 +367,7 @@ onMounted(async () => {
 const newQuizTitle = ref('')
 const newQuizTime = ref(100)
 const newQuizDueDate = ref('')
-const newQuizClassId = ref(null)
+const newQuizClassId = ref('')
 
 // New Question Fields
 const newQSection = ref('LISTENING')
@@ -381,7 +394,7 @@ const openCreateQuizModal = () => {
   newQuizLevelId.value = topikLevels.value[0]?.id || null
   newQuizTime.value = 100
   newQuizDueDate.value = ''
-  newQuizClassId.value = classesList.value.length > 0 ? classesList.value[0].id : null
+  newQuizClassId.value = ''
   showCreateModal.value = true
 }
 
@@ -394,7 +407,7 @@ const handleCreateQuiz = async () => {
       topikLevelId: newQuizLevelId.value,
       timeLimitMins: parseInt(newQuizTime.value),
       dueDate: newQuizDueDate.value + 'T23:59:59',
-      classId: newQuizClassId.value
+      classId: newQuizClassId.value || null
     })
     toast.success("Tạo đề thi/bài tập mới thành công!")
   } catch (e) {
@@ -509,7 +522,7 @@ const quizToEdit = ref(null)
 const editQuizTitle = ref('')
 const editQuizTime = ref(100)
 const editQuizDueDate = ref('')
-const editQuizClassId = ref(null)
+const editQuizClassId = ref('')
 
 const showDeleteQuizConfirmModal = ref(false)
 const quizToDelete = ref(null)
@@ -523,7 +536,7 @@ const triggerEditQuiz = (quiz) => {
   
   editQuizTime.value = quiz.timeLimitMins || 100
   editQuizDueDate.value = quiz.dueDate ? quiz.dueDate.substring(0, 10) : ''
-  editQuizClassId.value = quiz.classId || quiz.clazzId || null
+  editQuizClassId.value = quiz.classId || quiz.clazzId || ''
   showEditQuizModal.value = true
 }
 
@@ -536,7 +549,7 @@ const handleUpdateQuiz = async () => {
       topikLevelId: editQuizLevelId.value,
       timeLimitMins: parseInt(editQuizTime.value),
       dueDate: editQuizDueDate.value + 'T23:59:59',
-      classId: editQuizClassId.value
+      classId: editQuizClassId.value || null
     })
     toast.success("Cập nhật đề thi thành công!")
     showEditQuizModal.value = false

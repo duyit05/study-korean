@@ -10,6 +10,8 @@ import java.util.List;
 @Builder
 public class ClassResponse {
     private Long id;
+    private Long courseId;
+    private String courseTitle;
     private String name;
     private String schedule;
     private String room;

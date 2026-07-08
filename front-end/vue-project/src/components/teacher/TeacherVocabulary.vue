@@ -103,11 +103,7 @@
           </div>
           <div class="form-group">
             <label for="setRange">Cấp độ (TOPIK)</label>
-            <select id="setRange" v-model="newSetLevelId">
-              <option v-for="level in topikLevels" :key="level.id" :value="level.id">
-                {{ level.name }}
-              </option>
-            </select>
+            <AppSelect id="setRange" v-model="newSetLevelId" :options="levelOptions" />
           </div>
           <div class="modal-actions">
             <button type="button" class="cancel-btn" @click="showCreateModal = false">Hủy bỏ</button>
@@ -201,6 +197,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
+import AppSelect from '../AppSelect.vue'
 import { useStudySetStore } from '../../stores/studySet'
 import { useTopikLevelStore } from '../../stores/topikLevel'
 import { toast } from 'vue3-toastify'
@@ -224,6 +221,9 @@ const showAddCardModal = ref(false)
 
 // TOPIK Levels loaded from Pinia Store
 const topikLevels = computed(() => (topikLevelStore.levels || []).filter(l => l.groupType === 'VOCAB'))
+const levelOptions = computed(() => {
+  return topikLevels.value.map(lvl => ({ label: lvl.name, value: lvl.id }))
+})
 const newSetLevelId = ref(null)
 const editSetLevelId = ref(null)
 

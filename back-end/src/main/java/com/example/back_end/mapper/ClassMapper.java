@@ -86,8 +86,13 @@ public class ClassMapper {
                 .collect(Collectors.toList());
         }
 
+        Long courseId = c.getCourse() != null ? c.getCourse().getId() : null;
+        String courseTitle = c.getCourse() != null ? c.getCourse().getTitle() : null;
+
         return ClassResponse.builder()
                 .id(c.getId())
+                .courseId(courseId)
+                .courseTitle(courseTitle)
                 .name(name)
                 .schedule(schedule)
                 .room(room)

@@ -4,6 +4,8 @@ import com.example.back_end.dto.request.QuizRequest;
 import com.example.back_end.dto.request.QuestionRequest;
 import com.example.back_end.dto.response.ApiResponse;
 import com.example.back_end.dto.response.QuizResponse;
+import com.example.back_end.enums.QuestionSection;
+import com.example.back_end.enums.QuestionType;
 import com.example.back_end.service.QuizService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +22,24 @@ import java.util.List;
 public class QuizController {
 
     private final QuizService quizService;
+
+    @GetMapping("/question-types")
+    public ApiResponse<QuestionType[]> getQuestionTypes() {
+        return ApiResponse.<QuestionType[]>builder()
+                .code(HttpStatus.OK.value())
+                .message("Lấy danh sách dạng câu hỏi thành công.")
+                .data(QuestionType.values())
+                .build();
+    }
+
+    @GetMapping("/sections")
+    public ApiResponse<QuestionSection[]> getQuestionSections() {
+        return ApiResponse.<QuestionSection[]>builder()
+                .code(HttpStatus.OK.value())
+                .message("Lấy danh sách phần thi thành công.")
+                .data(QuestionSection.values())
+                .build();
+    }
 
     @PostMapping
     public ApiResponse<QuizResponse> createQuiz(@Valid @RequestBody QuizRequest request) {

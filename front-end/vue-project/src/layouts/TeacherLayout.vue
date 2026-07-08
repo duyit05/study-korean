@@ -20,6 +20,11 @@
           <span>Quản lý Lớp học</span>
         </router-link>
 
+        <router-link to="/teacher/courses" class="sidebar-link" active-class="active">
+          <AppIcon name="award" size="18" />
+          <span>Quản lý Khóa học</span>
+        </router-link>
+
         <router-link to="/teacher/vocabulary" class="sidebar-link" active-class="active">
           <AppIcon name="book" size="18" />
           <span>Kho từ vựng</span>

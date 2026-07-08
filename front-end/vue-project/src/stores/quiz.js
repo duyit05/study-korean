@@ -6,8 +6,30 @@ export const useQuizStore = defineStore('quiz', () => {
   const quizzes = ref([]);
   const pendingAttempts = ref([]);
   const studentAttempts = ref([]);
+  const questionTypes = ref([]);
+  const questionSections = ref([]);
   const loading = ref(false);
   const errorMessage = ref('');
+
+  const fetchQuestionTypes = async () => {
+    try {
+      const response = await api.get('/quizzes/question-types');
+      questionTypes.value = response.data || [];
+      return questionTypes.value;
+    } catch (error) {
+      console.error("Failed to fetch question types:", error);
+    }
+  };
+
+  const fetchQuestionSections = async () => {
+    try {
+      const response = await api.get('/quizzes/sections');
+      questionSections.value = response.data || [];
+      return questionSections.value;
+    } catch (error) {
+      console.error("Failed to fetch question sections:", error);
+    }
+  };
 
   const fetchQuizzesByClass = async (classId) => {
     loading.value = true;
@@ -191,8 +213,12 @@ export const useQuizStore = defineStore('quiz', () => {
     quizzes,
     pendingAttempts,
     studentAttempts,
+    questionTypes,
+    questionSections,
     loading,
     errorMessage,
+    fetchQuestionTypes,
+    fetchQuestionSections,
     fetchQuizzesByClass,
     fetchMyCreatedQuizzes,
     fetchQuizDetails,

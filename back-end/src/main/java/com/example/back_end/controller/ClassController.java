@@ -3,6 +3,7 @@ package com.example.back_end.controller;
 import com.example.back_end.dto.request.ClassRequest;
 import com.example.back_end.dto.response.ApiResponse;
 import com.example.back_end.dto.response.ClassResponse;
+import com.example.back_end.enums.MaterialType;
 import com.example.back_end.service.ClassService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,6 +20,15 @@ import java.util.List;
 public class ClassController {
 
     private final ClassService classService;
+
+    @GetMapping("/material-types")
+    public ApiResponse<MaterialType[]> getMaterialTypes() {
+        return ApiResponse.<MaterialType[]>builder()
+                .code(HttpStatus.OK.value())
+                .message("Lấy danh sách định dạng tài liệu thành công.")
+                .data(MaterialType.values())
+                .build();
+    }
 
     @PostMapping
     public ApiResponse<ClassResponse> createClass(@Valid @RequestBody ClassRequest request) {

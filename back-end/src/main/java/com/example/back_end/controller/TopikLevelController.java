@@ -3,6 +3,7 @@ package com.example.back_end.controller;
 import com.example.back_end.dto.request.TopikLevelRequest;
 import com.example.back_end.dto.response.ApiResponse;
 import com.example.back_end.entity.TopikLevel;
+import com.example.back_end.enums.TopikGroup;
 import com.example.back_end.service.TopikLevelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -16,6 +17,15 @@ import java.util.List;
 public class TopikLevelController {
 
     private final TopikLevelService topikLevelService;
+
+    @GetMapping("/groups")
+    public ApiResponse<TopikGroup[]> getTopikGroups() {
+        return ApiResponse.<TopikGroup[]>builder()
+                .code(HttpStatus.OK.value())
+                .message("Lấy danh sách nhóm cấp độ TOPIK thành công.")
+                .data(TopikGroup.values())
+                .build();
+    }
 
     @GetMapping
     public ApiResponse<List<TopikLevel>> getAllLevels() {

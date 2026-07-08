@@ -4,8 +4,19 @@ import api from '../services/axios';
 
 export const useTopikLevelStore = defineStore('topikLevel', () => {
   const levels = ref([]);
+  const groups = ref([]);
   const loading = ref(false);
   const errorMessage = ref('');
+
+  const fetchTopikGroups = async () => {
+    try {
+      const response = await api.get('/topik-levels/groups');
+      groups.value = response.data || [];
+      return groups.value;
+    } catch (error) {
+      console.error("Failed to fetch topik groups:", error);
+    }
+  };
 
   const fetchLevels = async () => {
     loading.value = true;
@@ -73,8 +84,10 @@ export const useTopikLevelStore = defineStore('topikLevel', () => {
 
   return {
     levels,
+    groups,
     loading,
     errorMessage,
+    fetchTopikGroups,
     fetchLevels,
     createLevel,
     updateLevel,

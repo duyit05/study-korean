@@ -4,8 +4,19 @@ import api from '../services/axios';
 
 export const useMaterialStore = defineStore('material', () => {
   const materials = ref([]);
+  const materialTypes = ref([]);
   const loading = ref(false);
   const errorMessage = ref('');
+
+  const fetchMaterialTypes = async () => {
+    try {
+      const response = await api.get('/classes/material-types');
+      materialTypes.value = response.data || [];
+      return materialTypes.value;
+    } catch (error) {
+      console.error("Failed to fetch material types:", error);
+    }
+  };
 
   const fetchMaterials = async (classId) => {
     loading.value = true;
@@ -61,8 +72,10 @@ export const useMaterialStore = defineStore('material', () => {
 
   return {
     materials,
+    materialTypes,
     loading,
     errorMessage,
+    fetchMaterialTypes,
     fetchMaterials,
     uploadMaterial,
     deleteMaterial
