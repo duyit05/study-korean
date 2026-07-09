@@ -1,12 +1,18 @@
 package com.example.back_end.service;
 
 import com.example.back_end.dto.request.TopikLevelRequest;
+import com.example.back_end.dto.response.PageResponse;
 import com.example.back_end.entity.TopikLevel;
 import com.example.back_end.exception.AppException;
 import com.example.back_end.exception.ErrorCode;
 import com.example.back_end.repository.TopikLevelRepository;
+import com.example.back_end.utils.SortUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +28,26 @@ public class TopikLevelService {
     @Transactional(readOnly = true)
     public List<TopikLevel> getAllLevels() {
         return topikLevelRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<TopikLevel> getPaginatedLevels(int pageNo, int pageSize, String search, String groupType, String... sorts) {
+        int page = Math.max(0, pageNo - 1);
+        Sort sort = SortUtils.parseSort(sorts);
+        Pageable pageable = PageRequest.of(page, pageSize, sort);
+
+        String safeSearch = (search != null && !search.trim().isEmpty()) ? "%" + search.trim().toLowerCase() + "%" : null;
+        String safeGroupType = (groupType != null && !groupType.isEmpty() && !groupType.equals("ALL_GROUPS")) ? groupType : null;
+
+        Page<TopikLevel> pageResult = topikLevelRepository.searchLevels(safeSearch, safeGroupType, pageable);
+
+        return PageResponse.<TopikLevel>builder()
+                .pageNo(page + 1)
+                .pageSize(pageSize)
+                .totalPage(pageResult.getTotalPages())
+                .totalElements(pageResult.getTotalElements())
+                .items(pageResult.getContent())
+                .build();
     }
 
     @Transactional(readOnly = true)

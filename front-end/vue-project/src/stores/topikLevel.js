@@ -18,13 +18,18 @@ export const useTopikLevelStore = defineStore('topikLevel', () => {
     }
   };
 
-  const fetchLevels = async () => {
+  const fetchLevels = async (params = {}) => {
     loading.value = true;
     errorMessage.value = '';
     try {
-      const response = await api.get('/topik-levels');
-      levels.value = response.data || [];
-      return levels.value;
+      const response = await api.get('/topik-levels', { params });
+      if (response.data && response.data.items) {
+        levels.value = response.data.items;
+        return response.data;
+      } else {
+        levels.value = response.data || [];
+        return levels.value;
+      }
     } catch (error) {
       errorMessage.value = error.message;
       throw error;

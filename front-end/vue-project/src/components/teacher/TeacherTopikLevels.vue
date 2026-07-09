@@ -18,6 +18,7 @@
         <input 
           type="text" 
           v-model="searchQuery" 
+          @keyup.enter="triggerSearch"
           placeholder="Tìm kiếm cấp độ (theo tên hoặc mã)..."
         >
       </div>
@@ -34,7 +35,7 @@
         <p>Đang tải danh sách cấp độ...</p>
       </div>
 
-      <div v-else-if="filteredLevels.length === 0" class="empty-state">
+      <div v-else-if="totalElements === 0" class="empty-state">
         <AppIcon name="alert" size="48" />
         <p>Không tìm thấy cấp độ nào phù hợp.</p>
       </div>
@@ -50,7 +51,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="level in filteredLevels" :key="level.id">
+          <tr v-for="level in topikLevelStore.levels" :key="level.id">
             <td><strong>#{{ level.id }}</strong></td>
             <td>
               <div class="level-name-cell">
@@ -75,6 +76,67 @@
           </tr>
         </tbody>
       </table>
+
+      <!-- Pagination Demo Section -->
+      <div v-if="totalElements > 0" class="pagination-bar">
+        <div class="pagination-info">
+          Đang hiển thị <strong>{{ startIndex }} - {{ endIndex }}</strong> trong số <strong>{{ totalElements }}</strong> cấp độ
+        </div>
+        <div class="pagination-controls">
+          <div class="page-buttons">
+            <button 
+              class="page-nav-btn" 
+              :disabled="currentPage === 1" 
+              @click="goToPage(1)" 
+              title="Trang đầu"
+            >
+              <span style="display: inline-flex; align-items: center; margin-right: -4px;">
+                <AppIcon name="chevron-left" size="12" />
+                <AppIcon name="chevron-left" size="12" style="margin-left: -6px;" />
+              </span>
+            </button>
+            <button 
+              class="page-nav-btn" 
+              :disabled="currentPage === 1" 
+              @click="prevPage" 
+              title="Trang trước"
+            >
+              <AppIcon name="chevron-left" size="12" />
+            </button>
+            
+            <button 
+              v-for="page in pageNumbers" 
+              :key="page" 
+              class="page-num-btn" 
+              :class="{ active: currentPage === page, dots: page === '...' }"
+              :disabled="page === '...'"
+              @click="typeof page === 'number' && goToPage(page)"
+            >
+              {{ page }}
+            </button>
+
+            <button 
+              class="page-nav-btn" 
+              :disabled="currentPage === totalPages" 
+              @click="nextPage" 
+              title="Trang sau"
+            >
+              <AppIcon name="chevron-right" size="12" />
+            </button>
+            <button 
+              class="page-nav-btn" 
+              :disabled="currentPage === totalPages" 
+              @click="goToPage(totalPages)" 
+              title="Trang cuối"
+            >
+              <span style="display: inline-flex; align-items: center; margin-left: -4px;">
+                <AppIcon name="chevron-right" size="12" style="margin-right: -6px;" />
+                <AppIcon name="chevron-right" size="12" />
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Create / Edit Modal -->
@@ -149,7 +211,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useTopikLevelStore } from '../../stores/topikLevel'
 import AppIcon from '../icons/AppIcon.vue'
 import AppSelect from '../AppSelect.vue'
@@ -195,33 +257,107 @@ const form = ref({
 const showDeleteConfirm = ref(false)
 const levelToDelete = ref(null)
 
-onMounted(async () => {
+const currentPage = ref(1)
+const itemsPerPage = ref(10)
+const totalPages = ref(1)
+const totalElements = ref(0)
+
+const loadLevels = async () => {
   try {
-    await topikLevelStore.fetchLevels()
-    await topikLevelStore.fetchTopikGroups()
+    const pageData = await topikLevelStore.fetchLevels({
+      page: currentPage.value,
+      size: itemsPerPage.value,
+      search: searchQuery.value.trim() || null,
+      group: selectedGroupFilter.value === 'ALL_GROUPS' ? null : selectedGroupFilter.value,
+      unpaged: false
+    })
+    totalPages.value = pageData.totalPage || 1
+    totalElements.value = pageData.totalElements || 0
   } catch (err) {
     toast.error("Không thể tải danh sách cấp độ từ máy chủ.")
   }
+}
+
+onMounted(async () => {
+  try {
+    await loadLevels()
+    await topikLevelStore.fetchTopikGroups()
+  } catch (err) {
+    console.error(err)
+  }
 })
 
-// Filter levels based on search query and group type
-const filteredLevels = computed(() => {
-  let list = topikLevelStore.levels || []
-  
-  if (selectedGroupFilter.value !== 'ALL_GROUPS') {
-    list = list.filter(l => l.groupType === selectedGroupFilter.value)
-  }
-  
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.toLowerCase().trim()
-    list = list.filter(l => 
-      l.name.toLowerCase().includes(q) || 
-      l.code.toLowerCase().includes(q)
-    )
-  }
-  
-  return list
+watch(currentPage, () => {
+  loadLevels()
 })
+
+let debounceTimeout = null
+
+watch(searchQuery, () => {
+  currentPage.value = 1
+  if (debounceTimeout) clearTimeout(debounceTimeout)
+  debounceTimeout = setTimeout(() => {
+    loadLevels()
+  }, 300)
+})
+
+watch(selectedGroupFilter, () => {
+  currentPage.value = 1
+  loadLevels()
+})
+
+const triggerSearch = () => {
+  if (debounceTimeout) clearTimeout(debounceTimeout)
+  currentPage.value = 1
+  loadLevels()
+}
+
+const startIndex = computed(() => {
+  if (totalElements.value === 0) return 0
+  return (currentPage.value - 1) * itemsPerPage.value + 1
+})
+
+const endIndex = computed(() => {
+  return Math.min(currentPage.value * itemsPerPage.value, totalElements.value)
+})
+
+const pageNumbers = computed(() => {
+  const pages = []
+  const total = totalPages.value
+  const current = currentPage.value
+  const maxVisible = 5
+  
+  if (total <= maxVisible) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+  } else {
+    if (current <= 3) {
+      pages.push(1, 2, 3, 4, '...', total)
+    } else if (current >= total - 2) {
+      pages.push(1, '...', total - 3, total - 2, total - 1, total)
+    } else {
+      pages.push(1, '...', current - 1, current, current + 1, '...', total)
+    }
+  }
+  return pages
+})
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
+  }
+}
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
 
 const openCreateModal = () => {
   isEditMode.value = false
@@ -258,6 +394,7 @@ const handleSubmit = async () => {
       toast.success("Tạo cấp độ mới thành công!")
     }
     showModal.value = false
+    await loadLevels()
   } catch (err) {
     console.error(err)
     toast.error("Đã xảy ra lỗi khi lưu thông tin cấp độ.")
@@ -279,6 +416,7 @@ const confirmDelete = async () => {
     toast.success("Xóa cấp độ thành công!")
     showDeleteConfirm.value = false
     levelToDelete.value = null
+    await loadLevels()
   } catch (err) {
     console.error(err)
     toast.error("Không thể xóa cấp độ này. Vui lòng thử lại sau.")
@@ -660,5 +798,105 @@ code {
 
 .danger-btn:hover:not(:disabled) {
   background-color: #83392c;
+}
+
+/* Pagination Styling */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color);
+  min-height: 56px;
+}
+
+.pagination-info {
+  font-size: 0.9rem;
+  color: var(--text-body);
+  position: absolute;
+  left: 0;
+}
+
+.pagination-info strong {
+  color: var(--text-title);
+  font-weight: 700;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .pagination-bar {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: auto;
+  }
+  
+  .pagination-info {
+    position: static;
+  }
+}
+
+.page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-body);
+}
+
+.page-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.page-nav-btn, .page-num-btn {
+  height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0 0.5rem;
+}
+
+.page-nav-btn:hover:not(:disabled), .page-num-btn:hover:not(:disabled):not(.dots) {
+  background-color: var(--bg-hover);
+  border-color: var(--border-color-hover);
+  color: var(--text-title);
+  transform: translateY(-1px);
+}
+
+.page-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-num-btn.active {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+
+.page-num-btn.dots {
+  border-color: transparent;
+  background-color: transparent;
+  cursor: default;
 }
 </style>

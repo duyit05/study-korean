@@ -2,6 +2,7 @@ package com.example.back_end.controller;
 
 import com.example.back_end.dto.request.TopikLevelRequest;
 import com.example.back_end.dto.response.ApiResponse;
+import com.example.back_end.dto.response.PageResponse;
 import com.example.back_end.entity.TopikLevel;
 import com.example.back_end.enums.TopikGroup;
 import com.example.back_end.service.TopikLevelService;
@@ -28,12 +29,27 @@ public class TopikLevelController {
     }
 
     @GetMapping
-    public ApiResponse<List<TopikLevel>> getAllLevels() {
-        List<TopikLevel> list = topikLevelService.getAllLevels();
-        return ApiResponse.<List<TopikLevel>>builder()
+    public ApiResponse<?> getLevels(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String group,
+            @RequestParam(required = false) String[] sort,
+            @RequestParam(defaultValue = "true") boolean unpaged
+    ) {
+        if (unpaged) {
+            List<TopikLevel> list = topikLevelService.getAllLevels();
+            return ApiResponse.<List<TopikLevel>>builder()
+                    .code(HttpStatus.OK.value())
+                    .message("Lấy danh sách cấp độ thành công.")
+                    .data(list)
+                    .build();
+        }
+        PageResponse<TopikLevel> data = topikLevelService.getPaginatedLevels(page, size, search, group, sort);
+        return ApiResponse.<PageResponse<TopikLevel>>builder()
                 .code(HttpStatus.OK.value())
                 .message("Lấy danh sách cấp độ thành công.")
-                .data(list)
+                .data(data)
                 .build();
     }
 
