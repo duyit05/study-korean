@@ -18,7 +18,7 @@
         :key="quiz.id" 
         class="quiz-card"
         :class="{ active: selectedQuiz && selectedQuiz.id === quiz.id }"
-        @click="selectedQuiz = quiz"
+        @click="selectQuiz(quiz)"
       >
         <div class="quiz-header">
           <div class="quiz-icon-badge">한</div>
@@ -38,7 +38,11 @@
           </div>
           <div class="meta-row">
             <AppIcon name="book" size="16" class="icon" />
-            <span>{{ quiz.questions?.length || 0 }} câu hỏi</span>
+            <span>{{ quiz.questionCount || 0 }} câu hỏi</span>
+          </div>
+          <div class="meta-row">
+            <AppIcon name="award" size="16" class="icon" />
+            <span>Tổng điểm: {{ quiz.totalScore || 100 }} điểm</span>
           </div>
         </div>
         <div class="quiz-footer">
@@ -46,7 +50,7 @@
             <button class="action-btn text-link" @click.stop="triggerEditQuiz(quiz)">Sửa</button>
             <button class="action-btn text-link danger-action" @click.stop="triggerDeleteQuiz(quiz)">Xóa</button>
           </div>
-          <button class="action-btn text-link" @click.stop="openEditQuestions(quiz)">Quản lý câu hỏi &rarr;</button>
+          <button class="action-btn text-link" @click.stop="selectQuiz(quiz)">Quản lý câu hỏi &rarr;</button>
         </div>
       </div>
     </div>
@@ -56,7 +60,7 @@
       <div class="panel-header">
         <div class="header-title">
           <h3>Đề: {{ selectedQuiz.title }}</h3>
-          <p>{{ selectedQuiz.topikLevel || 'Luyện tập thường' }} | Thời gian: {{ selectedQuiz.timeLimitMins }} phút</p>
+          <p>{{ selectedQuiz.topikLevel || 'Luyện tập thường' }} | Thời gian: {{ selectedQuiz.timeLimitMins }} phút | Tổng điểm: {{ selectedQuiz.totalScore || 100 }} điểm</p>
         </div>
         <button class="close-btn" @click="selectedQuiz = null">&times;</button>
       </div>
@@ -97,8 +101,9 @@
                 <span>[Tự luận] Học sinh điền câu trả lời ngắn hoặc viết bài luận.</span>
               </div>
             </div>
-            <div class="q-actions-row">
-              <button class="delete-btn" @click="deleteQuestion(selectedQuiz, question.id)">Xóa câu này</button>
+            <div class="q-actions-row" style="display: flex; justify-content: flex-end; gap: 1rem; align-items: center;">
+              <button class="edit-question-btn" @click="triggerEditQuestion(question)">Sửa câu hỏi</button>
+              <button class="delete-btn" @click="triggerDeleteQuestion(question)">Xóa câu này</button>
             </div>
           </div>
           
@@ -127,7 +132,11 @@
           </div>
           <div class="form-group">
             <label for="quizTime">Thời gian làm bài (phút)</label>
-            <input type="number" id="quizTime" v-model="newQuizTime" placeholder="Ví dụ: 100" required min="1">
+            <input type="number" id="quizTime" v-model="newQuizTime" placeholder="Ví dụ: 50" required min="1">
+          </div>
+          <div class="form-group">
+            <label for="quizScore">Tổng điểm bài thi</label>
+            <input type="number" id="quizScore" v-model="newQuizScore" placeholder="Ví dụ: 100" required min="1">
           </div>
           <div class="form-group">
             <label for="quizDueDate">Hạn nộp bài</label>
@@ -149,8 +158,8 @@
     <div v-if="showAddQuestionModal" class="modal-overlay">
       <div class="modal-content large animate-scale">
         <div class="modal-header">
-          <h3>Soạn câu hỏi mới</h3>
-          <button class="close-btn" @click="showAddQuestionModal = false">&times;</button>
+          <h3>{{ isEditQuestionMode ? 'Sửa thông tin câu hỏi' : 'Soạn câu hỏi mới' }}</h3>
+          <button class="close-btn" @click="closeQuestionModal">&times;</button>
         </div>
         <form @submit.prevent="handleAddQuestion" class="modal-form">
           <div class="form-row-2">
@@ -171,8 +180,29 @@
 
           <!-- Listening Audio Options -->
           <div v-if="newQSection === 'LISTENING'" class="form-group border-box">
-            <label for="qAudio">URL File âm thanh (.mp3)</label>
-            <input type="text" id="qAudio" v-model="newQAudio" placeholder="https://example.com/audio.mp3" required>
+            <label style="margin-bottom: 0.5rem; display: block;">File âm thanh bài nghe (.mp3, .mp4)</label>
+            
+            <div class="upload-container">
+              <input 
+                type="file" 
+                ref="audioFileRef" 
+                @change="onAudioFileSelected" 
+                accept="audio/*,video/mp4" 
+                class="hidden-file-input" 
+                id="audioFileInput"
+              >
+              <label for="audioFileInput" class="upload-drag-zone">
+                <AppIcon name="upload" size="24" class="upload-icon" />
+                <span v-if="!uploadingAudioFile && !newQAudio">Nhấp để chọn file âm thanh/video (.mp3, .mp4)</span>
+                <span v-else-if="uploadingAudioFile" class="loading-text">Đang tải file lên...</span>
+                <span v-else class="file-name-display">{{ getAudioFileName(newQAudio) }}</span>
+              </label>
+            </div>
+
+            <!-- Global Audio Preview Player -->
+            <div v-if="newQAudio" class="recording-preview" style="margin-top: 1rem;">
+              <audio :key="newQAudio" :src="newQAudio" controls class="audio-player-preview"></audio>
+            </div>
           </div>
 
           <div class="form-group">
@@ -215,8 +245,8 @@
           </div>
 
           <div class="modal-actions">
-            <button type="button" class="cancel-btn" @click="showAddQuestionModal = false">Hủy bỏ</button>
-            <button type="submit" class="submit-btn">Thêm vào đề thi</button>
+            <button type="button" class="cancel-btn" @click="closeQuestionModal">Hủy bỏ</button>
+            <button type="submit" class="submit-btn">{{ isEditQuestionMode ? 'Cập nhật câu hỏi' : 'Thêm vào đề thi' }}</button>
           </div>
         </form>
       </div>
@@ -234,15 +264,17 @@
             <label for="editQuizTitle">Tên đề thi / bài tập</label>
             <input type="text" id="editQuizTitle" v-model="editQuizTitle" required>
           </div>
-          <div class="form-row-2">
-            <div class="form-group">
-              <label for="editQuizLevel">Cấp độ (TOPIK)</label>
-              <AppSelect id="editQuizLevel" v-model="editQuizLevelId" :options="levelOptions" />
-            </div>
-            <div class="form-group">
-              <label for="editQuizTime">Thời gian làm bài (phút)</label>
-              <input type="number" id="editQuizTime" v-model.number="editQuizTime" required min="5">
-            </div>
+          <div class="form-group">
+            <label for="editQuizLevel">Cấp độ (TOPIK)</label>
+            <AppSelect id="editQuizLevel" v-model="editQuizLevelId" :options="levelOptions" />
+          </div>
+          <div class="form-group">
+            <label for="editQuizTime">Thời gian làm bài (phút)</label>
+            <input type="number" id="editQuizTime" v-model.number="editQuizTime" required min="5">
+          </div>
+          <div class="form-group">
+            <label for="editQuizScore">Tổng điểm bài thi</label>
+            <input type="number" id="editQuizScore" v-model="editQuizScore"  required min="1">
           </div>
           <div class="form-group">
             <label for="editQuizDueDate">Hạn nộp bài</label>
@@ -279,13 +311,38 @@
         </div>
       </div>
     </div>
+
+    <!-- Delete Question Confirmation Modal -->
+    <div v-if="showDeleteQuestionConfirmModal" class="modal-overlay">
+      <div class="modal-content delete-confirm animate-scale">
+        <div class="modal-header">
+          <h3>Xác nhận xóa câu hỏi</h3>
+          <button class="close-btn" @click="showDeleteQuestionConfirmModal = false">&times;</button>
+        </div>
+        <div class="modal-body text-center">
+          <div class="alert-icon-wrapper">
+            <AppIcon name="alert" size="48" class="warning-color" />
+          </div>
+          <p class="warning-text">
+            Bạn có chắc chắn muốn xóa câu hỏi này?
+          </p>
+          <p class="sub-text">
+            Hành động này không thể hoàn tác và sẽ xóa vĩnh viễn câu hỏi khỏi đề thi.
+          </p>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="cancel-btn" @click="showDeleteQuestionConfirmModal = false">Hủy bỏ</button>
+          <button type="button" class="danger-btn" @click="confirmDeleteQuestion">Xác nhận xóa</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
-import AppSelect from '../AppSelect.vue'
+import api from '../../services/axios'
 import { useQuizStore } from '../../stores/quiz'
 import { useStudySetStore } from '../../stores/studySet'
 import { useTopikLevelStore } from '../../stores/topikLevel'
@@ -365,7 +422,8 @@ onMounted(async () => {
 
 // New Quiz Fields
 const newQuizTitle = ref('')
-const newQuizTime = ref(100)
+const newQuizTime = ref(50)
+const newQuizScore = ref(100)
 const newQuizDueDate = ref('')
 const newQuizClassId = ref('')
 
@@ -396,10 +454,11 @@ const openCreateQuizModal = () => {
   newQuizDueDate.value = ''
   newQuizClassId.value = ''
   showCreateModal.value = true
+  newQuizScore.value = 100
 }
 
 const handleCreateQuiz = async () => {
-  if (!newQuizTitle.value || !newQuizTime.value || !newQuizDueDate.value) return
+  if (!newQuizTitle.value || !newQuizTime.value || !newQuizDueDate.value || !newQuizScore.value) return
 
   try {
     await quizStore.createQuiz({
@@ -407,7 +466,8 @@ const handleCreateQuiz = async () => {
       topikLevelId: newQuizLevelId.value,
       timeLimitMins: parseInt(newQuizTime.value),
       dueDate: newQuizDueDate.value + 'T23:59:59',
-      classId: newQuizClassId.value || null
+      classId: newQuizClassId.value || null,
+      totalScore: parseInt(newQuizScore.value)
     })
     toast.success("Tạo đề thi/bài tập mới thành công!")
   } catch (e) {
@@ -418,7 +478,14 @@ const handleCreateQuiz = async () => {
   showCreateModal.value = false
 }
 
+const isEditQuestionMode = ref(false)
+const editingQuestionId = ref(null)
+const uploadingAudioFile = ref(false)
+const audioFileRef = ref(null)
+
 const openAddQuestionModal = () => {
+  isEditQuestionMode.value = false
+  editingQuestionId.value = null
   newQSection.value = 'LISTENING'
   newQPoints.value = 2
   newQText.value = ''
@@ -431,6 +498,75 @@ const openAddQuestionModal = () => {
   newQOptions.value = ['', '', '', '']
   newQCorrectOptionIndex.value = 0
   showAddQuestionModal.value = true
+}
+
+const closeQuestionModal = () => {
+  showAddQuestionModal.value = false
+}
+
+const triggerEditQuestion = (question) => {
+  isEditQuestionMode.value = true
+  editingQuestionId.value = question.id
+  newQSection.value = question.section || 'LISTENING'
+  newQPoints.value = question.points || 2
+  newQText.value = question.questionText || ''
+  newQType.value = question.questionType || 'MULTIPLE_CHOICE'
+  newQAudio.value = question.audioUrl || ''
+  
+  if (question.questionType === 'MULTIPLE_CHOICE') {
+    newQCorrectAnswer.value = ''
+    if (question.wrongAnswers && question.wrongAnswers.length > 0) {
+      newQOptions.value = [...question.wrongAnswers]
+      const idx = question.wrongAnswers.indexOf(question.correctAnswer)
+      newQCorrectOptionIndex.value = idx !== -1 ? idx : 0
+    } else {
+      newQOptions.value = ['', '', '', '']
+      newQCorrectOptionIndex.value = 0
+    }
+  } else {
+    newQCorrectAnswer.value = question.correctAnswer || ''
+    newQOptions.value = ['', '', '', '']
+    newQCorrectOptionIndex.value = 0
+  }
+  
+  showAddQuestionModal.value = true
+}
+
+const onAudioFileSelected = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  uploadingAudioFile.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('prefix', 'audio')
+    
+    const res = await api.post('/files/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    if (res && res.key) {
+      const baseURL = api.defaults.baseURL || 'http://localhost:8080/api'
+      newQAudio.value = `${baseURL}/files/download/${res.key}`
+      toast.success("Tải file lên thành công!")
+    } else {
+      toast.error("Tải file lên thất bại.")
+    }
+  } catch (e) {
+    console.error("Upload failed:", e)
+    toast.error("Lỗi khi tải file lên.")
+  } finally {
+    uploadingAudioFile.value = false
+  }
+}
+
+const getAudioFileName = (url) => {
+  if (!url) return ''
+  const parts = url.split('/')
+  return decodeURIComponent(parts[parts.length - 1])
 }
 
 const handleAddQuestion = async () => {
@@ -457,27 +593,46 @@ const handleAddQuestion = async () => {
       audioUrl: newQSection.value === 'LISTENING' ? newQAudio.value : null
     }
 
-    const newQuestion = await quizStore.addQuestion(selectedQuiz.value.id, questionPayload)
-    
-    if (selectedQuiz.value) {
-      if (!selectedQuiz.value.questions) selectedQuiz.value.questions = []
-      selectedQuiz.value.questions.push(newQuestion)
+    if (isEditQuestionMode.value) {
+      const updatedQuestion = await quizStore.updateQuestion(selectedQuiz.value.id, editingQuestionId.value, questionPayload)
+      if (selectedQuiz.value && selectedQuiz.value.questions) {
+        const idx = selectedQuiz.value.questions.findIndex(q => q.id === editingQuestionId.value)
+        if (idx !== -1) {
+          selectedQuiz.value.questions[idx] = updatedQuestion
+        }
+      }
+      toast.success("Cập nhật câu hỏi thành công!")
+    } else {
+      const newQuestion = await quizStore.addQuestion(selectedQuiz.value.id, questionPayload)
+      if (selectedQuiz.value) {
+        if (!selectedQuiz.value.questions) selectedQuiz.value.questions = []
+        selectedQuiz.value.questions.push(newQuestion)
+      }
+      toast.success("Thêm câu hỏi mới thành công!")
     }
-    toast.success("Thêm câu hỏi mới thành công!")
   } catch (e) {
-    console.error("Failed to add question via API:", e)
-    toast.error("Thêm câu hỏi mới thất bại.")
+    console.error("Failed to save question:", e)
+    toast.error(isEditQuestionMode.value ? "Cập nhật câu hỏi thất bại." : "Thêm câu hỏi mới thất bại.")
   }
 
-  showAddQuestionModal.value = false
+  closeQuestionModal()
 }
 
-const deleteQuestion = async (quiz, questionId) => {
-  if (!confirm("Bạn có chắc chắn muốn xóa câu hỏi này?")) return
+const showDeleteQuestionConfirmModal = ref(false)
+const questionToDelete = ref(null)
+
+const triggerDeleteQuestion = (question) => {
+  questionToDelete.value = question
+  showDeleteQuestionConfirmModal.value = true
+}
+
+const confirmDeleteQuestion = async () => {
+  if (!questionToDelete.value || !selectedQuiz.value) return
+  const qId = questionToDelete.value.id
   try {
-    await quizStore.deleteQuestion(quiz.id, questionId)
-    if (selectedQuiz.value && selectedQuiz.value.questions) {
-      const index = selectedQuiz.value.questions.findIndex(q => q.id === questionId)
+    await quizStore.deleteQuestion(selectedQuiz.value.id, qId)
+    if (selectedQuiz.value.questions) {
+      const index = selectedQuiz.value.questions.findIndex(q => q.id === qId)
       if (index !== -1) {
         selectedQuiz.value.questions.splice(index, 1)
       }
@@ -486,11 +641,20 @@ const deleteQuestion = async (quiz, questionId) => {
   } catch (e) {
     console.error("Failed to delete question via API:", e)
     toast.error("Xóa câu hỏi thất bại.")
+  } finally {
+    showDeleteQuestionConfirmModal.value = false
+    questionToDelete.value = null
   }
 }
 
-const openEditQuestions = (quiz) => {
-  selectedQuiz.value = quiz
+const selectQuiz = async (quiz) => {
+  try {
+    const details = await quizStore.fetchQuizDetails(quiz.id)
+    selectedQuiz.value = details
+  } catch (e) {
+    console.error("Failed to fetch quiz details:", e)
+    toast.error("Không thể lấy chi tiết câu hỏi.")
+  }
 }
 
 const getQuestionOptions = (question) => {
@@ -523,7 +687,7 @@ const editQuizTitle = ref('')
 const editQuizTime = ref(100)
 const editQuizDueDate = ref('')
 const editQuizClassId = ref('')
-
+const editQuizScore = ref(100)
 const showDeleteQuizConfirmModal = ref(false)
 const quizToDelete = ref(null)
 
@@ -537,11 +701,12 @@ const triggerEditQuiz = (quiz) => {
   editQuizTime.value = quiz.timeLimitMins || 100
   editQuizDueDate.value = quiz.dueDate ? quiz.dueDate.substring(0, 10) : ''
   editQuizClassId.value = quiz.classId || quiz.clazzId || ''
+  editQuizScore.value = quiz.totalScore || 100
   showEditQuizModal.value = true
 }
 
 const handleUpdateQuiz = async () => {
-  if (!quizToEdit.value || !editQuizTitle.value || !editQuizTime.value || !editQuizDueDate.value) return
+  if (!quizToEdit.value || !editQuizTitle.value || !editQuizTime.value || !editQuizDueDate.value || !editQuizScore.value) return
 
   try {
     await quizStore.updateQuiz(quizToEdit.value.id, {
@@ -549,7 +714,8 @@ const handleUpdateQuiz = async () => {
       topikLevelId: editQuizLevelId.value,
       timeLimitMins: parseInt(editQuizTime.value),
       dueDate: editQuizDueDate.value + 'T23:59:59',
-      classId: editQuizClassId.value || null
+      classId: editQuizClassId.value || null,
+      totalScore: parseInt(editQuizScore.value)
     })
     toast.success("Cập nhật đề thi thành công!")
     showEditQuizModal.value = false
@@ -562,6 +728,8 @@ const handleUpdateQuiz = async () => {
       selectedQuiz.value.title = editQuizTitle.value
       selectedQuiz.value.topikLevel = levelName
       selectedQuiz.value.timeLimitMins = editQuizTime.value
+      selectedQuiz.value.totalScore = parseInt(editQuizScore.value)
+      selectedQuiz.value.classId = editQuizClassId.value || null
     }
   } catch (e) {
     console.error("Failed to update quiz:", e)
@@ -605,6 +773,8 @@ const confirmDeleteQuiz = async () => {
   justify-content: space-between;
   align-items: center;
 }
+
+.modal-body { padding: 2rem 1.5rem; }
 
 .title-area h2 {
   font-size: 1.5rem;
@@ -935,6 +1105,19 @@ const confirmDeleteQuiz = async () => {
   text-decoration: underline;
 }
 
+.edit-question-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.edit-question-btn:hover {
+  text-decoration: underline;
+}
+
 /* Modal layout variants */
 .modal-overlay {
   position: fixed;
@@ -1080,5 +1263,255 @@ input:focus, select:focus, textarea:focus {
 
 .submit-btn:hover {
   background-color: var(--primary-hover);
+}
+
+.delete-confirm {
+  max-width: 440px;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.alert-icon-wrapper {
+  margin-bottom: 1rem;
+}
+
+.warning-color {
+  color: var(--danger);
+}
+
+.warning-text {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-title);
+  margin-bottom: 0.5rem;
+}
+
+.sub-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.danger-btn {
+  background-color: var(--danger);
+  color: #fff;
+  border: none;
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.danger-btn:hover:not(:disabled) {
+  background-color: #83392c;
+}
+
+.audio-source-selector {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.audio-source-selector .radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.upload-container {
+  margin-top: 0.5rem;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.upload-drag-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  background-color: var(--bg-body);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+
+.upload-drag-zone:hover {
+  border-color: var(--primary);
+  background-color: rgba(var(--primary-rgb), 0.05);
+}
+
+.upload-icon {
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+
+.file-name-display {
+  font-size: 0.85rem;
+  color: var(--primary);
+  font-weight: 600;
+  word-break: break-all;
+}
+
+.loading-text {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.recorder-container {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.recorder-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  background-color: var(--bg-body);
+}
+
+.recorder-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-card);
+}
+
+.status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--text-muted);
+}
+
+.recorder-status.recording .status-indicator {
+  background-color: var(--danger);
+  animation: blink 1s infinite;
+}
+
+.recorder-status.paused .status-indicator {
+  background-color: #f59e0b;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.status-text {
+  font-size: 0.85rem;
+  font-weight: 500;
+  flex-grow: 1;
+  color: var(--text-title);
+}
+
+.timer-countdown {
+  font-size: 1rem;
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+.recorder-controls {
+  display: flex;
+  justify-content: center;
+}
+
+.active-controls {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.record-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: none;
+  flex: 1;
+  transition: all var(--transition-fast);
+}
+
+.record-btn.start {
+  background-color: var(--primary);
+  color: #fff;
+  max-width: 200px;
+}
+
+.record-btn.start:hover {
+  background-color: var(--primary-hover);
+}
+
+.record-btn.pause {
+  background-color: #f59e0b;
+  color: #fff;
+}
+
+.record-btn.pause:hover {
+  background-color: #d97706;
+}
+
+.record-btn.resume {
+  background-color: #10b981;
+  color: #fff;
+}
+
+.record-btn.resume:hover {
+  background-color: #059669;
+}
+
+.record-btn.stop {
+  background-color: var(--danger);
+  color: #fff;
+}
+
+.record-btn.stop:hover {
+  background-color: #b91c1c;
+}
+
+.recording-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.preview-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.audio-player-preview {
+  width: 100%;
+  border-radius: var(--radius-sm);
 }
 </style>

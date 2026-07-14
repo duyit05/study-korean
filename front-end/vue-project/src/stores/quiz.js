@@ -31,7 +31,8 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   };
 
-  const fetchQuizzesByClass = async (classId) => {
+  const fetchQuizzesByClass = async (classId, force = false) => {
+    if (quizzes.value.length > 0 && !force) return quizzes.value;
     loading.value = true;
     errorMessage.value = '';
     try {
@@ -46,7 +47,8 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   };
 
-  const fetchMyCreatedQuizzes = async () => {
+  const fetchMyCreatedQuizzes = async (force = false) => {
+    if (quizzes.value.length > 0 && !force) return quizzes.value;
     loading.value = true;
     errorMessage.value = '';
     try {
@@ -110,6 +112,20 @@ export const useQuizStore = defineStore('quiz', () => {
     errorMessage.value = '';
     try {
       await api.delete(`/quizzes/${quizId}/questions/${questionId}`);
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const updateQuestion = async (quizId, questionId, questionPayload) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      const response = await api.put(`/quizzes/${quizId}/questions/${questionId}`, questionPayload);
+      return response.data;
     } catch (error) {
       errorMessage.value = error.message;
       throw error;
@@ -226,6 +242,7 @@ export const useQuizStore = defineStore('quiz', () => {
     updateQuiz,
     deleteQuiz,
     addQuestion,
+    updateQuestion,
     deleteQuestion,
     submitQuizAttempt,
     fetchPendingAttempts,

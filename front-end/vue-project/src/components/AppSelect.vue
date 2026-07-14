@@ -92,12 +92,12 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
+  padding: 0.65rem 1rem;
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   color: var(--text-title);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   cursor: pointer;
   user-select: none;
   transition: all var(--transition-fast);
@@ -115,6 +115,16 @@ onUnmounted(() => {
 .select-trigger.disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.trigger-label, .trigger-placeholder {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 0.5rem;
+  text-align: left;
 }
 
 .trigger-placeholder {

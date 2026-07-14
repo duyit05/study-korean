@@ -37,12 +37,21 @@ public class StudySetService {
     @Transactional(readOnly = true)
     public List<StudySetResponse> getAllStudySets() {
         List<StudySet> sets = studySetRepository.findAllWithCreatorAndTopikLevel();
-        return studySetMapper.toResponses(sets);
+        Long studentId = null;
+        try {
+            studentId = userService.getCurrentUser().getId();
+        } catch (Exception e) {
+            // anonymous or unauthenticated
+        }
+        return studySetMapper.toResponses(sets, studentId);
     }
 
     @Transactional(readOnly = true)
-    public List<Card> getCardsByStudySet(Long studySetId) {
-        return cardRepository.findByStudySetIdOrderByOrderAsc(studySetId);
+    public List<StudySetResponse.CardResponse> getCardsByStudySet(Long studySetId) {
+        List<Card> cards = cardRepository.findByStudySetIdOrderByOrderAsc(studySetId);
+        return cards.stream()
+                .map(studySetMapper::toCardResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -86,6 +95,34 @@ public class StudySetService {
 
         Card saved = cardRepository.save(card);
         return studySetMapper.toCardResponse(saved);
+    }
+
+    @Transactional
+    public List<StudySetResponse.CardResponse> addCardsToStudySet(Long studySetId, List<CardRequest> requests) {
+        StudySet studySet = studySetRepository.findById(studySetId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        List<Card> existingCards = cardRepository.findByStudySetId(studySetId);
+        int nextOrder = existingCards.size() + 1;
+
+        List<Card> cardsToSave = new java.util.ArrayList<>();
+        for (CardRequest request : requests) {
+            Card card = Card.builder()
+                    .studySet(studySet)
+                    .cardType(CardType.VOCAB)
+                    .frontText(request.getFrontText())
+                    .backText(request.getBackText())
+                    .exampleSentence(request.getExampleSentence())
+                    .order(nextOrder++)
+                    .difficulty(1)
+                    .build();
+            cardsToSave.add(card);
+        }
+
+        List<Card> saved = cardRepository.saveAll(cardsToSave);
+        return saved.stream()
+                .map(studySetMapper::toCardResponse)
+                .collect(Collectors.toList());
     }
 
     @Transactional

@@ -7,6 +7,8 @@ import com.example.back_end.entity.QuizAttempt;
 import com.example.back_end.repository.CardProgressRepository;
 import com.example.back_end.repository.CardRepository;
 import com.example.back_end.repository.QuizAttemptRepository;
+import com.example.back_end.repository.AssignedStudySetRepository;
+import com.example.back_end.entity.AssignedStudySet;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +22,7 @@ public class ClassMapper {
     private final CardProgressRepository cardProgressRepository;
     private final CardRepository cardRepository;
     private final QuizAttemptRepository quizAttemptRepository;
+    private final AssignedStudySetRepository assignedStudySetRepository;
 
     public ClassResponse toResponse(Class c) {
         if (c == null) return null;
@@ -35,7 +38,13 @@ public class ClassMapper {
 
             progressMap = progressList.stream().collect(Collectors.groupingBy(p -> p.getStudent().getId()));
             attemptsMap = attemptsList.stream().collect(Collectors.groupingBy(a -> a.getStudent().getId()));
-            totalCards = cardRepository.count();
+
+            List<AssignedStudySet> assigned = assignedStudySetRepository.findByClazzId(c.getId());
+            List<Long> studySetIds = assigned.stream()
+                    .map(a -> a.getStudySet().getId())
+                    .distinct()
+                    .collect(Collectors.toList());
+            totalCards = studySetIds.isEmpty() ? 0 : cardRepository.countByStudySetIdIn(studySetIds);
         }
 
         return toResponse(c, progressMap, attemptsMap, totalCards);
@@ -141,7 +150,8 @@ public class ClassMapper {
 
         java.util.Map<Long, List<CardProgress>> progressMap = java.util.Map.of();
         java.util.Map<Long, List<QuizAttempt>> attemptsMap = java.util.Map.of();
-        long totalCards = 0;
+        java.util.Map<Long, List<AssignedStudySet>> assignedMap = java.util.Map.of();
+        java.util.Map<Long, Long> studySetCardCounts = java.util.Map.of();
 
         if (!studentIds.isEmpty()) {
             List<CardProgress> allProgress = cardProgressRepository.findByStudentIdIn(studentIds);
@@ -149,15 +159,42 @@ public class ClassMapper {
 
             progressMap = allProgress.stream().collect(Collectors.groupingBy(p -> p.getStudent().getId()));
             attemptsMap = allAttempts.stream().collect(Collectors.groupingBy(a -> a.getStudent().getId()));
-            totalCards = cardRepository.count();
+        }
+
+        List<Long> classIds = classes.stream().map(Class::getId).collect(Collectors.toList());
+        if (!classIds.isEmpty()) {
+            List<AssignedStudySet> allAssigned = assignedStudySetRepository.findByClazzIdIn(classIds);
+            assignedMap = allAssigned.stream().collect(Collectors.groupingBy(a -> a.getClazz().getId()));
+
+            List<Long> allStudySetIds = allAssigned.stream()
+                    .map(a -> a.getStudySet().getId())
+                    .distinct()
+                    .collect(Collectors.toList());
+            if (!allStudySetIds.isEmpty()) {
+                List<Object[]> cardCounts = cardRepository.countCardsByStudySetIds(allStudySetIds);
+                studySetCardCounts = cardCounts.stream()
+                        .collect(Collectors.toMap(
+                                row -> (Long) row[0],
+                                row -> (Long) row[1]
+                        ));
+            }
         }
 
         final java.util.Map<Long, List<CardProgress>> finalProgressMap = progressMap;
         final java.util.Map<Long, List<QuizAttempt>> finalAttemptsMap = attemptsMap;
-        final long finalTotalCards = totalCards;
+        final java.util.Map<Long, List<AssignedStudySet>> finalAssignedMap = assignedMap;
+        final java.util.Map<Long, Long> finalCardCounts = studySetCardCounts;
 
         return classes.stream()
-                .map(c -> toResponse(c, finalProgressMap, finalAttemptsMap, finalTotalCards))
+                .map(c -> {
+                    List<AssignedStudySet> assigned = finalAssignedMap.getOrDefault(c.getId(), List.of());
+                    long classTotalCards = assigned.stream()
+                            .map(a -> a.getStudySet().getId())
+                            .distinct()
+                            .mapToLong(setId -> finalCardCounts.getOrDefault(setId, 0L))
+                            .sum();
+                    return toResponse(c, finalProgressMap, finalAttemptsMap, classTotalCards);
+                })
                 .collect(Collectors.toList());
     }
 }

@@ -478,7 +478,6 @@
 <script setup>
 import { ref, computed, onMounted, watch, reactive } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
-import AppSelect from '../AppSelect.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 

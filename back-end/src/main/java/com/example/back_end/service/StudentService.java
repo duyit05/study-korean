@@ -42,8 +42,13 @@ public class StudentService {
 
     @Transactional(readOnly = true)
     public List<StudentResponse> getAllStudents() {
-        return userRepository.findByRole(UserRole.STUDENT).stream()
-                .map(studentMapper::toResponse)
+        List<User> students = userRepository.findByRole(UserRole.STUDENT);
+        List<StudentProfile> profiles = studentProfileRepository.findAll();
+        java.util.Map<Long, StudentProfile> profileMap = profiles.stream()
+                .filter(p -> p.getUser() != null)
+                .collect(Collectors.toMap(p -> p.getUser().getId(), p -> p, (p1, p2) -> p1));
+        return students.stream()
+                .map(student -> studentMapper.toResponse(student, profileMap.get(student.getId())))
                 .collect(Collectors.toList());
     }
 
@@ -78,9 +83,8 @@ public class StudentService {
                 .build();
 
         studentProfileRepository.save(profile);
-        savedUser.setStudentProfile(profile);
 
-        return studentMapper.toResponse(savedUser);
+        return studentMapper.toResponse(savedUser, profile);
     }
 
     @Transactional
@@ -104,7 +108,7 @@ public class StudentService {
             user.setIsActive(request.getIsActive());
         }
 
-        StudentProfile profile = user.getStudentProfile();
+        StudentProfile profile = studentProfileRepository.findByUserId(user.getId()).orElse(null);
         if (profile == null) {
             profile = StudentProfile.builder()
                     .user(user)
@@ -117,10 +121,9 @@ public class StudentService {
         profile.setCurrentLevel(request.getCurrentLevel());
 
         studentProfileRepository.save(profile);
-        user.setStudentProfile(profile);
 
         User saved = userRepository.save(user);
-        return studentMapper.toResponse(saved);
+        return studentMapper.toResponse(saved, profile);
     }
 
     @Transactional

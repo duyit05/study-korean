@@ -54,7 +54,7 @@ Product (Entity) → chỉ dùng nội bộ trong service/repo
 
 **Lý do:** Tránh load toàn bộ data khi có nhiều sản phẩm.
 
-**Cách gọi:** GET /api/v1/products?page=0&size=20&sort=createdAt,desc
+**Cách gọi:** GET /api/products?page=0&size=20&sort=createdAt,desc
 
 **Giới hạn:** size tối đa 100, nếu client gửi quá 100 thì ép về 100.
 

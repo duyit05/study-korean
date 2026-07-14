@@ -18,6 +18,8 @@ public class QuizResponse {
     private LocalDateTime dueDate;
     private LocalDateTime createdAt;
     private List<QuestionResponse> questions;
+    private Integer questionCount;
+    private Long classId;
 
     @Data
     @NoArgsConstructor

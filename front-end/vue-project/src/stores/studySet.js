@@ -9,13 +9,32 @@ export const useStudySetStore = defineStore('studySet', () => {
   const loading = ref(false);
   const errorMessage = ref('');
 
-  const fetchStudySets = async () => {
+  const fetchStudySets = async (force = false) => {
+    if (studySets.value.length > 0 && !force) return studySets.value;
     loading.value = true;
     errorMessage.value = '';
     try {
       const response = await api.get('/study-sets');
       studySets.value = response.data || [];
       return studySets.value;
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const fetchCardsForSet = async (setId) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      const response = await api.get(`/study-sets/${setId}/cards`);
+      const idx = studySets.value.findIndex(s => s.id === setId);
+      if (idx !== -1) {
+        studySets.value[idx].words = response.data || [];
+      }
+      return response.data;
     } catch (error) {
       errorMessage.value = error.message;
       throw error;
@@ -45,6 +64,20 @@ export const useStudySetStore = defineStore('studySet', () => {
     errorMessage.value = '';
     try {
       const response = await api.post(`/study-sets/${setId}/cards`, cardPayload);
+      return response.data;
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const addCardsBatch = async (setId, cardsPayload) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      const response = await api.post(`/study-sets/${setId}/cards/batch`, cardsPayload);
       return response.data;
     } catch (error) {
       errorMessage.value = error.message;
@@ -100,7 +133,8 @@ export const useStudySetStore = defineStore('studySet', () => {
     }
   };
 
-  const fetchClasses = async (role) => {
+  const fetchClasses = async (role, force = false) => {
+    if (classes.value.length > 0 && !force) return classes.value;
     loading.value = true;
     errorMessage.value = '';
     try {
@@ -186,10 +220,12 @@ export const useStudySetStore = defineStore('studySet', () => {
     loading,
     errorMessage,
     fetchStudySets,
+    fetchCardsForSet,
     createStudySet,
     updateStudySet,
     deleteStudySet,
     addCard,
+    addCardsBatch,
     deleteCard,
     fetchClasses,
     createClass,

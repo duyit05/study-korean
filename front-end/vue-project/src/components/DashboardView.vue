@@ -236,10 +236,8 @@ const vocabStats = computed(() => {
   let total = 0
   let learned = 0
   props.studySets.forEach(set => {
-    set.words.forEach(w => {
-      total++
-      if (w.status === 'learned') learned++
-    })
+    total += (set.wordCount || 0)
+    learned += (set.learnedCount || 0)
   })
   return { total, learned }
 })

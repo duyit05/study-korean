@@ -24,20 +24,23 @@
       <div class="filter-options">
         <div class="filter-group">
           <label for="levelFilter">Cấp độ</label>
-          <select id="levelFilter" v-model="selectedLevelFilter">
-            <option value="">Tất cả cấp độ</option>
-            <option v-for="lvl in topikLevels" :key="lvl.id" :value="lvl.name">
-              {{ lvl.name }}
-            </option>
-          </select>
+          <AppSelect
+            id="levelFilter"
+            v-model="selectedLevelFilter"
+            :options="levelFilterOptions"
+            placeholder="Tất cả cấp độ"
+            style="min-width: 180px;"
+          />
         </div>
         <div class="filter-group">
           <label for="statusFilter">Trạng thái</label>
-          <select id="statusFilter" v-model="selectedStatusFilter">
-            <option value="">Tất cả</option>
-            <option value="active">Hoạt động</option>
-            <option value="inactive">Đã khóa</option>
-          </select>
+          <AppSelect
+            id="statusFilter"
+            v-model="selectedStatusFilter"
+            :options="statusFilterOptions"
+            placeholder="Tất cả"
+            style="min-width: 120px;"
+          />
         </div>
       </div>
     </div>
@@ -156,12 +159,12 @@
             </div>
             <div class="form-group">
               <label for="newCurrentLevel">Trình độ hiện tại</label>
-              <select id="newCurrentLevel" v-model="newStudent.currentLevel">
-                <option value="">Chưa phân lớp</option>
-                <option v-for="lvl in topikLevels" :key="lvl.id" :value="lvl.name">
-                  {{ lvl.name }}
-                </option>
-              </select>
+              <AppSelect
+                id="newCurrentLevel"
+                v-model="newStudent.currentLevel"
+                :options="levelFormOptions"
+                placeholder="Chưa phân lớp"
+              />
             </div>
             <div class="form-group full-width">
               <label for="newGoal">Mục tiêu học tập</label>
@@ -205,19 +208,20 @@
             </div>
             <div class="form-group">
               <label for="editCurrentLevel">Trình độ hiện tại</label>
-              <select id="editCurrentLevel" v-model="editingStudent.currentLevel">
-                <option value="">Chưa phân lớp</option>
-                <option v-for="lvl in topikLevels" :key="lvl.id" :value="lvl.name">
-                  {{ lvl.name }}
-                </option>
-              </select>
+              <AppSelect
+                id="editCurrentLevel"
+                v-model="editingStudent.currentLevel"
+                :options="levelFormOptions"
+                placeholder="Chưa phân lớp"
+              />
             </div>
             <div class="form-group">
               <label for="editStatus">Trạng thái tài khoản</label>
-              <select id="editStatus" v-model="editingStudent.isActive">
-                <option :value="true">Hoạt động</option>
-                <option :value="false">Đã khóa</option>
-              </select>
+              <AppSelect
+                id="editStatus"
+                v-model="editingStudent.isActive"
+                :options="statusFormOptions"
+              />
             </div>
             <div class="form-group full-width">
               <label for="editGoal">Mục tiêu học tập</label>
@@ -281,6 +285,27 @@ const topikLevels = computed(() => topikLevelStore.levels)
 const searchQuery = ref('')
 const selectedLevelFilter = ref('')
 const selectedStatusFilter = ref('')
+
+const levelFilterOptions = computed(() => [
+  { value: '', label: 'Tất cả cấp độ' },
+  ...topikLevels.value.map(lvl => ({ value: lvl.name, label: lvl.name }))
+])
+
+const statusFilterOptions = [
+  { value: '', label: 'Tất cả' },
+  { value: 'active', label: 'Hoạt động' },
+  { value: 'inactive', label: 'Đã khóa' }
+]
+
+const levelFormOptions = computed(() => [
+  { value: '', label: 'Chưa phân lớp' },
+  ...topikLevels.value.map(lvl => ({ value: lvl.name, label: lvl.name }))
+])
+
+const statusFormOptions = [
+  { value: true, label: 'Hoạt động' },
+  { value: false, label: 'Đã khóa' }
+]
 
 // Modal state
 const showCreateModal = ref(false)
@@ -539,21 +564,16 @@ const confirmDelete = async () => {
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-muted);
+  white-space: nowrap;
 }
 
-.filter-group select {
-  padding: 0.6rem 2rem 0.6rem 1rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
+.filter-group :deep(.select-trigger) {
   background-color: var(--bg-body);
-  color: var(--text-title);
-  font-size: 0.85rem;
-  cursor: pointer;
+  padding: 0.6rem 1rem;
 }
 
-.filter-group select:focus {
-  border-color: var(--primary);
-  outline: none;
+.form-group :deep(.select-trigger) {
+  background-color: var(--bg-body);
 }
 
 /* Table Card */

@@ -21,14 +21,18 @@ public class QuizMapper {
         if (quizzes == null || quizzes.isEmpty()) return List.of();
 
         List<Long> quizIds = quizzes.stream().map(Quiz::getId).collect(Collectors.toList());
-        List<QuizQuestion> allQuestions = quizQuestionRepository.findByQuizIdInOrderByQuizIdAscOrderAsc(quizIds);
-        java.util.Map<Long, List<QuizQuestion>> questionsByQuizMap = allQuestions.stream()
-                .collect(Collectors.groupingBy(q -> q.getQuiz().getId()));
+        List<Object[]> counts = quizQuestionRepository.countQuestionsByQuizIds(quizIds);
+        java.util.Map<Long, Long> countMap = counts.stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Long) row[1]
+                ));
 
         return quizzes.stream()
                 .map(quiz -> {
-                    List<QuizQuestion> questions = questionsByQuizMap.getOrDefault(quiz.getId(), List.of());
-                    return toResponse(quiz, questions);
+                    QuizResponse res = toResponse(quiz, null);
+                    res.setQuestionCount(countMap.getOrDefault(quiz.getId(), 0L).intValue());
+                    return res;
                 })
                 .collect(Collectors.toList());
     }
@@ -45,6 +49,8 @@ public class QuizMapper {
                 .dueDate(quiz.getDueDate())
                 .createdAt(quiz.getCreatedAt())
                 .questions(questions != null ? questions.stream().map(this::toQuestionResponse).collect(Collectors.toList()) : List.of())
+                .questionCount(questions != null ? questions.size() : 0)
+                .classId(quiz.getClazz() != null ? quiz.getClazz().getId() : null)
                 .build();
     }
 

@@ -193,7 +193,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useCourseStore } from '../../stores/course'
 import { useTopikLevelStore } from '../../stores/topikLevel'
 import AppIcon from '../icons/AppIcon.vue'
-import AppSelect from '../AppSelect.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 

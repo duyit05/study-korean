@@ -31,6 +31,16 @@ public class StudySetController {
                 .build();
     }
 
+    @GetMapping("/{id}/cards")
+    public ApiResponse<List<StudySetResponse.CardResponse>> getCards(@PathVariable Long id) {
+        List<StudySetResponse.CardResponse> response = studySetService.getCardsByStudySet(id);
+        return ApiResponse.<List<StudySetResponse.CardResponse>>builder()
+                .code(HttpStatus.OK.value())
+                .message("Lấy danh sách thẻ từ vựng thành công.")
+                .data(response)
+                .build();
+    }
+
     @PostMapping
     public ApiResponse<StudySetResponse> createStudySet(@Valid @RequestBody StudySetRequest request) {
         StudySetResponse response = studySetService.createStudySet(request);
@@ -49,6 +59,18 @@ public class StudySetController {
         return ApiResponse.<StudySetResponse.CardResponse>builder()
                 .code(HttpStatus.OK.value())
                 .message("Thêm thẻ từ vựng thành công.")
+                .data(response)
+                .build();
+    }
+
+    @PostMapping("/{id}/cards/batch")
+    public ApiResponse<List<StudySetResponse.CardResponse>> addCardsBatch(
+            @PathVariable Long id,
+            @Valid @RequestBody List<CardRequest> requests) {
+        List<StudySetResponse.CardResponse> response = studySetService.addCardsToStudySet(id, requests);
+        return ApiResponse.<List<StudySetResponse.CardResponse>>builder()
+                .code(HttpStatus.OK.value())
+                .message("Nhập danh sách thẻ từ vựng thành công.")
                 .data(response)
                 .build();
     }

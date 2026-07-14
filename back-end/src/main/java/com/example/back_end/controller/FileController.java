@@ -49,6 +49,7 @@ public class FileController {
             else if (lowerKey.endsWith(".gif")) contentType = "image/gif";
             else if (lowerKey.endsWith(".pdf")) contentType = "application/pdf";
             else if (lowerKey.endsWith(".mp3")) contentType = "audio/mpeg";
+            else if (lowerKey.endsWith(".mp4")) contentType = "video/mp4";
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_TYPE, contentType)

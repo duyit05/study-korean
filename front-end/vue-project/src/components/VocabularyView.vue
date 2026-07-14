@@ -32,7 +32,7 @@
         class="study-set-card"
       >
         <div class="set-meta">
-          <span class="vocab-count-badge">{{ set.words.length }} Từ</span>
+          <span class="vocab-count-badge">{{ set.wordCount || 0 }} Từ</span>
         </div>
         <h3>{{ set.name }}</h3>
         <p>{{ set.description }}</p>
@@ -263,6 +263,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import AppIcon from './icons/AppIcon.vue'
+import { useStudySetStore } from '../stores/studySet'
 
 const props = defineProps({
   studySets: {
@@ -283,13 +284,23 @@ const currentCardIndex = ref(0)
 const isFlipped = ref(false)
 
 // Select set
-const selectSet = (set, mode) => {
+const selectSet = async (set, mode) => {
   selectedSet.value = set
   viewMode.value = mode
   searchQuery.value = ''
   activeFilter.value = 'all'
   currentCardIndex.value = 0
   isFlipped.value = false
+
+  if (!set.words || set.words.length === 0) {
+    try {
+      const studySetStore = useStudySetStore()
+      const cards = await studySetStore.fetchCardsForSet(set.id)
+      selectedSet.value.words = cards || []
+    } catch (e) {
+      console.warn("Failed to load cards for set:", e)
+    }
+  }
 }
 
 // Start Flashcard Mode
@@ -301,19 +312,20 @@ const startFlashcardMode = () => {
 
 // Calculations
 const getSetProgressPercentage = (set) => {
-  if (set.words.length === 0) return 0
-  const learnedCount = set.words.filter(w => w.status === 'learned').length
-  return Math.round((learnedCount / set.words.length) * 100)
+  const total = set.wordCount || 0
+  if (total === 0) return 0
+  const learned = set.learnedCount || 0
+  return Math.round((learned / total) * 100)
 }
 
 const getWordCountByStatus = (status) => {
-  if (!selectedSet.value) return 0
+  if (!selectedSet.value || !selectedSet.value.words) return 0
   return selectedSet.value.words.filter(w => w.status === status).length
 }
 
 // Filters vocab list
 const filteredWords = computed(() => {
-  if (!selectedSet.value) return []
+  if (!selectedSet.value || !selectedSet.value.words) return []
   return selectedSet.value.words.filter(word => {
     // Check search query
     const matchSearch = 
@@ -330,7 +342,7 @@ const filteredWords = computed(() => {
 
 // Flashcard deck filters - all words in set
 const activeFlashcards = computed(() => {
-  return selectedSet.value ? selectedSet.value.words : []
+  return selectedSet.value ? (selectedSet.value.words || []) : []
 })
 
 const currentCard = computed(() => {

@@ -14,6 +14,8 @@ public class StudySetResponse {
     private String category;
     private String creatorName;
     private List<CardResponse> words;
+    private Integer wordCount;
+    private Integer learnedCount;
 
     @Data
     @NoArgsConstructor

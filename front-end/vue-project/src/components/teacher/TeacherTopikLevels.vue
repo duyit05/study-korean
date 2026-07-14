@@ -214,7 +214,6 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useTopikLevelStore } from '../../stores/topikLevel'
 import AppIcon from '../icons/AppIcon.vue'
-import AppSelect from '../AppSelect.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
@@ -480,7 +479,7 @@ const confirmDelete = async () => {
 
 .filter-bar {
   display: flex;
-  justify-content: space-between;
+  /* justify-content: space-between; */
   align-items: center;
   gap: 1.5rem;
   flex-wrap: wrap;
@@ -519,6 +518,7 @@ const confirmDelete = async () => {
   font-weight: 600;
   color: var(--text-title);
   font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 .table-container {

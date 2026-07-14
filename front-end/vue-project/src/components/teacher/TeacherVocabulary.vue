@@ -60,9 +60,15 @@
       <div class="panel-body">
         <div class="cards-section-header">
           <h4>Danh sách thẻ từ ({{ selectedSet.words?.length || 0 }})</h4>
-          <button class="secondary-btn" @click="openAddCardForm">
-            <span>+ Thêm từ mới</span>
-          </button>
+          <div class="header-action-group" style="display: flex; gap: 0.5rem;">
+            <button class="secondary-btn" @click="openImportModal" style="background-color: var(--primary-glow); border-color: var(--primary); display: flex; align-items: center; gap: 0.25rem;">
+              <AppIcon name="upload" size="14" />
+              <span>Import từ file / text</span>
+            </button>
+            <button class="secondary-btn" @click="openAddCardForm">
+              <span>+ Thêm từ mới</span>
+            </button>
+          </div>
         </div>
 
         <div class="cards-list">
@@ -158,17 +164,132 @@
           </div>
           <div class="form-group">
             <label for="editRange">Cấp độ (TOPIK)</label>
-            <select id="editRange" v-model="editSetLevelId">
-              <option v-for="level in topikLevels" :key="level.id" :value="level.id">
-                {{ level.name }}
-              </option>
-            </select>
+            <AppSelect id="editRange" v-model="editSetLevelId" :options="levelOptions" />
           </div>
           <div class="modal-actions">
             <button type="button" class="cancel-btn" @click="showEditModal = false">Hủy bỏ</button>
             <button type="submit" class="submit-btn">Lưu thay đổi</button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Import Cards Modal -->
+    <div v-if="showImportModal" class="modal-overlay">
+      <div class="modal-content large animate-scale" style="max-width: 600px;">
+        <div class="modal-header">
+          <h3>Nhập từ vựng hàng loạt (Import)</h3>
+          <button class="close-btn" @click="showImportModal = false">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 1rem 0;">
+          <div class="import-tabs">
+            <button 
+              type="button" 
+              class="tab-btn" 
+              :class="{ active: importTab === 'paste' }"
+              @click="importTab = 'paste'"
+            >
+              Copy & Paste văn bản
+            </button>
+            <button 
+              type="button" 
+              class="tab-btn" 
+              :class="{ active: importTab === 'file' }"
+              @click="importTab = 'file'"
+            >
+              Chọn file từ máy tính (.txt, .csv)
+            </button>
+          </div>
+
+          <!-- Format selector -->
+          <div class="format-selector-row">
+            <span class="format-label">Định dạng nhập liệu:</span>
+            <div class="format-options">
+              <label class="format-option-card" :class="{ active: importFormat === 'auto' }">
+                <input type="radio" value="auto" v-model="importFormat" @change="previewParsedData">
+                <span>Tự động nhận diện</span>
+              </label>
+              <label class="format-option-card" :class="{ active: importFormat === 'vertical' }">
+                <input type="radio" value="vertical" v-model="importFormat" @change="previewParsedData">
+                <span>Hàng dọc (dòng trống)</span>
+              </label>
+              <label class="format-option-card" :class="{ active: importFormat === 'horizontal' }">
+                <input type="radio" value="horizontal" v-model="importFormat" @change="previewParsedData">
+                <span>Hàng ngang (Tab/|/,/;)</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Paste Tab Content -->
+          <div v-if="importTab === 'paste'" class="tab-content">
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+              Cách dùng: Nhập thông tin từ vựng theo dạng hàng dọc (mỗi từ chiếm 2-3 dòng liên tiếp, cách nhau bởi dòng trống) hoặc dán các cột từ Excel sang hàng ngang.
+            </p>
+            <textarea 
+              v-model="importText" 
+              placeholder="DÁN DỮ LIỆU VÀO ĐÂY&#10;&#10;Định dạng hàng dọc ví dụ (Mỗi từ 2-3 dòng, cách nhau dòng trống):&#10;날씨&#10;Thời tiết&#10;오늘 날씨가 참 좋네요&#10;&#10;사과&#10;Quả táo&#10;사과를 먹어요&#10;&#10;----------------------------------------&#10;&#10;Định dạng hàng ngang ví dụ:&#10;날씨 | Thời tiết | 오늘 날씨가 참 좋네요&#10;사과 | Quả táo | 사과를 먹어요"
+              rows="8"
+              style="width: 100%; padding: 0.75rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); background-color: var(--bg-body); color: var(--text-title); font-family: monospace; font-size: 0.85rem;"
+              @input="previewParsedData"
+            ></textarea>
+          </div>
+
+          <!-- File Upload Tab Content -->
+          <div v-else-if="importTab === 'file'" class="tab-content">
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+              Chọn file văn bản hoặc file csv (.txt, .csv) được mã hóa UTF-8. Các từ phân cách bằng dòng trống (nếu để hàng dọc) hoặc ngăn cách bằng dấu Tab/|/,/; (nếu để hàng ngang).
+            </p>
+            <div class="upload-container" style="margin-bottom: 1rem;">
+              <input 
+                type="file" 
+                @change="handleImportFileSelected" 
+                accept=".txt,.csv" 
+                class="hidden-file-input" 
+                id="importFileInput"
+                style="display: none;"
+              >
+              <label for="importFileInput" class="upload-drag-zone" style="display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed var(--border-color); border-radius: var(--radius-md); padding: 1.5rem; background-color: var(--bg-body); cursor: pointer; text-align: center;">
+                <AppIcon name="upload" size="24" class="upload-icon" style="color: var(--text-muted); margin-bottom: 0.5rem;" />
+                <span v-if="!importedFileName">Nhấp để chọn file từ máy tính</span>
+                <span v-else class="file-name-display" style="color: var(--primary); font-weight: 600;">{{ importedFileName }}</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Preview Table -->
+          <div v-if="parsedCards.length > 0" class="parsed-preview" style="margin-top: 1rem;">
+            <h5 style="margin-bottom: 0.5rem; font-weight: 700; font-size: 0.85rem; color: var(--text-title);">Xem trước kết quả phân tích (Tìm thấy {{ parsedCards.length }} từ):</h5>
+            <div style="max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left;">
+                <thead>
+                  <tr style="background-color: var(--bg-body); border-bottom: 1px solid var(--border-color);">
+                    <th style="padding: 0.5rem;">Từ tiếng Hàn</th>
+                    <th style="padding: 0.5rem;">Nghĩa tiếng Việt</th>
+                    <th style="padding: 0.5rem;">Ví dụ (Tùy chọn)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(card, cIdx) in parsedCards" :key="cIdx" style="border-bottom: 1px solid var(--border-color);">
+                    <td style="padding: 0.5rem; font-weight: 600;">{{ card.frontText }}</td>
+                    <td style="padding: 0.5rem;">{{ card.backText }}</td>
+                    <td style="padding: 0.5rem; color: var(--text-muted);">{{ card.exampleSentence }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions" style="margin-top: 1rem;">
+          <button type="button" class="cancel-btn" @click="showImportModal = false">Hủy bỏ</button>
+          <button 
+            type="button" 
+            class="submit-btn" 
+            :disabled="parsedCards.length === 0" 
+            @click="handleImportCards"
+          >
+            Nhập vào bộ từ vựng
+          </button>
+        </div>
       </div>
     </div>
 
@@ -197,7 +318,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
-import AppSelect from '../AppSelect.vue'
 import { useStudySetStore } from '../../stores/studySet'
 import { useTopikLevelStore } from '../../stores/topikLevel'
 import { toast } from 'vue3-toastify'
@@ -218,6 +338,112 @@ const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const showDeleteConfirmModal = ref(false)
 const showAddCardModal = ref(false)
+const showImportModal = ref(false)
+
+const importTab = ref('paste')
+const importFormat = ref('auto')
+const importText = ref('')
+const importedFileName = ref('')
+const parsedCards = ref([])
+
+const openImportModal = () => {
+  importText.value = ''
+  importedFileName.value = ''
+  parsedCards.value = []
+  importTab.value = 'paste'
+  importFormat.value = 'auto'
+  showImportModal.value = true
+}
+
+const parseTextToCards = (text) => {
+  if (!text) return []
+  const cleanText = text.replace(/\r\n/g, '\n')
+  
+  let isVertical = importFormat.value === 'vertical'
+  if (importFormat.value === 'auto') {
+    const hasHorizontalDelimiters = cleanText.includes('\t') || cleanText.includes('|') || cleanText.includes(';')
+    isVertical = !hasHorizontalDelimiters && cleanText.split('\n').length > 2
+  }
+  
+  if (isVertical) {
+    const blocks = cleanText.split(/\n\s*\n/)
+    const results = []
+    for (const block of blocks) {
+      const lines = block.split('\n').map(l => l.trim()).filter(l => l.length > 0)
+      if (lines.length >= 2) {
+        results.push({
+          frontText: lines[0],
+          backText: lines[1],
+          exampleSentence: lines[2] || ''
+        })
+      }
+    }
+    return results
+  } else {
+    const lines = cleanText.split('\n')
+    const results = []
+    for (let line of lines) {
+      line = line.trim()
+      if (!line) continue
+      
+      let separator = ','
+      if (line.includes('\t')) {
+        separator = '\t'
+      } else if (line.includes('|')) {
+        separator = '|'
+      } else if (line.includes(';')) {
+        separator = ';'
+      }
+      
+      const parts = line.split(separator).map(p => p.trim())
+      if (parts.length >= 2 && parts[0] && parts[1]) {
+        results.push({
+          frontText: parts[0],
+          backText: parts[1],
+          exampleSentence: parts[2] || ''
+        })
+      }
+    }
+    return results
+  }
+}
+
+const previewParsedData = () => {
+  parsedCards.value = parseTextToCards(importText.value)
+}
+
+const handleImportFileSelected = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  importedFileName.value = file.name
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    const text = e.target.result
+    importText.value = text
+    parsedCards.value = parseTextToCards(text)
+  }
+  reader.readAsText(file, 'UTF-8')
+}
+
+const handleImportCards = async () => {
+  if (!selectedSet.value || parsedCards.value.length === 0) return
+  
+  try {
+    const importedList = await studySetStore.addCardsBatch(selectedSet.value.id, parsedCards.value)
+    
+    if (selectedSet.value) {
+      if (!selectedSet.value.words) selectedSet.value.words = []
+      selectedSet.value.words.push(...importedList)
+    }
+    
+    toast.success(`Import thành công ${importedList.length} từ vựng!`)
+    showImportModal.value = false
+  } catch (e) {
+    console.error("Batch import failed:", e)
+    toast.error("Nhập dữ liệu hàng loạt thất bại.")
+  }
+}
 
 // TOPIK Levels loaded from Pinia Store
 const topikLevels = computed(() => (topikLevelStore.levels || []).filter(l => l.groupType === 'VOCAB'))
@@ -821,5 +1047,100 @@ const openEditCards = (set) => {
 
 .submit-btn:hover {
   background-color: var(--primary-hover);
+}
+
+/* Import UI specific styles */
+.import-tabs {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0px;
+}
+
+.tab-btn {
+  background: none;
+  border: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.75rem 0.5rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.tab-btn:hover {
+  color: var(--primary);
+}
+
+.tab-btn.active {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background-color: var(--primary);
+  border-radius: 2px;
+}
+
+.format-selector-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.format-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-title);
+}
+
+.format-options {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.format-option-card {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 0.85rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: center;
+}
+
+.format-option-card input[type="radio"] {
+  display: none;
+}
+
+.format-option-card:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background-color: var(--primary-glow);
+}
+
+.format-option-card.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  background-color: var(--primary-glow);
+  box-shadow: 0 0 0 1px var(--primary);
 }
 </style>

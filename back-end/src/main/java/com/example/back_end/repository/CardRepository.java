@@ -15,4 +15,10 @@ public interface CardRepository extends JpaRepository<Card, Long> {
 
     @Query("SELECT c FROM Card c WHERE c.studySet.id IN :studySetIds ORDER BY c.studySet.id ASC, c.order ASC")
     List<Card> findByStudySetIdInOrderByStudySetIdAscOrderAsc(@Param("studySetIds") List<Long> studySetIds);
+
+    @Query("SELECT c.studySet.id, COUNT(c) FROM Card c WHERE c.studySet.id IN :studySetIds GROUP BY c.studySet.id")
+    List<Object[]> countCardsByStudySetIds(@Param("studySetIds") List<Long> studySetIds);
+
+    @Query("SELECT COUNT(c) FROM Card c WHERE c.studySet.id IN :studySetIds")
+    long countByStudySetIdIn(@Param("studySetIds") List<Long> studySetIds);
 }

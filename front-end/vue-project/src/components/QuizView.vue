@@ -58,7 +58,7 @@
           </div>
           <h3>{{ quiz.title || 'Đề ôn tập đọc' }}</h3>
           <p class="due-date" v-if="quiz.dueDate && quiz.status !== 'completed'">Hạn nộp: {{ formatDate(quiz.dueDate) }}</p>
-          <p class="summary-q" v-else>{{ quiz.questions ? quiz.questions.length : 0 }} câu hỏi ôn tập</p>
+          <p class="summary-q" v-else>{{ quiz.questionCount || 0 }} câu hỏi ôn tập</p>
 
           <div class="quiz-action-bar">
             <button class="start-btn" @click="startQuiz(quiz)">
@@ -99,7 +99,7 @@
           </div>
           <h3>{{ quiz.title || 'Đề ôn tập nghe' }}</h3>
           <p class="due-date" v-if="quiz.dueDate && quiz.status !== 'completed'">Hạn nộp: {{ formatDate(quiz.dueDate) }}</p>
-          <p class="summary-q" v-else>{{ quiz.questions ? quiz.questions.length : 0 }} câu hỏi luyện nghe</p>
+          <p class="summary-q" v-else>{{ quiz.questionCount || 0 }} câu hỏi luyện nghe</p>
 
           <div class="quiz-action-bar">
             <button class="start-btn" @click="startQuiz(quiz)">
@@ -131,7 +131,7 @@
             <span class="badge date-completed" v-if="quiz.completedAt"><AppIcon name="check" size="14" /> {{ formatDateShort(quiz.completedAt) }}</span>
           </div>
           <h3>{{ quiz.title || 'Đề hoàn thành' }}</h3>
-          <p class="summary-q">{{ quiz.questions ? quiz.questions.length : 0 }} câu hỏi đã nộp</p>
+          <p class="summary-q">{{ quiz.questionCount || 0 }} câu hỏi đã nộp</p>
 
           <div class="quiz-action-bar">
             <button class="review-btn" @click="viewResults(quiz)">
@@ -500,6 +500,7 @@
 <script setup>
 import { ref, computed, onUnmounted, onMounted } from 'vue'
 import AppIcon from './icons/AppIcon.vue'
+import { useQuizStore } from '../stores/quiz'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
@@ -741,11 +742,23 @@ const cleanAnswer = (ans) => {
 }
 
 // Start a quiz - heavily guarded against undefined arrays
-const startQuiz = (quiz) => {
+const startQuiz = async (quiz) => {
   if (!quiz) return
+
+  let fullQuiz = quiz
+  if ((!quiz.questions || quiz.questions.length === 0) && !quiz.id.toString().startsWith('practice-')) {
+    try {
+      const quizStore = useQuizStore()
+      fullQuiz = await quizStore.fetchQuizDetails(quiz.id)
+    } catch (e) {
+      console.error("Failed to fetch quiz details:", e)
+      toast.error("Không thể lấy nội dung câu hỏi bài tập.")
+      return
+    }
+  }
   
   // Map backend quiz questions to the format expected by QuizView.vue
-  const mappedQuestions = (quiz.questions || []).map(q => {
+  const mappedQuestions = (fullQuiz.questions || []).map(q => {
     // If it's already a frontend-style question, return it
     if (q.options && q.question) return q;
 
@@ -784,8 +797,8 @@ const startQuiz = (quiz) => {
   });
 
   const mappedQuiz = {
-    ...quiz,
-    timeLimit: quiz.timeLimitMins || quiz.timeLimit || 10,
+    ...fullQuiz,
+    timeLimit: fullQuiz.timeLimitMins || fullQuiz.timeLimit || 10,
     questions: mappedQuestions
   };
 
@@ -917,8 +930,19 @@ const submitQuiz = () => {
 }
 
 // View details of previous submission
-const viewResults = (quiz) => {
-  viewingResultQuiz.value = quiz
+const viewResults = async (quiz) => {
+  let fullQuiz = quiz
+  if ((!quiz.questions || quiz.questions.length === 0) && !quiz.id.toString().startsWith('practice-')) {
+    try {
+      const quizStore = useQuizStore()
+      fullQuiz = await quizStore.fetchQuizDetails(quiz.id)
+    } catch (e) {
+      console.error("Failed to fetch quiz details:", e)
+      toast.error("Không thể lấy nội dung câu hỏi bài tập.")
+      return
+    }
+  }
+  viewingResultQuiz.value = fullQuiz
 }
 
 // Grader check helper for UI display - with fallback typeguards

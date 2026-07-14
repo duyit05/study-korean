@@ -160,6 +160,28 @@ public class QuizService {
     }
 
     @Transactional
+    public QuizResponse.QuestionResponse updateQuestion(Long quizId, Long questionId, QuestionRequest request) {
+        QuizQuestion question = quizQuestionRepository.findById(questionId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        if (!question.getQuiz().getId().equals(quizId)) {
+            throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
+        }
+
+        question.setQuestionText(request.getQuestionText());
+        question.setQuestionType(request.getQuestionType() != null ? request.getQuestionType() : "MULTIPLE_CHOICE");
+        question.setPoints(request.getPoints());
+        question.setSection(request.getSection());
+        question.setAudioUrl(request.getAudioUrl());
+        question.setAudioSource(request.getAudioUrl() != null && !request.getAudioUrl().isEmpty() ? "UPLOAD" : "TTS");
+        question.setCorrectAnswer(request.getCorrectAnswer());
+        question.setWrongAnswers(request.getWrongAnswers());
+
+        QuizQuestion savedQuestion = quizQuestionRepository.save(question);
+        return quizMapper.toQuestionResponse(savedQuestion);
+    }
+
+    @Transactional
     public void deleteQuiz(Long id) {
         Quiz quiz = quizRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));

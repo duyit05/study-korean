@@ -15,4 +15,7 @@ public interface QuizQuestionRepository extends JpaRepository<QuizQuestion, Long
 
     @Query("SELECT q FROM QuizQuestion q WHERE q.quiz.id IN :quizIds ORDER BY q.quiz.id ASC, q.order ASC")
     List<QuizQuestion> findByQuizIdInOrderByQuizIdAscOrderAsc(@Param("quizIds") List<Long> quizIds);
+
+    @Query("SELECT q.quiz.id, COUNT(q) FROM QuizQuestion q WHERE q.quiz.id IN :quizIds GROUP BY q.quiz.id")
+    List<Object[]> countQuestionsByQuizIds(@Param("quizIds") List<Long> quizIds);
 }

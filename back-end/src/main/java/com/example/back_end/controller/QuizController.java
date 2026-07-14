@@ -93,6 +93,19 @@ public class QuizController {
                 .build();
     }
 
+    @PutMapping("/{quizId}/questions/{questionId}")
+    public ApiResponse<QuizResponse.QuestionResponse> updateQuestion(
+            @PathVariable Long quizId,
+            @PathVariable Long questionId,
+            @Valid @RequestBody QuestionRequest request) {
+        QuizResponse.QuestionResponse response = quizService.updateQuestion(quizId, questionId, request);
+        return ApiResponse.<QuizResponse.QuestionResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Cập nhật câu hỏi thành công.")
+                .data(response)
+                .build();
+    }
+
     @DeleteMapping("/{quizId}/questions/{questionId}")
     public ApiResponse<Void> deleteQuestion(@PathVariable Long quizId, @PathVariable Long questionId) {
         quizService.deleteQuestion(quizId, questionId);

@@ -162,6 +162,11 @@ const handleLoginSuccess = async (userData) => {
 
 const handleLogout = () => {
   authStore.logout()
+  studySetStore.classes = []
+  studySetStore.studySets = []
+  quizStore.quizzes = []
+  quizStore.pendingAttempts = []
+  quizStore.studentAttempts = []
   router.push('/login')
 }
 

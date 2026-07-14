@@ -159,6 +159,23 @@
     <!-- Plus -->
     <line v-if="name === 'plus'" x1="12" x2="12" y1="5" y2="19" />
     <line v-if="name === 'plus'" x1="5" x2="19" y1="12" y2="12" />
+
+    <!-- Upload -->
+    <path v-if="name === 'upload'" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline v-if="name === 'upload'" points="17 8 12 3 7 8" />
+    <line v-if="name === 'upload'" x1="12" x2="12" y1="3" y2="15" />
+
+    <!-- Mic -->
+    <path v-if="name === 'mic'" d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+    <path v-if="name === 'mic'" d="M19 10v1a7 7 0 0 1-14 0v-1" />
+    <line v-if="name === 'mic'" x1="12" x2="12" y1="19" y2="22" />
+
+    <!-- Pause -->
+    <rect v-if="name === 'pause'" width="4" height="16" x="6" y="4" rx="1" />
+    <rect v-if="name === 'pause'" width="4" height="16" x="14" y="4" rx="1" />
+
+    <!-- Square (Stop) -->
+    <rect v-if="name === 'square'" width="16" height="16" x="4" y="4" rx="2" />
   </svg>
 </template>
 
