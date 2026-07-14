@@ -6,12 +6,19 @@ spring:
     username: postgres
     password: 123123za
     driver-class-name: org.postgresql.Driver
+  data:
+    redis:
+      host: localhost
+      port: 6379
 
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
       ddl-auto: update
     show-sql: true
+    properties:
+      hibernate:
+        default_batch_fetch_size: 100
 jwt:
   expiry-time: 1
   expiry-day: 14

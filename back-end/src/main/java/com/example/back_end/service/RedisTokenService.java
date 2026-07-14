@@ -1,0 +1,47 @@
+package com.example.back_end.service;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
+
+import java.util.concurrent.TimeUnit;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class RedisTokenService {
+
+    private final StringRedisTemplate redisTemplate;
+
+    private static final String BLACKLIST_PREFIX = "blacklist:";
+    private static final String REFRESH_TOKEN_PREFIX = "refresh_token:";
+
+    public void saveRefreshToken(String username, String token, long expirySec) {
+        String key = REFRESH_TOKEN_PREFIX + username;
+        redisTemplate.opsForValue().set(key, token, expirySec, TimeUnit.SECONDS);
+    }
+
+    public String getRefreshToken(String username) {
+        String key = REFRESH_TOKEN_PREFIX + username;
+        return redisTemplate.opsForValue().get(key);
+    }
+
+    public void deleteRefreshToken(String username) {
+        String key = REFRESH_TOKEN_PREFIX + username;
+        redisTemplate.delete(key);
+    }
+
+    public void blacklistAccessToken(String token, long remainingMs) {
+        String key = BLACKLIST_PREFIX + token;
+        if (remainingMs > 0) {
+            redisTemplate.opsForValue().set(key, "revoked", remainingMs, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    public boolean isAccessTokenBlacklisted(String token) {
+        String key = BLACKLIST_PREFIX + token;
+        Boolean exists = redisTemplate.hasKey(key);
+        return exists != null && exists;
+    }
+}

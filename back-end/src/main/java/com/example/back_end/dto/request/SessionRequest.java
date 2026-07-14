@@ -9,12 +9,12 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class SessionRequest {
-    @NotNull(message = "Class ID không được để trống.")
+    @NotNull(message = "CLASS_ID_REQUIRED")
     private Long classId;
 
     private Long scheduleId;
 
-    @NotNull(message = "Số thứ tự buổi học không được để trống.")
+    @NotNull(message = "SESSION_NUMBER_REQUIRED")
     private Integer sessionNumber;
 
     private LocalDateTime scheduledAt;

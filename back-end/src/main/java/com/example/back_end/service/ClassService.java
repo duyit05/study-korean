@@ -36,31 +36,30 @@ public class ClassService {
     @Transactional(readOnly = true)
     public List<ClassResponse> getTeacherClasses() {
         User teacher = userService.getCurrentUser();
-        return classRepository.findByTeacherId(teacher.getId()).stream()
-                .map(classMapper::toResponse)
-                .collect(Collectors.toList());
+        List<Class> classes = classRepository.findByTeacherIdWithRelations(teacher.getId());
+        return classMapper.toResponses(classes);
     }
 
     @Transactional(readOnly = true)
     public List<ClassResponse> getStudentClasses() {
         User student = userService.getCurrentUser();
-        return classRepository.findByStudentsId(student.getId()).stream()
-                .map(classMapper::toResponse)
-                .collect(Collectors.toList());
+        List<Class> classes = classRepository.findByStudentsIdWithRelations(student.getId());
+        return classMapper.toResponses(classes);
     }
 
     @Transactional
     public ClassResponse createClass(ClassRequest request) {
         User teacher = userService.getCurrentUser();
-        log.info("Creating class with topikLevelId: {} for teacher: {}", request.getTopikLevelId(), teacher.getUsername());
-        
+
         com.example.back_end.entity.TopikLevel topikLevel = topikLevelRepository.findById(request.getTopikLevelId())
-                .orElseThrow(() -> new com.example.back_end.exception.AppException(com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
+                .orElseThrow(() -> new com.example.back_end.exception.AppException(
+                        com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
 
         Course course = null;
         if (request.getCourseId() != null) {
             course = courseRepository.findById(request.getCourseId())
-                    .orElseThrow(() -> new com.example.back_end.exception.AppException(com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
+                    .orElseThrow(() -> new com.example.back_end.exception.AppException(
+                            com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
         }
 
         Class clazz = Class.builder()
@@ -80,10 +79,12 @@ public class ClassService {
     @Transactional
     public ClassResponse enrollStudent(Long classId, Long studentId) {
         Class clazz = classRepository.findById(classId)
-                .orElseThrow(() -> new com.example.back_end.exception.AppException(com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
+                .orElseThrow(() -> new com.example.back_end.exception.AppException(
+                        com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
 
         User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new com.example.back_end.exception.AppException(com.example.back_end.exception.ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new com.example.back_end.exception.AppException(
+                        com.example.back_end.exception.ErrorCode.USER_NOT_FOUND));
 
         if (student.getRole() != com.example.back_end.enums.UserRole.STUDENT) {
             throw new com.example.back_end.exception.AppException(com.example.back_end.exception.ErrorCode.INVALID_KEY);
@@ -101,11 +102,12 @@ public class ClassService {
 
     @Transactional
     public void deleteClass(Long id) {
-        log.info("Deleting class: {}", id);
         Class clazz = classRepository.findById(id)
-                .orElseThrow(() -> new com.example.back_end.exception.AppException(com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
-        
-        // Since it is @ManyToMany, clear the list of students to remove rows in the join table
+                .orElseThrow(() -> new com.example.back_end.exception.AppException(
+                        com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
+
+        // Since it is @ManyToMany, clear the list of students to remove rows in the
+        // join table
         clazz.getStudents().clear();
         classRepository.delete(clazz);
     }

@@ -8,8 +8,30 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import lombok.RequiredArgsConstructor;
+import com.example.back_end.repository.QuizQuestionRepository;
+
 @Component
+@RequiredArgsConstructor
 public class QuizMapper {
+
+    private final QuizQuestionRepository quizQuestionRepository;
+
+    public List<QuizResponse> toResponses(List<Quiz> quizzes) {
+        if (quizzes == null || quizzes.isEmpty()) return List.of();
+
+        List<Long> quizIds = quizzes.stream().map(Quiz::getId).collect(Collectors.toList());
+        List<QuizQuestion> allQuestions = quizQuestionRepository.findByQuizIdInOrderByQuizIdAscOrderAsc(quizIds);
+        java.util.Map<Long, List<QuizQuestion>> questionsByQuizMap = allQuestions.stream()
+                .collect(Collectors.groupingBy(q -> q.getQuiz().getId()));
+
+        return quizzes.stream()
+                .map(quiz -> {
+                    List<QuizQuestion> questions = questionsByQuizMap.getOrDefault(quiz.getId(), List.of());
+                    return toResponse(quiz, questions);
+                })
+                .collect(Collectors.toList());
+    }
 
     public QuizResponse toResponse(Quiz quiz, List<QuizQuestion> questions) {
         if (quiz == null) return null;

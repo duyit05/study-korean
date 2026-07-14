@@ -10,15 +10,15 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 @Builder
 public class CourseRequest {
-    @NotBlank(message = "Tiêu đề khóa học không được để trống.")
+    @NotBlank(message = "COURSE_TITLE_REQUIRED")
     private String title;
 
     private String description;
 
-    @NotBlank(message = "Cấp độ khóa học không được để trống.")
+    @NotBlank(message = "COURSE_LEVEL_REQUIRED")
     private String level;
 
-    @NotNull(message = "Số buổi học không được để trống.")
+    @NotNull(message = "TOTAL_SESSIONS_REQUIRED")
     private Integer totalSessions;
 
     private BigDecimal price;

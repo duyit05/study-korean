@@ -45,8 +45,6 @@ public class SessionService {
             throw new AppException(ErrorCode.FORBIDDEN);
         }
 
-        log.info("Creating session for class: {} by teacher: {}", clazz.getId(), user.getUsername());
-
         Schedule schedule = null;
         if (request.getScheduleId() != null) {
             schedule = scheduleRepository.findById(request.getScheduleId())
@@ -92,7 +90,7 @@ public class SessionService {
     @Transactional(readOnly = true)
     public List<SessionResponse> getSessionsByClass(Long classId) {
         // Find by class ID and order by session number ascending
-        return sessionRepository.findByClazzIdOrderBySessionNumberAsc(classId).stream()
+        return sessionRepository.findByClazzIdOrderBySessionNumberAscWithClazzAndTopikLevel(classId).stream()
                 .map(sessionMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -108,8 +106,6 @@ public class SessionService {
         if (user.getRole() != UserRole.ADMIN && (clazz == null || !clazz.getTeacher().getId().equals(user.getId()))) {
             throw new AppException(ErrorCode.FORBIDDEN);
         }
-
-        log.info("Updating session id: {} by user: {}", id, user.getUsername());
 
         session.setSessionNumber(request.getSessionNumber());
         session.setScheduledAt(request.getScheduledAt());
@@ -153,7 +149,6 @@ public class SessionService {
             throw new AppException(ErrorCode.FORBIDDEN);
         }
 
-        log.info("Deleting session id: {} by user: {}", id, user.getUsername());
         sessionRepository.delete(session);
     }
 }

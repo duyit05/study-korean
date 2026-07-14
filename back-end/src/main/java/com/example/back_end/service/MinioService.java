@@ -26,9 +26,7 @@ public class MinioService {
                             .object(objectName)
                             .stream(inputStream, inputStream.available(), -1)
                             .contentType(contentType)
-                            .build()
-            );
-            log.info("Successfully uploaded file {} to bucket {}", objectName, bucketName);
+                            .build());
         } catch (Exception e) {
             log.error("Failed to upload file {} to bucket {}", objectName, bucketName, e);
             throw new RuntimeException("MinIO upload failure: " + e.getMessage());
@@ -43,8 +41,7 @@ public class MinioService {
                             .bucket(bucketName)
                             .object(objectName)
                             .expiry(2, TimeUnit.HOURS)
-                            .build()
-            );
+                            .build());
         } catch (Exception e) {
             log.error("Failed to generate presigned URL for file {} in bucket {}", objectName, bucketName, e);
             throw new RuntimeException("MinIO link generation failure: " + e.getMessage());

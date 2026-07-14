@@ -36,7 +36,8 @@ export const useAuthStore = defineStore('auth', () => {
           name: authData.fullName || authData.email.split('@')[0],
           email: authData.email,
           token: authData.token,
-          avatar: "",
+          refreshToken: authData.refreshToken,
+          avatar: authData.avatarUrl || "",
           level: authData.role === 'TEACHER' ? 'Giáo viên' : 'Sơ cấp 1A (Beginner)',
           streak: 5,
           xp: 1250,
@@ -75,13 +76,50 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  const logout = () => {
-    user.value = null;
+  const logout = async () => {
+    try {
+      if (user.value && user.value.refreshToken) {
+        await api.post('/auth/logout', { refreshToken: user.value.refreshToken });
+      }
+    } catch (e) {
+      console.warn("Backend logout failed:", e);
+    } finally {
+      user.value = null;
+      errorMessage.value = '';
+      try {
+        localStorage.removeItem('sk_user');
+      } catch (e) {
+        console.warn("Storage access failed:", e);
+      }
+    }
+  };
+
+  const uploadAvatar = async (file) => {
+    loading.value = true;
     errorMessage.value = '';
     try {
-      localStorage.removeItem('sk_user');
-    } catch (e) {
-      console.warn("Storage access failed:", e);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('prefix', 'avatar');
+
+      const response = await api.post('/files/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      if (response && response.key) {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+        return `${baseUrl}/files/download/${response.key}`;
+      } else {
+        throw new Error("Không nhận được file key từ server.");
+      }
+    } catch (error) {
+      console.error("Avatar upload failed:", error);
+      errorMessage.value = error.message || 'Tải ảnh đại diện thất bại.';
+      throw error;
+    } finally {
+      loading.value = false;
     }
   };
 
@@ -92,5 +130,6 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     logout,
+    uploadAvatar,
   };
 });

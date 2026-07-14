@@ -8,8 +8,30 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import lombok.RequiredArgsConstructor;
+import com.example.back_end.repository.CardRepository;
+
 @Component
+@RequiredArgsConstructor
 public class StudySetMapper {
+
+    private final CardRepository cardRepository;
+
+    public List<StudySetResponse> toResponses(List<StudySet> sets) {
+        if (sets == null || sets.isEmpty()) return List.of();
+
+        List<Long> setIds = sets.stream().map(StudySet::getId).collect(Collectors.toList());
+        List<Card> allCards = cardRepository.findByStudySetIdInOrderByStudySetIdAscOrderAsc(setIds);
+        java.util.Map<Long, List<Card>> cardsBySetMap = allCards.stream()
+                .collect(Collectors.groupingBy(card -> card.getStudySet().getId()));
+
+        return sets.stream()
+                .map(set -> {
+                    List<Card> cards = cardsBySetMap.getOrDefault(set.getId(), List.of());
+                    return toResponse(set, cards);
+                })
+                .collect(Collectors.toList());
+    }
 
     public StudySetResponse toResponse(StudySet s, List<Card> cards) {
         if (s == null) return null;

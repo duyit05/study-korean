@@ -1,6 +1,7 @@
 package com.example.back_end.controller;
 
 import com.example.back_end.dto.request.RegisterRequest;
+import com.example.back_end.dto.request.RefreshRequest;
 import com.example.back_end.dto.response.ApiResponse;
 import com.example.back_end.dto.response.AuthResponse;
 import com.example.back_end.dto.request.LoginRequest;
@@ -43,6 +44,29 @@ public class AuthenticationController {
                 .code(HttpStatus.OK.value())
                 .message("Đăng nhập thành công.")
                 .data(authResponse)
+                .build();
+    }
+
+    @PostMapping("/refresh")
+    public ApiResponse<AuthResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        AuthResponse authResponse = userService.refreshToken(request);
+        return ApiResponse.<AuthResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Refresh token thành công.")
+                .data(authResponse)
+                .build();
+    }
+
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(
+            @org.springframework.web.bind.annotation.RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody(required = false) RefreshRequest request
+    ) {
+        String refreshToken = request != null ? request.getRefreshToken() : null;
+        userService.logout(authHeader, refreshToken);
+        return ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("Đăng xuất thành công.")
                 .build();
     }
 }

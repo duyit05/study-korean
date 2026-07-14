@@ -26,6 +26,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
+    private final com.example.back_end.service.RedisTokenService redisTokenService;
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
@@ -33,20 +35,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             String jwt = getJwtFromRequest(request);
 
-            if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
-                String username = tokenProvider.getUsernameFromJWT(jwt);
+            if (StringUtils.hasText(jwt)) {
+                if (redisTokenService.isAccessTokenBlacklisted(jwt)) {
+                    throw new org.springframework.security.authentication.InsufficientAuthenticationException("Token is blacklisted");
+                }
+                if (tokenProvider.validateToken(jwt)) {
+                    String username = tokenProvider.getUsernameFromJWT(jwt);
 
-                User user = userRepository.findByUsername(username)
-                        .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+                    User user = userRepository.findByUsername(username)
+                            .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
-                SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
-                
-                UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        user.getUsername(), null, Collections.singletonList(authority));
-                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    if (user.getIsActive() != null && !user.getIsActive()) {
+                        throw new org.springframework.security.authentication.DisabledException("User is blocked");
+                    }
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
+                    
+                    UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
+                            user.getUsername(), null, Collections.singletonList(authority));
+                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                }
             }
+        } catch (org.springframework.security.core.AuthenticationException ex) {
+            authenticationEntryPoint.commence(request, response, ex);
+            return;
         } catch (Exception ex) {
             logger.error("Could not set user authentication in security context", ex);
         }

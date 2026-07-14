@@ -23,17 +23,30 @@ public class JwtTokenProvider {
     @Value("${jwt.secret-key}")
     private String secretKeyString;
 
-    @Value("${jwt.expiry-time:1}")
+    @Value("${jwt.secret-refresh-key}")
+    private String secretRefreshKeyString;
+
+    @Value("${jwt.expiry-time}")
     private long expiryTimeHours;
+
+    @Value("${jwt.expiry-day}")
+    private long expiryTimeDays;
 
     private Key jwtSecret;
     private long jwtExpirationInMs;
+
+    private Key jwtRefreshSecret;
+    private long jwtRefreshExpirationInMs;
 
     @PostConstruct
     public void init() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKeyString);
         this.jwtSecret = Keys.hmacShaKeyFor(keyBytes);
         this.jwtExpirationInMs = expiryTimeHours * 60 * 60 * 1000;
+
+        byte[] refreshKeyBytes = Decoders.BASE64.decode(secretRefreshKeyString);
+        this.jwtRefreshSecret = Keys.hmacShaKeyFor(refreshKeyBytes);
+        this.jwtRefreshExpirationInMs = expiryTimeDays * 24 * 60 * 60 * 1000;
     }
 
     public String generateToken(UserDetails userDetails) {
@@ -70,5 +83,55 @@ public class JwtTokenProvider {
             log.error("Invalid JWT token: {}", ex.getMessage());
         }
         return false;
+    }
+
+    public String generateRefreshToken(UserDetails userDetails) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + jwtRefreshExpirationInMs);
+
+        return Jwts.builder()
+                .setSubject(userDetails.getUsername())
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(jwtRefreshSecret, SignatureAlgorithm.HS512)
+                .compact();
+    }
+
+    public String getUsernameFromRefreshToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(jwtRefreshSecret)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return claims.getSubject();
+    }
+
+    public boolean validateRefreshToken(String authToken) {
+        try {
+            Jwts.parserBuilder().setSigningKey(jwtRefreshSecret).build().parseClaimsJws(authToken);
+            return true;
+        } catch (Exception ex) {
+            log.error("Invalid JWT Refresh token: {}", ex.getMessage());
+        }
+        return false;
+    }
+
+    public long getRefreshTokenExpirationInSec() {
+        return expiryTimeDays * 24 * 60 * 60;
+    }
+
+    public long getRemainingExpiryTimeMs(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(jwtSecret)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            Date expiration = claims.getExpiration();
+            return Math.max(0, expiration.getTime() - System.currentTimeMillis());
+        } catch (Exception ex) {
+            return 0;
+        }
     }
 }

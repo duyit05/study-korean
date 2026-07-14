@@ -13,6 +13,8 @@ import com.example.back_end.repository.StudentProfileRepository;
 import com.example.back_end.repository.TeacherProfileRepository;
 import com.example.back_end.repository.UserRepository;
 import com.example.back_end.utils.JwtTokenProvider;
+import com.example.back_end.dto.request.RefreshRequest;
+import com.example.back_end.service.RedisTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,6 +36,7 @@ public class UserService {
     private final StudentProfileRepository studentProfileRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RedisTokenService redisTokenService;
 
     @Transactional
     public User register(RegisterRequest request) {
@@ -62,7 +65,6 @@ public class UserService {
                     .user(savedUser)
                     .build();
             teacherProfileRepository.save(teacherProfile);
-            log.info("Teacher profile created successfully for {}", savedUser.getEmail());
         } else if (request.getRole() == UserRole.STUDENT) {
             StudentProfile studentProfile = StudentProfile.builder()
                     .user(savedUser)
@@ -97,13 +99,87 @@ public class UserService {
                 .build();
 
         String token = jwtTokenProvider.generateToken(userDetails);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
+
+        // Save refresh token in Redis
+        redisTokenService.saveRefreshToken(user.getUsername(), refreshToken,
+                jwtTokenProvider.getRefreshTokenExpirationInSec());
 
         return AuthResponse.builder()
                 .token(token)
+                .refreshToken(refreshToken)
                 .email(user.getEmail())
                 .fullName(user.getFullName())
+                .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole())
                 .build();
+    }
+
+    public AuthResponse refreshToken(RefreshRequest request) {
+        String refreshToken = request.getRefreshToken();
+
+        if (!jwtTokenProvider.validateRefreshToken(refreshToken)) {
+            throw new AppException(ErrorCode.INVALID_KEY);
+        }
+
+        String username = jwtTokenProvider.getUsernameFromRefreshToken(refreshToken);
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        if (user.getIsActive() != null && !user.getIsActive()) {
+            throw new AppException(ErrorCode.USER_BLOCKED);
+        }
+
+        // Verify with the active token stored in Redis
+        String activeRefreshToken = redisTokenService.getRefreshToken(username);
+        if (activeRefreshToken == null || !activeRefreshToken.equals(refreshToken)) {
+            redisTokenService.deleteRefreshToken(username);
+            throw new AppException(ErrorCode.INVALID_KEY);
+        }
+
+        UserDetails userDetails = org.springframework.security.core.userdetails.User.withUsername(user.getUsername())
+                .password(user.getPasswordHash())
+                .authorities("ROLE_" + user.getRole().name())
+                .build();
+
+        String newAccessToken = jwtTokenProvider.generateToken(userDetails);
+        String newRefreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
+
+        // Save new refresh token in Redis
+        redisTokenService.saveRefreshToken(user.getUsername(), newRefreshToken,
+                jwtTokenProvider.getRefreshTokenExpirationInSec());
+
+        return AuthResponse.builder()
+                .token(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .avatarUrl(user.getAvatarUrl())
+                .role(user.getRole())
+                .build();
+    }
+
+    public void logout(String authHeader, String refreshToken) {
+        // 1. Blacklist the Access Token
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String accessToken = authHeader.substring(7);
+            long remainingMs = jwtTokenProvider.getRemainingExpiryTimeMs(accessToken);
+            if (remainingMs > 0) {
+                redisTokenService.blacklistAccessToken(accessToken, remainingMs);
+            } else {
+                log.warn("Access Token remaining validity is 0 or negative. Not blacklisting.");
+            }
+        } else {
+            log.warn("No valid Authorization Bearer header found in logout request.");
+        }
+
+        // 2. Delete the Refresh Token from Redis
+        if (refreshToken != null && !refreshToken.isEmpty() && jwtTokenProvider.validateRefreshToken(refreshToken)) {
+            String username = jwtTokenProvider.getUsernameFromRefreshToken(refreshToken);
+            redisTokenService.deleteRefreshToken(username);
+        } else {
+            log.warn("No valid refresh token provided for eviction.");
+        }
     }
 
     public User getCurrentUser() {
@@ -119,9 +195,12 @@ public class UserService {
     @Transactional
     public User updateProfile(String fullName, String email, String avatarUrl) {
         User user = getCurrentUser();
-        if (fullName != null) user.setFullName(fullName);
-        if (email != null) user.setEmail(email);
-        if (avatarUrl != null) user.setAvatarUrl(avatarUrl);
+        if (fullName != null)
+            user.setFullName(fullName);
+        if (email != null)
+            user.setEmail(email);
+        if (avatarUrl != null)
+            user.setAvatarUrl(avatarUrl);
         return userRepository.save(user);
     }
 }

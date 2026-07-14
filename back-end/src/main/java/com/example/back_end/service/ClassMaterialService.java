@@ -39,7 +39,8 @@ public class ClassMaterialService {
                     String downloadUrl = "";
                     try {
                         // Generate a presigned URL valid for 30 minutes
-                        downloadUrl = r2PresignService.generatePresignedUrl(material.getFileKey(), Duration.ofMinutes(30));
+                        downloadUrl = r2PresignService.generatePresignedUrl(material.getFileKey(),
+                                Duration.ofMinutes(30));
                     } catch (Exception e) {
                         log.error("Failed to generate presigned URL for file: {}", material.getFileKey(), e);
                     }
@@ -65,8 +66,6 @@ public class ClassMaterialService {
             throw new IllegalArgumentException("File cannot be empty");
         }
 
-        log.info("Uploading class material file: {} for class: {}", file.getOriginalFilename(), classId);
-        
         // Upload file to R2 under materials prefix
         String fileKey = r2StorageService.uploadFile(file, "materials");
 
@@ -109,8 +108,6 @@ public class ClassMaterialService {
         if (!material.getClazz().getId().equals(classId)) {
             throw new AppException(ErrorCode.INVALID_KEY);
         }
-
-        log.info("Deleting class material file: {} for class: {}", material.getFileKey(), classId);
 
         // Delete from R2
         try {

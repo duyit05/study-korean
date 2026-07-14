@@ -46,7 +46,6 @@ public class QuizService {
 
     @Transactional
     public QuizResponse createQuiz(QuizRequest request) {
-        log.info("Creating quiz: {}", request.getTitle());
         User creator = userService.getCurrentUser();
         Class clazz = null;
         if (request.getClassId() != null) {
@@ -77,7 +76,6 @@ public class QuizService {
 
     @Transactional
     public QuizResponse.QuestionResponse addQuestionToQuiz(Long quizId, QuestionRequest request) {
-        log.info("Adding question to quiz: {}", quizId);
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
@@ -111,23 +109,15 @@ public class QuizService {
 
     @Transactional(readOnly = true)
     public List<QuizResponse> getQuizzesByClass(Long classId) {
-        return quizRepository.findByClazzId(classId).stream()
-                .map(quiz -> {
-                    List<QuizQuestion> questions = quizQuestionRepository.findByQuizIdOrderByOrderAsc(quiz.getId());
-                    return quizMapper.toResponse(quiz, questions);
-                })
-                .collect(Collectors.toList());
+        List<Quiz> quizzes = quizRepository.findByClazzIdWithTopikLevel(classId);
+        return quizMapper.toResponses(quizzes);
     }
 
     @Transactional(readOnly = true)
     public List<QuizResponse> getMyCreatedQuizzes() {
         User creator = userService.getCurrentUser();
-        return quizRepository.findByCreatorId(creator.getId()).stream()
-                .map(quiz -> {
-                    List<QuizQuestion> questions = quizQuestionRepository.findByQuizIdOrderByOrderAsc(quiz.getId());
-                    return quizMapper.toResponse(quiz, questions);
-                })
-                .collect(Collectors.toList());
+        List<Quiz> quizzes = quizRepository.findByCreatorIdWithTopikLevel(creator.getId());
+        return quizMapper.toResponses(quizzes);
     }
 
     @Transactional
@@ -142,7 +132,6 @@ public class QuizService {
 
     @Transactional
     public QuizResponse updateQuiz(Long id, QuizRequest request) {
-        log.info("Updating quiz: {}", id);
         Quiz quiz = quizRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
@@ -172,7 +161,6 @@ public class QuizService {
 
     @Transactional
     public void deleteQuiz(Long id) {
-        log.info("Deleting quiz: {}", id);
         Quiz quiz = quizRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
@@ -193,6 +181,5 @@ public class QuizService {
         // Delete quiz
         quizRepository.delete(quiz);
     }
-
 
 }

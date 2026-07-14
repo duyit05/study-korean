@@ -36,12 +36,8 @@ public class StudySetService {
 
     @Transactional(readOnly = true)
     public List<StudySetResponse> getAllStudySets() {
-        return studySetRepository.findAll().stream()
-                .map(set -> {
-                    List<Card> cards = cardRepository.findByStudySetIdOrderByOrderAsc(set.getId());
-                    return studySetMapper.toResponse(set, cards);
-                })
-                .collect(Collectors.toList());
+        List<StudySet> sets = studySetRepository.findAllWithCreatorAndTopikLevel();
+        return studySetMapper.toResponses(sets);
     }
 
     @Transactional(readOnly = true)
@@ -52,7 +48,6 @@ public class StudySetService {
     @Transactional
     public StudySetResponse createStudySet(StudySetRequest request) {
         User creator = userService.getCurrentUser();
-        log.info("Creating study set: {}", request.getTitle());
 
         TopikLevel level = null;
         if (request.getTopikLevelId() != null) {
@@ -73,7 +68,6 @@ public class StudySetService {
 
     @Transactional
     public StudySetResponse.CardResponse addCardToStudySet(Long studySetId, CardRequest request) {
-        log.info("Adding card to study set: {}", studySetId);
         StudySet studySet = studySetRepository.findById(studySetId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
@@ -106,7 +100,6 @@ public class StudySetService {
 
     @Transactional
     public StudySetResponse updateStudySet(Long id, StudySetRequest request) {
-        log.info("Updating study set: id={}, title={}", id, request.getTitle());
         StudySet studySet = studySetRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
@@ -126,7 +119,6 @@ public class StudySetService {
 
     @Transactional
     public void deleteStudySet(Long id) {
-        log.info("Deleting study set: id={}", id);
         StudySet studySet = studySetRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
         List<Card> cards = cardRepository.findByStudySetId(id);

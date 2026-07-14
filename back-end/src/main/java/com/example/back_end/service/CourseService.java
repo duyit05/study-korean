@@ -34,8 +34,6 @@ public class CourseService {
             throw new AppException(ErrorCode.FORBIDDEN);
         }
 
-        log.info("Creating course: {} by teacher: {}", request.getTitle(), user.getUsername());
-
         Course course = Course.builder()
                 .title(request.getTitle())
                 .description(request.getDescription())
@@ -64,11 +62,11 @@ public class CourseService {
         List<Course> courses;
 
         if (user.getRole() == UserRole.ADMIN) {
-            courses = courseRepository.findAll();
+            courses = courseRepository.findAllWithTeacher();
         } else if (user.getRole() == UserRole.TEACHER) {
-            courses = courseRepository.findByTeacherId(user.getId());
+            courses = courseRepository.findByTeacherIdWithTeacher(user.getId());
         } else { // STUDENT or other
-            courses = courseRepository.findByIsPublishedTrue();
+            courses = courseRepository.findByIsPublishedTrueWithTeacher();
         }
 
         return courses.stream()
@@ -78,7 +76,7 @@ public class CourseService {
 
     @Transactional(readOnly = true)
     public List<CourseResponse> getCoursesByTeacher(Long teacherId) {
-        return courseRepository.findByTeacherId(teacherId).stream()
+        return courseRepository.findByTeacherIdWithTeacher(teacherId).stream()
                 .map(courseMapper::toResponse)
                 .collect(Collectors.toList());
     }
@@ -93,8 +91,6 @@ public class CourseService {
         if (user.getRole() != UserRole.ADMIN && !course.getTeacher().getId().equals(user.getId())) {
             throw new AppException(ErrorCode.FORBIDDEN);
         }
-
-        log.info("Updating course id: {} by user: {}", id, user.getUsername());
 
         course.setTitle(request.getTitle());
         course.setDescription(request.getDescription());
@@ -121,7 +117,6 @@ public class CourseService {
             throw new AppException(ErrorCode.FORBIDDEN);
         }
 
-        log.info("Deleting course id: {} by user: {}", id, user.getUsername());
         courseRepository.delete(course);
     }
 }

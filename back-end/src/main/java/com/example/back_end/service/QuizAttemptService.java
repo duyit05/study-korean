@@ -44,7 +44,6 @@ public class QuizAttemptService {
 
     @Transactional
     public QuizAttemptResponse submitAttempt(Long quizId, QuizSubmitRequest request) {
-        log.info("Submitting quiz attempt: quizId={}", quizId);
         User student = userService.getCurrentUser();
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
@@ -144,7 +143,6 @@ public class QuizAttemptService {
 
     @Transactional
     public QuizAttemptResponse gradeAttempt(Long attemptId, GradeAttemptRequest request) {
-        log.info("Grading attempt: id={}", attemptId);
         QuizAttempt attempt = quizAttemptRepository.findById(attemptId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
@@ -198,23 +196,16 @@ public class QuizAttemptService {
     @Transactional(readOnly = true)
     public List<QuizAttemptResponse> getPendingAttempts() {
         User teacher = userService.getCurrentUser();
-        return quizAttemptRepository.findByQuizCreatorIdAndStatus(teacher.getId(), "PENDING_GRADING").stream()
-                .map(attempt -> {
-                    List<QuizAnswer> answers = quizAnswerRepository.findByAttemptId(attempt.getId());
-                    return quizAttemptMapper.toResponse(attempt, answers);
-                })
-                .collect(Collectors.toList());
+        List<QuizAttempt> attempts = quizAttemptRepository.findByQuizCreatorIdAndStatusWithRelations(teacher.getId(),
+                "PENDING_GRADING");
+        return quizAttemptMapper.toResponses(attempts);
     }
 
     @Transactional(readOnly = true)
     public List<QuizAttemptResponse> getMyAttempts() {
         User student = userService.getCurrentUser();
-        return quizAttemptRepository.findByStudentId(student.getId()).stream()
-                .map(attempt -> {
-                    List<QuizAnswer> answers = quizAnswerRepository.findByAttemptId(attempt.getId());
-                    return quizAttemptMapper.toResponse(attempt, answers);
-                })
-                .collect(Collectors.toList());
+        List<QuizAttempt> attempts = quizAttemptRepository.findByStudentIdWithRelations(student.getId());
+        return quizAttemptMapper.toResponses(attempts);
     }
 
     @Transactional(readOnly = true)

@@ -1,5 +1,6 @@
 package com.example.back_end.dto.request;
 
+import jakarta.validation.constraints.NotBlank;
 import lombok.*;
 
 @Data
@@ -7,7 +8,12 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class TopikLevelRequest {
+    @NotBlank(message = "TOPIK_NAME_REQUIRED")
     private String name;
+
+    @NotBlank(message = "TOPIK_CODE_REQUIRED")
     private String code;
+
+    @NotBlank(message = "TOPIK_GROUP_REQUIRED")
     private String groupType;
 }

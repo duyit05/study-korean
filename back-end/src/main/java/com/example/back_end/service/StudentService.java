@@ -80,7 +80,6 @@ public class StudentService {
         studentProfileRepository.save(profile);
         savedUser.setStudentProfile(profile);
 
-        log.info("Student account created successfully: {}", savedUser.getEmail());
         return studentMapper.toResponse(savedUser);
     }
 
@@ -121,7 +120,6 @@ public class StudentService {
         user.setStudentProfile(profile);
 
         User saved = userRepository.save(user);
-        log.info("Student account updated successfully: {}", saved.getEmail());
         return studentMapper.toResponse(saved);
     }
 
@@ -133,8 +131,6 @@ public class StudentService {
         if (user.getRole() != UserRole.STUDENT) {
             throw new AppException(ErrorCode.INVALID_KEY);
         }
-
-        log.info("Deleting student account and cascading dependencies: {}", user.getEmail());
 
         // 1. Delete review logs
         reviewLogRepository.deleteAll(reviewLogRepository.findByStudentId(user.getId()));

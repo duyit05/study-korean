@@ -165,7 +165,7 @@ import { ref, computed, watch } from 'vue'
 import AppIcon from './icons/AppIcon.vue'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
-import api from '../services/axios'
+import { useAuthStore } from '../stores/auth'
 
 const props = defineProps({
   user: {
@@ -223,31 +223,21 @@ const triggerAvatarInput = () => {
   }
 }
 
+const authStore = useAuthStore()
+
 const handleAvatarUpload = async (event) => {
   const file = event.target.files[0]
   if (!file) return
 
   if (file.size > 5 * 1024 * 1024) {
-    toast.warning("Dung lượng ảnh đại diện không được vượt quá 5MB.")
+    toast.error("Ảnh đại diện phải nhỏ hơn 5MB")
     return
   }
 
   try {
-    const formData = new FormData()
-    formData.append('file', file)
-    formData.append('prefix', 'avatar')
-
-    const response = await api.post('/files/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-
-    if (response && response.key) {
-      // Store absolute endpoint path so it loads without token expiry issues
-      editableUser.value.avatar = 'http://localhost:8080/api/files/download/' + response.key
-      toast.success("Tải ảnh đại diện lên thành công! Nhấp 'Lưu thay đổi' để hoàn tất.")
-    }
+    const avatarUrl = await authStore.uploadAvatar(file)
+    editableUser.value.avatar = avatarUrl
+    toast.success("Tải ảnh đại diện lên thành công! Nhấp 'Lưu thay đổi' để hoàn tất.")
   } catch (error) {
     console.error("Failed to upload avatar:", error)
     toast.error("Tải ảnh đại diện lên thất bại.")
