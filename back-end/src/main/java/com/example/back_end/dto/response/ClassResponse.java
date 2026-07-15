@@ -22,6 +22,7 @@ public class ClassResponse {
     private LocalDate startedAt;
     private String notes;
     private List<StudentDto> students;
+    private List<AssignedStudySetDto> assignedStudySets;
 
     @Data
     @Builder
@@ -33,5 +34,20 @@ public class ClassResponse {
         private String email;
         private Integer vocabProgress;
         private Integer avgScore;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AssignedStudySetDto {
+        private Long id;
+        private Long studySetId;
+        private String studySetTitle;
+        private String studySetDescription;
+        private Integer wordCount;
+        private String dueDate;
+        private String note;
+        private String assignedAt;
     }
 }

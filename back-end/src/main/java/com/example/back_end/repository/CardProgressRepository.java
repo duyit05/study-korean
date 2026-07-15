@@ -24,4 +24,10 @@ public interface CardProgressRepository extends JpaRepository<CardProgress, Long
 
     @Query("SELECT cp.card.studySet.id, COUNT(cp) FROM CardProgress cp WHERE cp.student.id = :studentId AND cp.repetitions > 0 AND cp.card.studySet.id IN :studySetIds GROUP BY cp.card.studySet.id")
     List<Object[]> countLearnedCardsByStudySetIds(@Param("studentId") Long studentId, @Param("studySetIds") List<Long> studySetIds);
+
+    @Query("SELECT DISTINCT cp.card.studySet.id FROM CardProgress cp WHERE cp.student.id = :studentId")
+    List<Long> findDistinctStudySetIdsByStudentId(@Param("studentId") Long studentId);
+
+    @Query("SELECT COUNT(DISTINCT cp.card.studySet.id) FROM CardProgress cp WHERE cp.student.id = :studentId AND cp.repetitions > 0")
+    int countDistinctLearnedStudySetsByStudentId(@Param("studentId") Long studentId);
 }

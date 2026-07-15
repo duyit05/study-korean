@@ -214,6 +214,46 @@ export const useStudySetStore = defineStore('studySet', () => {
     }
   };
 
+  const assignStudySet = async (payload) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      const response = await api.post('/study-sets/assignments', payload);
+      const idx = classes.value.findIndex(c => c.id === payload.classId);
+      if (idx !== -1) {
+        if (!classes.value[idx].assignedStudySets) {
+          classes.value[idx].assignedStudySets = [];
+        }
+        classes.value[idx].assignedStudySets.push(response.data);
+      }
+      return response.data;
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const unassignStudySet = async (classId, assignmentId) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      await api.delete(`/study-sets/assignments/${assignmentId}`);
+      const idx = classes.value.findIndex(c => c.id === classId);
+      if (idx !== -1 && classes.value[idx].assignedStudySets) {
+        classes.value[idx].assignedStudySets = classes.value[idx].assignedStudySets.filter(
+          a => a.id !== assignmentId
+        );
+      }
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     studySets,
     classes,
@@ -232,6 +272,8 @@ export const useStudySetStore = defineStore('studySet', () => {
     deleteClass,
     studentsList,
     fetchStudents,
-    enrollStudent
+    enrollStudent,
+    assignStudySet,
+    unassignStudySet
   };
 });

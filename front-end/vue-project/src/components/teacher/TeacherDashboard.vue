@@ -53,6 +53,27 @@
       </div>
     </div>
 
+    <!-- Visual Charts Section -->
+    <div class="charts-section-grid" style="margin-bottom: 1.5rem;">
+      <div class="panel-card chart-card">
+        <div class="panel-header">
+          <h3>Điểm trung bình thi & bài tập (%)</h3>
+        </div>
+        <div class="chart-wrapper">
+          <Bar :data="barChartData" :options="barChartOptions" />
+        </div>
+      </div>
+
+      <div class="panel-card chart-card">
+        <div class="panel-header">
+          <h3>Số lượng bài nộp (6 tháng qua)</h3>
+        </div>
+        <div class="chart-wrapper">
+          <Line :data="lineChartData" :options="lineChartOptions" />
+        </div>
+      </div>
+    </div>
+
     <!-- Main Content Area: Shortcuts & Recent Activity -->
     <div class="dashboard-grid">
       <!-- Shortcuts Section -->
@@ -131,10 +152,36 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
 import { useQuizStore } from '../../stores/quiz'
 import { useStudySetStore } from '../../stores/studySet'
+import api from '../../services/axios'
+import { Bar, Line } from 'vue-chartjs'
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Filler
+} from 'chart.js'
+
+ChartJS.register(
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Filler
+)
 
 defineProps({
   quizzes: {
@@ -152,10 +199,20 @@ const emit = defineEmits(['navigate'])
 const quizStore = useQuizStore()
 const studySetStore = useStudySetStore()
 
+const statsData = ref({
+  monthlySubmissions: [],
+  classAverageScores: []
+})
+
 onMounted(async () => {
   try {
     await studySetStore.fetchClasses('TEACHER')
     await quizStore.fetchPendingAttempts()
+    
+    const response = await api.get('/teacher/stats')
+    if (response && response.data) {
+      statsData.value = response.data
+    }
   } catch (e) {
     console.warn("Failed to load dashboard statistics:", e)
   }
@@ -179,6 +236,94 @@ const recentActivities = computed(() => {
   })
   return list
 })
+
+// Bar Chart Data (Class Averages)
+const barChartData = computed(() => {
+  const labels = statsData.value.classAverageScores.map(c => c.className)
+  const data = statsData.value.classAverageScores.map(c => c.averageScore)
+  return {
+    labels: labels.length > 0 ? labels : ['Chưa có lớp học'],
+    datasets: [
+      {
+        label: 'Điểm trung bình (%)',
+        backgroundColor: 'rgba(219, 142, 113, 0.75)',
+        borderColor: 'rgb(219, 142, 113)',
+        borderWidth: 1,
+        borderRadius: 6,
+        data: data.length > 0 ? data : [0]
+      }
+    ]
+  }
+})
+
+const barChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: false
+    }
+  },
+  scales: {
+    y: {
+      min: 0,
+      max: 100,
+      grid: {
+        color: 'rgba(0, 0, 0, 0.05)'
+      }
+    },
+    x: {
+      grid: {
+        display: false
+      }
+    }
+  }
+}
+
+// Line Chart Data (Monthly Submissions)
+const lineChartData = computed(() => {
+  const labels = statsData.value.monthlySubmissions.map(m => m.month)
+  const data = statsData.value.monthlySubmissions.map(m => m.count)
+  return {
+    labels: labels.length > 0 ? labels : ['Tháng 1', 'Tháng 2', 'Tháng 3', 'Tháng 4', 'Tháng 5', 'Tháng 6'],
+    datasets: [
+      {
+        label: 'Số bài nộp',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderColor: 'rgb(59, 130, 246)',
+        borderWidth: 2,
+        tension: 0.35,
+        pointBackgroundColor: 'rgb(59, 130, 246)',
+        pointHoverRadius: 6,
+        fill: true,
+        data: data.length > 0 ? data : [0, 0, 0, 0, 0, 0]
+      }
+    ]
+  }
+})
+
+const lineChartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: false
+    }
+  },
+  scales: {
+    y: {
+      beginAtZero: true,
+      grid: {
+        color: 'rgba(0, 0, 0, 0.05)'
+      }
+    },
+    x: {
+      grid: {
+        display: false
+      }
+    }
+  }
+}
 </script>
 
 <style scoped>
@@ -452,5 +597,28 @@ const recentActivities = computed(() => {
 
 .action-btn:hover {
   background-color: var(--primary-hover);
+}
+
+.charts-section-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .charts-section-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chart-card {
+  padding-bottom: 1.5rem;
+}
+
+.chart-wrapper {
+  position: relative;
+  height: 280px;
+  padding: 0 1.5rem;
+  margin-top: 1rem;
 }
 </style>

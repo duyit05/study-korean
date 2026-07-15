@@ -34,4 +34,7 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> 
     List<QuizAttempt> findByStudentIdAndQuizId(Long studentId, Long quizId);
     List<QuizAttempt> findByStatus(String status);
     List<QuizAttempt> findByQuizCreatorIdAndStatus(Long creatorId, String status);
+
+    @Query("SELECT qa FROM QuizAttempt qa JOIN FETCH qa.quiz q WHERE q.creator.id = :creatorId")
+    List<QuizAttempt> findByQuizCreatorId(@Param("creatorId") Long creatorId);
 }

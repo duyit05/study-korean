@@ -2,47 +2,117 @@
   <div class="teacher-vocabulary animate-fade">
     <div class="header-section">
       <div class="title-area">
-        <h2>Kho từ vựng (Flashcards)</h2>
-        <p>Soạn thảo học liệu từ vựng theo chủ đề để giao cho học viên luyện tập.</p>
+        <h2 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-title);">Kho từ vựng (Flashcards)</h2>
       </div>
       <button class="primary-btn" @click="showCreateModal = true">
-        <AppIcon name="book" size="18" />
+        <AppIcon name="book" size="16" />
         <span>Tạo bộ từ vựng mới</span>
       </button>
     </div>
 
-    <!-- Study Sets List -->
-    <div class="sets-grid">
-      <div 
-        v-for="set in studySets" 
-        :key="set.id" 
-        class="set-card"
-        :class="{ active: selectedSet && selectedSet.id === set.id }"
-        @click="selectedSet = set"
-      >
-        <div class="card-inner">
-          <span class="kr-badge">한</span>
-          <div class="card-content">
-            <h3>{{ set.title }}</h3>
-            <p class="desc">{{ set.description }}</p>
-            <div class="card-meta">
-              <span class="count">{{ set.words?.length || 0 }} Từ vựng</span>
-              <span v-if="set.level || set.category" class="level-badge">{{ set.level || set.category }}</span>
+    <!-- Filter & Search -->
+    <div class="filter-card">
+      <div class="search-box">
+        <AppIcon name="search" size="16" class="search-icon" />
+        <input
+          type="text"
+          v-model="searchQuery"
+          placeholder="Tìm kiếm bộ từ vựng theo tên hoặc mô tả..."
+        />
+      </div>
+      <div class="filter-options">
+        <div class="filter-group">
+          <label>Cấp độ</label>
+          <AppSelect
+            id="levelFilter"
+            v-model="selectedLevelFilter"
+            :options="levelFilterOptions"
+            placeholder="Tất cả cấp độ"
+            style="min-width: 150px;"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Card wrapping grid + pagination -->
+    <div class="content-card">
+      <!-- Study Sets List -->
+      <div class="sets-grid">
+        <div
+          v-if="paginatedSets.length === 0"
+          class="empty-grid"
+        >
+          <AppIcon name="book" size="40" />
+          <p>Không tìm thấy bộ từ vựng nào.</p>
+        </div>
+        <div 
+          v-for="set in paginatedSets" 
+          :key="set.id" 
+          class="set-card"
+          :class="{ active: selectedSet && selectedSet.id === set.id }"
+          @click="selectSet(set)"
+        >
+          <div class="card-inner">
+            <span class="kr-badge">한</span>
+            <div class="card-content">
+              <h3>{{ set.title }}</h3>
+              <p class="desc">{{ set.description }}</p>
+              <div class="card-meta">
+                <span class="count">{{ set.wordCount || set.words?.length || 0 }} Từ vựng</span>
+                <span v-if="set.level || set.category" class="level-badge">{{ set.level || set.category }}</span>
+              </div>
             </div>
           </div>
+          <div class="card-actions-row">
+            <div class="action-btn-group">
+              <button class="action-btn text" @click.stop="openEditSetModal(set)">
+                <AppIcon name="edit" size="12" />
+                <span>Sửa</span>
+              </button>
+              <button class="action-btn text danger" @click.stop="triggerDeleteSet(set)">
+                <AppIcon name="trash" size="12" />
+                <span>Xóa</span>
+              </button>
+            </div>
+            <button class="action-btn text primary-action" @click.stop="openEditCards(set)">Sửa thẻ từ</button>
+          </div>
         </div>
-        <div class="card-actions-row">
-          <div class="action-btn-group">
-            <button class="action-btn text" @click.stop="openEditSetModal(set)">
-              <AppIcon name="edit" size="12" />
-              <span>Sửa</span>
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="totalElements > 0" class="pagination-bar">
+        <div class="pagination-info">
+          Đang hiển thị <strong>{{ startIndex }} - {{ endIndex }}</strong> trong số <strong>{{ totalElements }}</strong> bộ từ vựng
+        </div>
+        <div class="pagination-controls">
+          <div class="page-buttons">
+            <button class="page-nav-btn" :disabled="currentPage === 1" @click="currentPage = 1" title="Trang đầu">
+              <span style="display: inline-flex; align-items: center; margin-right: -4px;">
+                <AppIcon name="chevron-left" size="12" />
+                <AppIcon name="chevron-left" size="12" style="margin-left: -6px;" />
+              </span>
             </button>
-            <button class="action-btn text danger" @click.stop="triggerDeleteSet(set)">
-              <AppIcon name="trash" size="12" />
-              <span>Xóa</span>
+            <button class="page-nav-btn" :disabled="currentPage === 1" @click="currentPage--" title="Trang trước">
+              <AppIcon name="chevron-left" size="12" />
+            </button>
+            <button
+              v-for="page in pageNumbers"
+              :key="page"
+              class="page-num-btn"
+              :class="{ active: currentPage === page, dots: page === '...' }"
+              :disabled="page === '...'"
+              @click="typeof page === 'number' && (currentPage = page)"
+            >{{ page }}</button>
+            <button class="page-nav-btn" :disabled="currentPage === totalPages" @click="currentPage++" title="Trang sau">
+              <AppIcon name="chevron-right" size="12" />
+            </button>
+            <button class="page-nav-btn" :disabled="currentPage === totalPages" @click="currentPage = totalPages" title="Trang cuối">
+              <span style="display: inline-flex; align-items: center; margin-left: -4px;">
+                <AppIcon name="chevron-right" size="12" style="margin-right: -6px;" />
+                <AppIcon name="chevron-right" size="12" />
+              </span>
             </button>
           </div>
-          <button class="action-btn text primary-action" @click.stop="openEditCards(set)">Sửa thẻ từ</button>
         </div>
       </div>
     </div>
@@ -316,8 +386,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
+
 import { useStudySetStore } from '../../stores/studySet'
 import { useTopikLevelStore } from '../../stores/topikLevel'
 import { toast } from 'vue3-toastify'
@@ -435,6 +506,7 @@ const handleImportCards = async () => {
     if (selectedSet.value) {
       if (!selectedSet.value.words) selectedSet.value.words = []
       selectedSet.value.words.push(...importedList)
+      selectedSet.value.wordCount = (selectedSet.value.wordCount || 0) + importedList.length
     }
     
     toast.success(`Import thành công ${importedList.length} từ vựng!`)
@@ -450,8 +522,65 @@ const topikLevels = computed(() => (topikLevelStore.levels || []).filter(l => l.
 const levelOptions = computed(() => {
   return topikLevels.value.map(lvl => ({ label: lvl.name, value: lvl.id }))
 })
+const levelFilterOptions = computed(() => [
+  { value: '', label: 'Tất cả cấp độ' },
+  ...topikLevels.value.map(lvl => ({ value: lvl.name, label: lvl.name }))
+])
 const newSetLevelId = ref(null)
 const editSetLevelId = ref(null)
+
+// Search & Filter
+const searchQuery = ref('')
+const selectedLevelFilter = ref('')
+
+// Pagination
+const currentPage = ref(1)
+const itemsPerPage = 10
+
+const filteredSets = computed(() => {
+  let sets = props.studySets || []
+  const q = searchQuery.value.trim().toLowerCase()
+  if (q) {
+    sets = sets.filter(s =>
+      (s.title || '').toLowerCase().includes(q) ||
+      (s.description || '').toLowerCase().includes(q)
+    )
+  }
+  if (selectedLevelFilter.value) {
+    sets = sets.filter(s =>
+      (s.level || s.category || '') === selectedLevelFilter.value
+    )
+  }
+  return sets
+})
+
+const totalElements = computed(() => filteredSets.value.length)
+const totalPages = computed(() => Math.ceil(totalElements.value / itemsPerPage) || 1)
+const startIndex = computed(() => totalElements.value === 0 ? 0 : (currentPage.value - 1) * itemsPerPage + 1)
+const endIndex = computed(() => Math.min(currentPage.value * itemsPerPage, totalElements.value))
+
+const paginatedSets = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage
+  return filteredSets.value.slice(start, start + itemsPerPage)
+})
+
+const pageNumbers = computed(() => {
+  const pages = []
+  const total = totalPages.value
+  const current = currentPage.value
+  if (total <= 5) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+  } else if (current <= 3) {
+    pages.push(1, 2, 3, 4, '...', total)
+  } else if (current >= total - 2) {
+    pages.push(1, '...', total - 3, total - 2, total - 1, total)
+  } else {
+    pages.push(1, '...', current - 1, current, current + 1, '...', total)
+  }
+  return pages
+})
+
+watch([searchQuery, selectedLevelFilter], () => { currentPage.value = 1 })
 
 onMounted(async () => {
   try {
@@ -578,6 +707,19 @@ const openAddCardForm = () => {
   showAddCardModal.value = true
 }
 
+const selectSet = async (set) => {
+  selectedSet.value = set
+  if (!set.words || set.words.length === 0) {
+    try {
+      const cards = await studySetStore.fetchCardsForSet(set.id)
+      set.words = cards || []
+    } catch (e) {
+      console.error("Failed to load cards for set:", e)
+      toast.error("Không thể tải danh sách thẻ từ.")
+    }
+  }
+}
+
 const handleAddCard = async () => {
   if (!selectedSet.value || !newCardKorean.value || !newCardMeaning.value) return
 
@@ -591,6 +733,7 @@ const handleAddCard = async () => {
     if (selectedSet.value) {
       if (!selectedSet.value.words) selectedSet.value.words = []
       selectedSet.value.words.push(newWord)
+      selectedSet.value.wordCount = (selectedSet.value.wordCount || 0) + 1
     }
     toast.success("Thêm thẻ từ mới thành công!")
   } catch (e) {
@@ -608,6 +751,7 @@ const deleteCard = async (set, wordId) => {
       const index = selectedSet.value.words.findIndex(w => w.id === wordId)
       if (index !== -1) {
         selectedSet.value.words.splice(index, 1)
+        selectedSet.value.wordCount = Math.max(0, (selectedSet.value.wordCount || 0) - 1)
       }
     }
     toast.success("Xóa thẻ từ thành công!")
@@ -618,16 +762,16 @@ const deleteCard = async (set, wordId) => {
 }
 
 const openEditCards = (set) => {
-  selectedSet.value = set
+  selectSet(set)
 }
 </script>
 
 <style scoped>
 .teacher-vocabulary {
-  padding: 1.5rem;
+  padding: 1rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .header-section {
@@ -652,10 +796,10 @@ const openEditCards = (set) => {
   background-color: var(--primary);
   color: #fff;
   border: none;
-  padding: 0.65rem 1.25rem;
+  padding: 0.45rem 1rem;
   border-radius: var(--radius-md);
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -667,6 +811,178 @@ const openEditCards = (set) => {
 .primary-btn:hover {
   background-color: var(--primary-hover);
   transform: translateY(-1px);
+}
+
+/* Filter Card */
+.filter-card {
+  background-color: var(--bg-card);
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 260px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.search-box input {
+  width: 100%;
+  padding: 0.45rem 0.75rem 0.45rem 2.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-body);
+  color: var(--text-title);
+  font-size: 0.85rem;
+}
+
+.search-box input:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+.filter-options {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.filter-group :deep(.select-trigger) {
+  background-color: var(--bg-body);
+  padding: 0.45rem 0.75rem;
+  min-width: 150px;
+}
+
+/* Empty grid state */
+.empty-grid {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 4rem 1rem;
+  color: var(--text-muted);
+}
+
+/* Pagination */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0.5rem 0 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color);
+  min-height: 56px;
+}
+
+.pagination-info {
+  font-size: 0.9rem;
+  color: var(--text-body);
+  position: absolute;
+  left: 0;
+}
+
+.pagination-info strong {
+  color: var(--text-title);
+  font-weight: 700;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.page-nav-btn, .page-num-btn {
+  height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0 0.5rem;
+}
+
+.page-nav-btn:hover:not(:disabled), .page-num-btn:hover:not(:disabled):not(.dots) {
+  background-color: var(--bg-hover);
+  border-color: var(--border-color-hover);
+  color: var(--text-title);
+  transform: translateY(-1px);
+}
+
+.page-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-num-btn.active {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+
+.page-num-btn.dots {
+  border-color: transparent;
+  background-color: transparent;
+  cursor: default;
+}
+
+/* Content Card */
+.content-card {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .sets-grid {

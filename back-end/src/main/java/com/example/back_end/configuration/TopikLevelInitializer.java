@@ -18,16 +18,6 @@ public class TopikLevelInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        if (topikLevelRepository.count() == 0) {
-            topikLevelRepository.saveAll(List.of(
-                    TopikLevel.builder().name("Sơ cấp 1A").code("SO_CAP_1A").groupType("VOCAB").build(),
-                    TopikLevel.builder().name("Sơ cấp 1B").code("SO_CAP_1B").groupType("VOCAB").build(),
-                    TopikLevel.builder().name("Trung cấp (3-4)").code("TRUNG_CAP").groupType("VOCAB").build(),
-                    TopikLevel.builder().name("Cao cấp (5-6)").code("CAO_CAP").groupType("VOCAB").build(),
-                    TopikLevel.builder().name("TOPIK I (Nghe & Đọc)").code("TOPIK_I").groupType("QUIZ").build(),
-                    TopikLevel.builder().name("TOPIK II (Nghe, Đọc & Viết)").code("TOPIK_II").groupType("QUIZ").build(),
-                    TopikLevel.builder().name("Lớp 1A").code("LOP_1A").groupType("QUIZ").build(),
-                    TopikLevel.builder().name("Lớp 1B").code("LOP_1B").groupType("QUIZ").build()));
-        }
+
     }
 }

@@ -7,13 +7,18 @@ export const useStudentStore = defineStore('student', () => {
   const loading = ref(false);
   const errorMessage = ref('');
 
-  const fetchStudents = async () => {
+  const fetchStudents = async (params = {}) => {
     loading.value = true;
     errorMessage.value = '';
     try {
-      const response = await api.get('/students');
-      students.value = response.data || [];
-      return students.value;
+      const response = await api.get('/students', { params });
+      if (response.data && response.data.items) {
+        students.value = response.data.items;
+        return response.data;
+      } else {
+        students.value = response.data || [];
+        return students.value;
+      }
     } catch (error) {
       errorMessage.value = error.message;
       throw error;
@@ -71,6 +76,20 @@ export const useStudentStore = defineStore('student', () => {
     }
   };
 
+  const fetchStudentProgress = async (id) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      const response = await api.get(`/students/${id}/progress`);
+      return response.data;
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     students,
     loading,
@@ -78,6 +97,7 @@ export const useStudentStore = defineStore('student', () => {
     fetchStudents,
     createStudent,
     updateStudent,
-    deleteStudent
+    deleteStudent,
+    fetchStudentProgress
   };
 });

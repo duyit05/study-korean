@@ -2,8 +2,7 @@
   <div class="teacher-students animate-fade">
     <div class="header-section">
       <div class="title-area">
-        <h2>Quản lý Học viên</h2>
-        <p>Quản lý thông tin tài khoản, tiến trình học tập và mục tiêu của học viên.</p>
+        <h2 style="margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--text-title);">Quản lý Học viên</h2>
       </div>
       <button class="primary-btn" @click="openCreateModal">
         <AppIcon name="plus" size="16" />
@@ -71,7 +70,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="student in filteredStudents" :key="student.id">
+            <tr v-for="student in paginatedStudents" :key="student.id">
               <td>
                 <div class="student-profile-info">
                   <div class="avatar-circle">
@@ -114,6 +113,9 @@
               </td>
               <td>
                 <div class="action-buttons">
+                  <button class="action-btn view" @click="openProgressModal(student)" title="Xem tiến trình học">
+                    <AppIcon name="eye" size="16" />
+                  </button>
                   <button class="action-btn edit" @click="openEditModal(student)" title="Sửa thông tin">
                     <AppIcon name="edit" size="16" />
                   </button>
@@ -125,6 +127,67 @@
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- Pagination Section -->
+      <div v-if="totalElements > 0" class="pagination-bar">
+        <div class="pagination-info">
+          Đang hiển thị <strong>{{ startIndex }} - {{ endIndex }}</strong> trong số <strong>{{ totalElements }}</strong> học viên
+        </div>
+        <div class="pagination-controls">
+          <div class="page-buttons">
+            <button 
+              class="page-nav-btn" 
+              :disabled="currentPage === 1" 
+              @click="goToPage(1)" 
+              title="Trang đầu"
+            >
+              <span style="display: inline-flex; align-items: center; margin-right: -4px;">
+                <AppIcon name="chevron-left" size="12" />
+                <AppIcon name="chevron-left" size="12" style="margin-left: -6px;" />
+              </span>
+            </button>
+            <button 
+              class="page-nav-btn" 
+              :disabled="currentPage === 1" 
+              @click="prevPage" 
+              title="Trang trước"
+            >
+              <AppIcon name="chevron-left" size="12" />
+            </button>
+            
+            <button 
+              v-for="page in pageNumbers" 
+              :key="page" 
+              class="page-num-btn" 
+              :class="{ active: currentPage === page, dots: page === '...' }"
+              :disabled="page === '...'"
+              @click="typeof page === 'number' && goToPage(page)"
+            >
+              {{ page }}
+            </button>
+
+            <button 
+              class="page-nav-btn" 
+              :disabled="currentPage === totalPages" 
+              @click="nextPage" 
+              title="Trang sau"
+            >
+              <AppIcon name="chevron-right" size="12" />
+            </button>
+            <button 
+              class="page-nav-btn" 
+              :disabled="currentPage === totalPages" 
+              @click="goToPage(totalPages)" 
+              title="Trang cuối"
+            >
+              <span style="display: inline-flex; align-items: center; margin-left: -4px;">
+                <AppIcon name="chevron-right" size="12" style="margin-right: -6px;" />
+                <AppIcon name="chevron-right" size="12" />
+              </span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -263,11 +326,145 @@
         </div>
       </div>
     </div>
+
+    <!-- Student Progress Detail Modal -->
+    <div v-if="showProgressModal" class="modal-overlay">
+      <div class="modal-content large animate-scale" style="max-width: 680px;">
+        <div class="modal-header">
+          <h3>Tiến trình học tập: {{ selectedStudent?.fullName }}</h3>
+          <button class="close-btn" @click="showProgressModal = false">&times;</button>
+        </div>
+        <div class="modal-body" style="padding-top: 1rem; max-height: 520px; overflow-y: auto;">
+          <!-- Profile Quick Summary -->
+          <div class="progress-student-summary" style="display: flex; gap: 1rem; align-items: center; background-color: var(--bg-body); padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.25rem; border: 1px solid var(--border-color);">
+            <div class="avatar-circle" style="width: 50px; height: 50px; font-size: 1.5rem; font-weight: 700;">
+              {{ selectedStudent?.fullName ? selectedStudent.fullName[0].toUpperCase() : 'S' }}
+            </div>
+            <div>
+              <h4 style="margin: 0; font-size: 1.1rem; font-weight: 700; color: var(--text-title);">{{ selectedStudent?.fullName }}</h4>
+              <p style="margin: 0.15rem 0 0 0; font-size: 0.85rem; color: var(--text-muted);">
+                Username: @{{ selectedStudent?.username }} | Trình độ: {{ selectedStudent?.currentLevel || 'Chưa phân lớp' }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Tabs inside Modal -->
+          <div class="modal-tabs" style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 1rem;">
+            <button 
+              type="button" 
+              class="tab-btn" 
+              :class="{ active: progressActiveTab === 'classes' }"
+              @click="progressActiveTab = 'classes'"
+              style="padding: 0.5rem 1rem; font-weight: 600; font-size: 0.85rem; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; color: var(--text-muted);"
+            >
+              Lớp học
+            </button>
+            <button 
+              type="button" 
+              class="tab-btn" 
+              :class="{ active: progressActiveTab === 'quizzes' }"
+              @click="progressActiveTab = 'quizzes'"
+              style="padding: 0.5rem 1rem; font-weight: 600; font-size: 0.85rem; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; color: var(--text-muted);"
+            >
+              Lịch sử thi & bài tập
+            </button>
+            <button 
+              type="button" 
+              class="tab-btn" 
+              :class="{ active: progressActiveTab === 'vocab' }"
+              @click="progressActiveTab = 'vocab'"
+              style="padding: 0.5rem 1rem; font-weight: 600; font-size: 0.85rem; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; color: var(--text-muted);"
+            >
+              Tiến trình từ vựng
+            </button>
+          </div>
+
+          <!-- Tab Content: Classes -->
+          <div v-show="progressActiveTab === 'classes'" class="progress-tab-content">
+            <div v-if="loadingProgress" class="select-loading-spinner" style="padding: 2rem 0; text-align: center; color: var(--text-muted);">
+              Đang tải thông tin...
+            </div>
+            <div v-else-if="!studentProgress.classes || studentProgress.classes.length === 0" class="empty-state" style="padding: 2rem 0; text-align: center; color: var(--text-muted);">
+              Chưa tham gia lớp học nào.
+            </div>
+            <div v-else class="progress-classes-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+              <div v-for="cls in studentProgress.classes" :key="cls.id" style="background-color: var(--bg-body); padding: 0.75rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <strong style="color: var(--text-title); font-size: 0.9rem;">Lớp: {{ cls.name }}</strong>
+                  <span style="display: block; font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem;">Khóa: {{ cls.courseTitle }}</span>
+                </div>
+                <span class="status-badge active" style="font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 10px; font-weight: 600; background-color: rgba(16, 185, 129, 0.1); color: #10b981;">Đang học</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tab Content: Quiz attempts -->
+          <div v-show="progressActiveTab === 'quizzes'" class="progress-tab-content">
+            <div v-if="loadingProgress" class="select-loading-spinner" style="padding: 2rem 0; text-align: center; color: var(--text-muted);">
+              Đang tải thông tin...
+            </div>
+            <div v-else-if="!studentProgress.quizAttempts || studentProgress.quizAttempts.length === 0" class="empty-state" style="padding: 2rem 0; text-align: center; color: var(--text-muted);">
+              Chưa có lịch sử làm bài thi hay bài tập.
+            </div>
+            <div v-else class="progress-attempts-table" style="border: 1px solid var(--border-color); border-radius: var(--radius-sm); overflow: hidden;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; text-align: left;">
+                <thead>
+                  <tr style="background-color: var(--bg-body); border-bottom: 1px solid var(--border-color);">
+                    <th style="padding: 0.65rem 1rem;">Đề thi / Bài tập</th>
+                    <th style="padding: 0.65rem 1rem;">Điểm đạt</th>
+                    <th style="padding: 0.65rem 1rem;">Trạng thái</th>
+                    <th style="padding: 0.65rem 1rem;">Ngày nộp</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="att in studentProgress.quizAttempts" :key="att.id" style="border-bottom: 1px solid var(--border-color);">
+                    <td style="padding: 0.65rem 1rem; color: var(--text-title); font-weight: 600;">{{ att.quizTitle }}</td>
+                    <td style="padding: 0.65rem 1rem; color: var(--primary); font-weight: 700;">{{ att.score }} điểm</td>
+                    <td style="padding: 0.65rem 1rem;">
+                      <span style="font-size: 0.75rem; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 600;" :class="att.status === 'COMPLETED' ? 'status-badge active' : 'status-badge-sm orange'">
+                        {{ att.status === 'COMPLETED' ? 'Hoàn thành' : 'Chờ chấm' }}
+                      </span>
+                    </td>
+                    <td style="padding: 0.65rem 1rem; color: var(--text-muted); font-size: 0.8rem;">
+                      {{ att.submittedAt ? att.submittedAt.replace('T', ' ').substring(0, 16) : 'N/A' }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tab Content: Vocabulary progress -->
+          <div v-show="progressActiveTab === 'vocab'" class="progress-tab-content">
+            <div v-if="loadingProgress" class="select-loading-spinner" style="padding: 2rem 0; text-align: center; color: var(--text-muted);">
+              Đang tải thông tin...
+            </div>
+            <div v-else class="progress-vocab-summary" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+              <div style="background-color: var(--bg-body); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 800; color: #10b981;">{{ studentProgress.vocabProgress?.totalLearnedCards || 0 }}</div>
+                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Từ vựng đã thuộc</span>
+              </div>
+              <div style="background-color: var(--bg-body); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 800; color: #f59e0b;">{{ studentProgress.vocabProgress?.totalReviewCards || 0 }}</div>
+                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Từ vựng cần ôn tập</span>
+              </div>
+              <div style="background-color: var(--bg-body); padding: 1rem; border-radius: var(--radius-md); border: 1px solid var(--border-color); text-align: center;">
+                <div style="font-size: 1.75rem; font-weight: 800; color: var(--primary);">{{ studentProgress.vocabProgress?.totalStudySets || 0 }}</div>
+                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600;">Bộ từ vựng đã học</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+          <button type="button" class="cancel-btn" @click="showProgressModal = false" style="margin: 0;">Đóng</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
 import { useStudentStore } from '../../stores/student'
 import { useTopikLevelStore } from '../../stores/topikLevel'
@@ -311,6 +508,35 @@ const statusFormOptions = [
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const showDeleteConfirm = ref(false)
+const showProgressModal = ref(false)
+const progressActiveTab = ref('classes')
+const selectedStudent = ref(null)
+const loadingProgress = ref(false)
+const studentProgress = ref({
+  classes: [],
+  quizAttempts: [],
+  vocabProgress: { totalLearnedCards: 0, totalReviewCards: 0, totalStudySets: 0 }
+})
+
+const openProgressModal = async (student) => {
+  selectedStudent.value = student
+  showProgressModal.value = true
+  progressActiveTab.value = 'classes'
+  loadingProgress.value = true
+  try {
+    const data = await studentStore.fetchStudentProgress(student.id)
+    studentProgress.value = data || {
+      classes: [],
+      quizAttempts: [],
+      vocabProgress: { totalLearnedCards: 0, totalReviewCards: 0, totalStudySets: 0 }
+    }
+  } catch (err) {
+    console.error("Failed to load student progress details:", err)
+    toast.error("Không thể tải thông tin tiến trình của học viên.")
+  } finally {
+    loadingProgress.value = false
+  }
+}
 const submitting = ref(false)
 
 // Student Data forms
@@ -336,9 +562,34 @@ const editingStudent = ref({
 
 const studentToDelete = ref(null)
 
+const loadStudentsFromServer = async () => {
+  try {
+    const params = {
+      unpaged: false,
+      page: currentPage.value,
+      size: itemsPerPage.value
+    }
+    if (searchQuery.value.trim()) {
+      params.search = searchQuery.value.trim()
+    }
+    if (selectedLevelFilter.value) {
+      params.level = selectedLevelFilter.value
+    }
+    if (selectedStatusFilter.value) {
+      params.isActive = selectedStatusFilter.value === 'active'
+    }
+    const pageData = await studentStore.fetchStudents(params)
+    totalPages.value = pageData.totalPage || 1
+    totalElements.value = pageData.totalElements || 0
+  } catch (err) {
+    console.error("Failed to load students from server:", err)
+    toast.error("Không thể tải danh sách học viên từ máy chủ.")
+  }
+}
+
 onMounted(async () => {
   try {
-    await studentStore.fetchStudents()
+    await loadStudentsFromServer()
     await topikLevelStore.fetchLevels()
   } catch (err) {
     console.error("Error initial load:", err)
@@ -348,27 +599,82 @@ onMounted(async () => {
 
 // Filter computation
 const filteredStudents = computed(() => {
-  let list = students.value || []
+  return students.value || []
+})
+
+// Pagination logic
+const currentPage = ref(1)
+const itemsPerPage = ref(10)
+const totalPages = ref(1)
+const totalElements = ref(0)
+
+const startIndex = computed(() => {
+  if (totalElements.value === 0) return 0
+  return (currentPage.value - 1) * itemsPerPage.value + 1
+})
+
+const endIndex = computed(() => {
+  return Math.min(currentPage.value * itemsPerPage.value, totalElements.value)
+})
+
+const paginatedStudents = computed(() => {
+  return students.value || []
+})
+
+const pageNumbers = computed(() => {
+  const pages = []
+  const total = totalPages.value
+  const current = currentPage.value
+  const maxVisible = 5
   
-  if (searchQuery.value.trim()) {
-    const q = searchQuery.value.toLowerCase()
-    list = list.filter(s => 
-      (s.fullName || '').toLowerCase().includes(q) ||
-      (s.username || '').toLowerCase().includes(q) ||
-      (s.email || '').toLowerCase().includes(q)
-    )
+  if (total <= maxVisible) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+  } else {
+    if (current <= 3) {
+      pages.push(1, 2, 3, 4, '...', total)
+    } else if (current >= total - 2) {
+      pages.push(1, '...', total - 3, total - 2, total - 1, total)
+    } else {
+      pages.push(1, '...', current - 1, current, current + 1, '...', total)
+    }
   }
+  return pages
+})
 
-  if (selectedLevelFilter.value) {
-    list = list.filter(s => s.currentLevel === selectedLevelFilter.value)
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
   }
+}
 
-  if (selectedStatusFilter.value) {
-    const isActiveVal = selectedStatusFilter.value === 'active'
-    list = list.filter(s => s.isActive === isActiveVal)
+const nextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++
   }
+}
 
-  return list
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--
+  }
+}
+
+let searchTimeout = null
+watch(searchQuery, () => {
+  currentPage.value = 1
+  if (searchTimeout) clearTimeout(searchTimeout)
+  searchTimeout = setTimeout(() => {
+    loadStudentsFromServer()
+  }, 300)
+})
+
+watch([selectedLevelFilter, selectedStatusFilter], () => {
+  currentPage.value = 1
+  loadStudentsFromServer()
+})
+
+watch(currentPage, () => {
+  loadStudentsFromServer()
 })
 
 // Action triggers
@@ -415,6 +721,7 @@ const handleCreateStudent = async () => {
     await studentStore.createStudent(newStudent.value)
     toast.success("Tạo tài khoản học viên mới thành công!")
     showCreateModal.value = false
+    await loadStudentsFromServer()
   } catch (err) {
     console.error(err)
     toast.error(err.message || "Tạo tài khoản thất bại. Username hoặc Email có thể đã tồn tại.")
@@ -436,6 +743,7 @@ const handleUpdateStudent = async () => {
     })
     toast.success("Cập nhật thông tin học viên thành công!")
     showEditModal.value = false
+    await loadStudentsFromServer()
   } catch (err) {
     console.error(err)
     toast.error(err.message || "Cập nhật thất bại. Email có thể đã được sử dụng.")
@@ -452,6 +760,7 @@ const confirmDelete = async () => {
     toast.success("Xóa tài khoản học viên thành công!")
     showDeleteConfirm.value = false
     studentToDelete.value = null
+    await loadStudentsFromServer()
   } catch (err) {
     console.error(err)
     toast.error("Xóa tài khoản học viên thất bại.")
@@ -463,10 +772,10 @@ const confirmDelete = async () => {
 
 <style scoped>
 .teacher-students {
-  padding: 1.5rem;
+  padding: 1rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .header-section {
@@ -491,13 +800,14 @@ const confirmDelete = async () => {
   background-color: var(--primary);
   color: #fff;
   border: none;
-  padding: 0.6rem 1.25rem;
+  padding: 0.45rem 1rem;
   border-radius: var(--radius-md);
   font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-size: 0.85rem;
   transition: all 0.2s;
 }
 
@@ -508,7 +818,7 @@ const confirmDelete = async () => {
 /* Filter Card */
 .filter-card {
   background-color: var(--bg-card);
-  padding: 1.25rem;
+  padding: 0.75rem 1.25rem;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow-sm);
@@ -535,12 +845,12 @@ const confirmDelete = async () => {
 
 .search-box input {
   width: 100%;
-  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  padding: 0.45rem 1rem 0.45rem 2.25rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   background-color: var(--bg-body);
   color: var(--text-title);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .search-box input:focus {
@@ -569,7 +879,7 @@ const confirmDelete = async () => {
 
 .filter-group :deep(.select-trigger) {
   background-color: var(--bg-body);
-  padding: 0.6rem 1rem;
+  padding: 0.45rem 0.75rem;
 }
 
 .form-group :deep(.select-trigger) {
@@ -621,8 +931,8 @@ const confirmDelete = async () => {
 
 .data-table th {
   background-color: var(--bg-body);
-  padding: 1rem 1.25rem;
-  font-size: 0.85rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -631,7 +941,7 @@ const confirmDelete = async () => {
 }
 
 .data-table td {
-  padding: 1.25rem;
+  padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--border-color);
   vertical-align: middle;
 }
@@ -648,8 +958,8 @@ const confirmDelete = async () => {
 }
 
 .avatar-circle {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background-color: rgba(219, 142, 113, 0.15);
   color: var(--primary);
@@ -657,7 +967,7 @@ const confirmDelete = async () => {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
 }
 
 .student-names {
@@ -667,12 +977,12 @@ const confirmDelete = async () => {
 
 .student-names strong {
   color: var(--text-title);
-  font-size: 0.95rem;
+  font-size: 0.88rem;
 }
 
 .student-names span {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 
 /* Contact Info cell */
@@ -683,12 +993,12 @@ const confirmDelete = async () => {
 
 .contact-info .email {
   color: var(--text-title);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .contact-info .phone {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 
 .contact-info .phone.empty {
@@ -698,13 +1008,13 @@ const confirmDelete = async () => {
 
 /* Goal cell */
 .goal-text {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  display: block;
   max-width: 220px;
-  font-size: 0.9rem;
-  color: var(--text-title);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 0.85rem;
+  color: var(--text-body);
 }
 
 /* Level badge */
@@ -997,5 +1307,114 @@ const confirmDelete = async () => {
 
 .submit-btn:hover {
   background-color: var(--primary-hover);
+}
+
+.modal-tabs .tab-btn.active {
+  border-bottom: 2px solid var(--primary) !important;
+  color: var(--primary) !important;
+}
+
+.modal-tabs .tab-btn:hover {
+  color: var(--text-title) !important;
+}
+
+/* Pagination Styling */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 1.5rem 1.25rem 1.25rem 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color);
+  min-height: 56px;
+}
+
+.pagination-info {
+  font-size: 0.9rem;
+  color: var(--text-body);
+  position: absolute;
+  left: 0;
+}
+
+.pagination-info strong {
+  color: var(--text-title);
+  font-weight: 700;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .pagination-bar {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: auto;
+  }
+  
+  .pagination-info {
+    position: static;
+  }
+}
+
+.page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-body);
+}
+
+.page-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.page-nav-btn, .page-num-btn {
+  height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0 0.5rem;
+}
+
+.page-nav-btn:hover:not(:disabled), .page-num-btn:hover:not(:disabled):not(.dots) {
+  background-color: var(--bg-hover);
+  border-color: var(--border-color-hover);
+  color: var(--text-title);
+  transform: translateY(-1px);
+}
+
+.page-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-num-btn.active {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+
+.page-num-btn.dots {
+  border-color: transparent;
+  background-color: transparent;
+  cursor: default;
 }
 </style>

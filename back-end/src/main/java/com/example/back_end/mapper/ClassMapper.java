@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Component
@@ -29,7 +30,27 @@ public class ClassMapper {
 
         java.util.Map<Long, List<CardProgress>> progressMap = java.util.Map.of();
         java.util.Map<Long, List<QuizAttempt>> attemptsMap = java.util.Map.of();
+        java.util.Map<Long, Long> cardCountsMap = java.util.Map.of();
+        List<AssignedStudySet> assigned = List.of();
         long totalCards = 0;
+
+        if (c.getId() != null) {
+            assigned = assignedStudySetRepository.findByClazzId(c.getId());
+            List<Long> studySetIds = assigned.stream()
+                    .map(a -> a.getStudySet().getId())
+                    .distinct()
+                    .collect(Collectors.toList());
+            totalCards = studySetIds.isEmpty() ? 0 : cardRepository.countByStudySetIdIn(studySetIds);
+            
+            if (!studySetIds.isEmpty()) {
+                List<Object[]> cardCounts = cardRepository.countCardsByStudySetIds(studySetIds);
+                cardCountsMap = cardCounts.stream()
+                        .collect(Collectors.toMap(
+                                row -> (Long) row[0],
+                                row -> (Long) row[1]
+                        ));
+            }
+        }
 
         if (c.getStudents() != null && !c.getStudents().isEmpty()) {
             List<Long> studentIds = c.getStudents().stream().map(student -> student.getId()).collect(Collectors.toList());
@@ -38,23 +59,18 @@ public class ClassMapper {
 
             progressMap = progressList.stream().collect(Collectors.groupingBy(p -> p.getStudent().getId()));
             attemptsMap = attemptsList.stream().collect(Collectors.groupingBy(a -> a.getStudent().getId()));
-
-            List<AssignedStudySet> assigned = assignedStudySetRepository.findByClazzId(c.getId());
-            List<Long> studySetIds = assigned.stream()
-                    .map(a -> a.getStudySet().getId())
-                    .distinct()
-                    .collect(Collectors.toList());
-            totalCards = studySetIds.isEmpty() ? 0 : cardRepository.countByStudySetIdIn(studySetIds);
         }
 
-        return toResponse(c, progressMap, attemptsMap, totalCards);
+        return toResponse(c, progressMap, attemptsMap, totalCards, assigned, cardCountsMap);
     }
 
     public ClassResponse toResponse(
             Class c,
             java.util.Map<Long, List<CardProgress>> progressMap,
             java.util.Map<Long, List<QuizAttempt>> attemptsMap,
-            long totalCards
+            long totalCards,
+            List<AssignedStudySet> assigned,
+            java.util.Map<Long, Long> cardCountsMap
     ) {
         if (c == null) return null;
 
@@ -136,6 +152,7 @@ public class ClassMapper {
                 .startedAt(c.getStartedAt())
                 .notes(notes)
                 .students(studentDtos)
+                .assignedStudySets(mapAssignedStudySets(assigned, cardCountsMap))
                 .build();
     }
 
@@ -193,7 +210,26 @@ public class ClassMapper {
                             .distinct()
                             .mapToLong(setId -> finalCardCounts.getOrDefault(setId, 0L))
                             .sum();
-                    return toResponse(c, finalProgressMap, finalAttemptsMap, classTotalCards);
+                    return toResponse(c, finalProgressMap, finalAttemptsMap, classTotalCards, assigned, finalCardCounts);
+                })
+                .collect(Collectors.toList());
+    }
+
+    private List<ClassResponse.AssignedStudySetDto> mapAssignedStudySets(List<AssignedStudySet> assigned, java.util.Map<Long, Long> cardCountsMap) {
+        if (assigned == null) return List.of();
+        return assigned.stream()
+                .map(a -> {
+                    long count = cardCountsMap != null ? cardCountsMap.getOrDefault(a.getStudySet().getId(), 0L) : cardRepository.countByStudySetId(a.getStudySet().getId());
+                    return ClassResponse.AssignedStudySetDto.builder()
+                            .id(a.getId())
+                            .studySetId(a.getStudySet().getId())
+                            .studySetTitle(a.getStudySet().getTitle())
+                            .studySetDescription(a.getStudySet().getDescription())
+                            .wordCount((int) count)
+                            .dueDate(a.getDueDate() != null ? a.getDueDate().toString() : null)
+                            .note(a.getNote())
+                            .assignedAt(a.getAssignedAt() != null ? a.getAssignedAt().toString() : null)
+                            .build();
                 })
                 .collect(Collectors.toList());
     }

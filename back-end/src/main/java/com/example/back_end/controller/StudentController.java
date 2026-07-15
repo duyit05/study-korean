@@ -22,12 +22,26 @@ public class StudentController {
     private final StudentService studentService;
 
     @GetMapping
-    public ApiResponse<List<StudentResponse>> getAllStudents() {
-        List<StudentResponse> list = studentService.getAllStudents();
-        return ApiResponse.<List<StudentResponse>>builder()
+    public ApiResponse<?> getAllStudents(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String level,
+            @RequestParam(required = false) Boolean isActive,
+            @RequestParam(defaultValue = "true") boolean unpaged) {
+        if (unpaged) {
+            List<StudentResponse> list = studentService.getAllStudents(search, level, isActive);
+            return ApiResponse.<List<StudentResponse>>builder()
+                    .code(HttpStatus.OK.value())
+                    .message("Lấy danh sách học viên thành công.")
+                    .data(list)
+                    .build();
+        }
+        com.example.back_end.dto.response.PageResponse<StudentResponse> data = studentService.getPaginatedStudents(page, size, search, level, isActive);
+        return ApiResponse.<com.example.back_end.dto.response.PageResponse<StudentResponse>>builder()
                 .code(HttpStatus.OK.value())
                 .message("Lấy danh sách học viên thành công.")
-                .data(list)
+                .data(data)
                 .build();
     }
 
@@ -57,6 +71,16 @@ public class StudentController {
         return ApiResponse.<Void>builder()
                 .code(HttpStatus.OK.value())
                 .message("Xóa tài khoản học viên thành công.")
+                .build();
+    }
+
+    @GetMapping("/{id}/progress")
+    public ApiResponse<com.example.back_end.dto.response.StudentProgressResponse> getStudentProgress(@PathVariable Long id) {
+        com.example.back_end.dto.response.StudentProgressResponse data = studentService.getStudentProgress(id);
+        return ApiResponse.<com.example.back_end.dto.response.StudentProgressResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Lấy tiến trình học tập học viên thành công.")
+                .data(data)
                 .build();
     }
 }

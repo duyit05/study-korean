@@ -224,21 +224,72 @@
 
       <!-- Tab Content: Assignments -->
       <div v-else-if="activeTab === 'assignments'" class="tab-content assignments-tab">
-        <div class="assignments-list">
-          <div v-for="quiz in assignedQuizzes" :key="quiz.id" class="assignment-item">
-            <div class="assign-icon">
-              <AppIcon name="quiz" size="20" />
+        <div class="assignments-sub-sections" style="display: grid; grid-template-columns: 1fr; gap: 1.5rem;">
+          <!-- Subsection 1: Quizzes & Essays -->
+          <div class="panel-card" style="box-shadow: none; border: 1px solid var(--border-color); padding: 1.25rem;">
+            <div class="panel-header" style="margin-bottom: 1rem; border-bottom: none; padding: 0; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+              <h4 style="margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-title);">Đề thi & Bài tập trắc nghiệm</h4>
+              <button class="primary-btn-sm" @click="openAssignQuizModal">
+                <AppIcon name="plus" size="14" />
+                Giao đề thi/bài tập mới
+              </button>
             </div>
-            <div class="assign-info">
-              <h4>{{ quiz.title }}</h4>
-              <p>Hạn nộp: {{ quiz.dueDate }} | Dạng: {{ quiz.type }}</p>
-            </div>
-            <div class="assign-status">
-              <span class="status-badge">Đã nộp: 8/12</span>
+            <div class="assignments-list">
+              <div v-for="quiz in assignedQuizzes" :key="quiz.id" class="assignment-item">
+                <div style="display: flex; gap: 0.75rem; align-items: center; flex: 1;">
+                  <div class="assign-icon" style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: var(--radius-sm); background-color: var(--primary-glow); color: var(--primary);">
+                    <AppIcon name="quiz" size="20" />
+                  </div>
+                  <div class="assign-info">
+                    <h4 style="margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--text-title);">{{ quiz.title }}</h4>
+                    <p style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: var(--text-muted);">
+                      Hạn nộp: {{ quiz.dueDate ? quiz.dueDate.replace('T', ' ').substring(0, 16) : 'Không giới hạn' }} | Dạng: {{ quiz.type || 'Hỗn hợp' }}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <button class="delete-btn-sm" @click="handleUnassignQuiz(quiz.id)">
+                    Hủy giao
+                  </button>
+                </div>
+              </div>
+              <div v-if="assignedQuizzes.length === 0" class="empty-state">
+                Chưa có đề thi/bài tập nào được giao cho lớp này.
+              </div>
             </div>
           </div>
-          <div v-if="assignedQuizzes.length === 0" class="empty-state">
-            Chưa có bài tập nào được giao cho lớp này.
+
+          <!-- Subsection 2: Assigned Vocabulary Study Sets -->
+          <div class="panel-card" style="box-shadow: none; border: 1px solid var(--border-color); padding: 1.25rem;">
+            <div class="panel-header" style="margin-bottom: 1rem; border-bottom: none; padding: 0; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+              <h4 style="margin: 0; font-size: 1rem; font-weight: 700; color: var(--text-title);">Bộ từ vựng (Flashcards) đã giao</h4>
+              <button class="primary-btn-sm" @click="openAssignVocabModal">
+                <AppIcon name="plus" size="14" />
+                Giao bộ từ vựng mới
+              </button>
+            </div>
+            <div class="assignments-list">
+              <div v-for="set in (selectedClass.assignedStudySets || [])" :key="set.id" class="assignment-item">
+                <div style="display: flex; gap: 0.75rem; align-items: center; flex: 1;">
+                  <div class="assign-icon" style="background-color: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: var(--radius-sm);">
+                    <AppIcon name="book" size="20" />
+                  </div>
+                  <div class="assign-info">
+                    <h4 style="margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--text-title);">{{ set.studySetTitle }}</h4>
+                    <p style="margin: 0.2rem 0 0 0; font-size: 0.8rem; color: var(--text-muted);">{{ set.wordCount }} thẻ từ | Hạn nộp: {{ set.dueDate || 'Không giới hạn' }}</p>
+                    <p v-if="set.note" style="font-size: 0.75rem; color: var(--primary); margin: 0.15rem 0 0 0;">📝 Ghi chú: {{ set.note }}</p>
+                  </div>
+                </div>
+                <div>
+                  <button class="delete-btn-sm" @click="handleUnassignStudySet(set.id)">
+                    Hủy giao
+                  </button>
+                </div>
+              </div>
+              <div v-if="!selectedClass.assignedStudySets || selectedClass.assignedStudySets.length === 0" class="empty-state">
+                Chưa giao bộ từ vựng nào cho lớp này.
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -472,6 +523,110 @@
         </form>
       </div>
     </div>
+
+    <!-- Assign Vocabulary Modal -->
+    <div v-if="showAssignVocabModal" class="modal-overlay">
+      <div class="modal-content animate-scale">
+        <div class="modal-header">
+          <h3>Giao bài tập từ vựng: {{ selectedClass.name }}</h3>
+          <button class="close-btn" @click="showAssignVocabModal = false">&times;</button>
+        </div>
+        <form @submit.prevent="handleAssignVocab" class="modal-form">
+          <div class="form-group">
+            <label for="assignStudySet">Chọn bộ từ vựng <span class="required">*</span></label>
+            <AppSelect 
+              id="assignStudySet" 
+              v-model="assignVocabForm.studySetId" 
+              :options="studySetOptions" 
+              placeholder="-- Chọn bộ từ vựng --" 
+            />
+          </div>
+          <div class="form-group" style="margin-top: 1rem;">
+            <label for="assignDueDate">Hạn hoàn thành</label>
+            <input type="date" id="assignDueDate" v-model="assignVocabForm.dueDate" style="width: 100%; padding: 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.9rem;">
+          </div>
+          <div class="form-group" style="margin-top: 1rem;">
+            <label for="assignNote">Ghi chú cho học viên</label>
+            <textarea id="assignNote" v-model="assignVocabForm.note" placeholder="Ví dụ: Học thuộc 30 từ này trước buổi học tới nhé..." rows="2" style="width: 100%; padding: 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.9rem; resize: vertical;"></textarea>
+          </div>
+          <div class="modal-actions" style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <button type="button" class="cancel-btn" @click="showAssignVocabModal = false">Hủy bỏ</button>
+            <button type="submit" class="submit-btn" :disabled="assigningVocab || !assignVocabForm.studySetId">
+              {{ assigningVocab ? 'Đang giao...' : 'Giao bài tập' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Unassign Confirm Modal -->
+    <div v-if="showUnassignConfirm" class="modal-overlay">
+      <div class="modal-content animate-scale" style="max-width: 400px;">
+        <div class="modal-header">
+          <h3>Xác nhận hủy giao</h3>
+          <button class="close-btn" @click="showUnassignConfirm = false">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 1.25rem 0 0 0;">
+          <p style="font-size: 0.95rem; color: var(--text-body); line-height: 1.5; margin-bottom: 1.5rem;">Bạn có chắc chắn muốn hủy giao bộ từ vựng này cho lớp học?</p>
+          <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <button type="button" class="cancel-btn" @click="showUnassignConfirm = false" style="margin: 0;">Quay lại</button>
+            <button type="button" class="submit-btn" @click="confirmUnassign" :disabled="unassigning" style="background-color: var(--danger); margin: 0;">
+              {{ unassigning ? 'Đang hủy...' : 'Hủy giao' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Assign Quiz Modal -->
+    <div v-if="showAssignQuizModal" class="modal-overlay">
+      <div class="modal-content animate-scale">
+        <div class="modal-header">
+          <h3>Giao đề thi / bài tập: {{ selectedClass.name }}</h3>
+          <button class="close-btn" @click="showAssignQuizModal = false">&times;</button>
+        </div>
+        <form @submit.prevent="handleAssignQuiz" class="modal-form">
+          <div class="form-group">
+            <label for="assignQuiz">Chọn đề thi / bài tập <span class="required">*</span></label>
+            <AppSelect 
+              id="assignQuiz" 
+              v-model="assignQuizForm.quizId" 
+              :options="quizOptions" 
+              placeholder="-- Chọn đề thi / bài tập --" 
+            />
+          </div>
+          <div class="form-group" style="margin-top: 1rem;">
+            <label for="assignQuizDueDate">Hạn hoàn thành <span class="required">*</span></label>
+            <input type="date" id="assignQuizDueDate" v-model="assignQuizForm.dueDate" required style="width: 100%; padding: 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.9rem;">
+          </div>
+          <div class="modal-actions" style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <button type="button" class="cancel-btn" @click="showAssignQuizModal = false">Hủy bỏ</button>
+            <button type="submit" class="submit-btn" :disabled="assigningQuiz || !assignQuizForm.quizId || !assignQuizForm.dueDate">
+              {{ assigningQuiz ? 'Đang giao...' : 'Giao bài tập' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Unassign Quiz Confirm Modal -->
+    <div v-if="showUnassignQuizConfirm" class="modal-overlay">
+      <div class="modal-content animate-scale" style="max-width: 400px;">
+        <div class="modal-header">
+          <h3>Xác nhận hủy giao đề thi</h3>
+          <button class="close-btn" @click="showUnassignQuizConfirm = false">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 1.25rem 0 0 0;">
+          <p style="font-size: 0.95rem; color: var(--text-body); line-height: 1.5; margin-bottom: 1.5rem;">Bạn có chắc chắn muốn hủy giao đề thi/bài tập này cho lớp học?</p>
+          <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <button type="button" class="cancel-btn" @click="showUnassignQuizConfirm = false" style="margin: 0;">Quay lại</button>
+            <button type="button" class="submit-btn" @click="confirmUnassignQuiz" :disabled="unassigningQuiz" style="background-color: var(--danger); margin: 0;">
+              {{ unassigningQuiz ? 'Đang hủy...' : 'Hủy giao' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -582,6 +737,7 @@ watch(selectedClass, (newClass) => {
   if (newClass) {
     materialStore.fetchMaterials(newClass.id)
     sessionStore.fetchSessionsByClass(newClass.id)
+    quizStore.fetchMyCreatedQuizzes(true)
   }
 })
 
@@ -817,6 +973,175 @@ const handleEnrollStudent = async () => {
     toast.error("Thêm học viên vào lớp thất bại.")
   } finally {
     enrolling.value = false
+  }
+}
+
+// Vocabulary assignment state
+const showAssignVocabModal = ref(false)
+const assigningVocab = ref(false)
+const assignVocabForm = reactive({
+  studySetId: '',
+  dueDate: '',
+  note: ''
+})
+
+const showUnassignConfirm = ref(false)
+const unassignTargetId = ref(null)
+const unassigning = ref(false)
+
+// Quiz assignment state
+const showAssignQuizModal = ref(false)
+const assigningQuiz = ref(false)
+const assignQuizForm = reactive({
+  quizId: '',
+  dueDate: ''
+})
+
+const showUnassignQuizConfirm = ref(false)
+const unassignQuizTargetId = ref(null)
+const unassigningQuiz = ref(false)
+
+const studySetOptions = computed(() => {
+  return (props.studySets || []).map(set => ({
+    label: `${set.title} (${set.wordCount || set.words?.length || 0} từ) - ${set.topikLevel?.name || 'Mọi cấp độ'}`,
+    value: set.id
+  }))
+})
+
+const openAssignVocabModal = () => {
+  assignVocabForm.studySetId = ''
+  assignVocabForm.dueDate = ''
+  assignVocabForm.note = ''
+  showAssignVocabModal.value = true
+}
+
+const handleAssignVocab = async () => {
+  if (!assignVocabForm.studySetId || !selectedClass.value) return
+  assigningVocab.value = true
+  try {
+    const payload = {
+      classId: selectedClass.value.id,
+      studySetId: assignVocabForm.studySetId,
+      dueDate: assignVocabForm.dueDate || null,
+      note: assignVocabForm.note
+    }
+    const result = await studySetStore.assignStudySet(payload)
+    
+    // Add to current selected class view directly
+    if (!selectedClass.value.assignedStudySets) {
+      selectedClass.value.assignedStudySets = []
+    }
+    // Check if it's already there to avoid duplicates
+    if (!selectedClass.value.assignedStudySets.some(a => a.id === result.id)) {
+      selectedClass.value.assignedStudySets.push(result)
+    }
+
+    toast.success("Giao bộ từ vựng cho lớp thành công!")
+    showAssignVocabModal.value = false
+  } catch (err) {
+    console.error("Failed to assign study set:", err)
+    toast.error("Giao bộ từ vựng thất bại.")
+  } finally {
+    assigningVocab.value = false
+  }
+}
+
+const handleUnassignStudySet = (assignedId) => {
+  unassignTargetId.value = assignedId
+  showUnassignConfirm.value = true
+}
+
+const confirmUnassign = async () => {
+  if (!unassignTargetId.value || !selectedClass.value) return
+  unassigning.value = true
+  try {
+    await studySetStore.unassignStudySet(selectedClass.value.id, unassignTargetId.value)
+    // Update local view
+    if (selectedClass.value.assignedStudySets) {
+      selectedClass.value.assignedStudySets = selectedClass.value.assignedStudySets.filter(
+        a => a.id !== unassignTargetId.value
+      )
+    }
+    toast.success("Hủy giao bộ từ vựng thành công!")
+    showUnassignConfirm.value = false
+  } catch (err) {
+    console.error("Failed to unassign study set:", err)
+    toast.error("Hủy giao bộ từ vựng thất bại.")
+  } finally {
+    unassigning.value = false
+    unassignTargetId.value = null
+  }
+}
+
+const quizOptions = computed(() => {
+  const classQuizIds = assignedQuizzes.value.map(q => q.id)
+  return (props.quizzes || [])
+    .filter(q => !classQuizIds.includes(q.id))
+    .map(q => ({
+      label: `${q.title} (${q.totalScore} điểm) - TOPIK ${q.topikLevel?.name || ''}`,
+      value: q.id
+    }))
+})
+
+const openAssignQuizModal = () => {
+  assignQuizForm.quizId = ''
+  assignQuizForm.dueDate = ''
+  showAssignQuizModal.value = true
+}
+
+const handleAssignQuiz = async () => {
+  if (!assignQuizForm.quizId || !selectedClass.value) return
+  assigningQuiz.value = true
+  try {
+    const quizDetails = await quizStore.fetchQuizDetails(assignQuizForm.quizId)
+    const payload = {
+      title: quizDetails.title,
+      topikLevelId: quizDetails.topikLevel?.id || quizDetails.topikLevelId,
+      timeLimitMins: quizDetails.timeLimitMins,
+      totalScore: quizDetails.totalScore,
+      dueDate: assignQuizForm.dueDate ? `${assignQuizForm.dueDate}T23:59:59` : quizDetails.dueDate,
+      classId: selectedClass.value.id
+    }
+    await quizStore.updateQuiz(assignQuizForm.quizId, payload)
+    toast.success("Giao đề thi/bài tập thành công!")
+    showAssignQuizModal.value = false
+    await quizStore.fetchQuizzesByClass(selectedClass.value.id, true)
+  } catch (err) {
+    console.error("Failed to assign quiz:", err)
+    toast.error("Giao đề thi/bài tập thất bại.")
+  } finally {
+    assigningQuiz.value = false
+  }
+}
+
+const handleUnassignQuiz = (quizId) => {
+  unassignQuizTargetId.value = quizId
+  showUnassignQuizConfirm.value = true
+}
+
+const confirmUnassignQuiz = async () => {
+  if (!unassignQuizTargetId.value || !selectedClass.value) return
+  unassigningQuiz.value = true
+  try {
+    const quizDetails = await quizStore.fetchQuizDetails(unassignQuizTargetId.value)
+    const payload = {
+      title: quizDetails.title,
+      topikLevelId: quizDetails.topikLevel?.id || quizDetails.topikLevelId,
+      timeLimitMins: quizDetails.timeLimitMins,
+      totalScore: quizDetails.totalScore,
+      dueDate: quizDetails.dueDate,
+      classId: null
+    }
+    await quizStore.updateQuiz(unassignQuizTargetId.value, payload)
+    toast.success("Hủy giao đề thi/bài tập thành công!")
+    showUnassignQuizConfirm.value = false
+    await quizStore.fetchQuizzesByClass(selectedClass.value.id, true)
+  } catch (err) {
+    console.error("Failed to unassign quiz:", err)
+    toast.error("Hủy giao đề thi/bài tập thất bại.")
+  } finally {
+    unassigningQuiz.value = false
+    unassignQuizTargetId.value = null
   }
 }
 

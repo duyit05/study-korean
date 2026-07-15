@@ -2,11 +2,10 @@
   <div class="teacher-levels animate-fade">
     <div class="header-section">
       <div class="title-area">
-        <h2>Quản lý mức độ học tập</h2>
-        <p>Quản lý danh sách các cấp độ TOPIK dùng để phân loại Kho từ vựng và Đề thi.</p>
+        <h2 style="margin: 0; font-size: 1.35rem; font-weight: 800; color: var(--text-title); letter-spacing: -0.5px;">Quản lý mức độ học tập</h2>
       </div>
       <button class="primary-btn" @click="openCreateModal">
-        <AppIcon name="settings" size="18" />
+        <AppIcon name="settings" size="16" />
         <span>Thêm cấp độ mới</span>
       </button>
     </div>
@@ -427,10 +426,10 @@ const confirmDelete = async () => {
 
 <style scoped>
 .teacher-levels {
-  padding: 1.5rem;
+  padding: 1rem 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .header-section {
@@ -454,13 +453,14 @@ const confirmDelete = async () => {
 .primary-btn {
   background-color: var(--primary);
   color: #fff;
-  padding: 0.75rem 1.25rem;
+  padding: 0.45rem 1rem;
   border-radius: var(--radius-md);
   font-weight: 600;
   display: flex;
   align-items: center;
   gap: 0.5rem;
   box-shadow: var(--shadow-sm);
+  font-size: 0.85rem;
   transition: all var(--transition-fast);
 }
 
@@ -473,7 +473,7 @@ const confirmDelete = async () => {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 1.25rem;
+  padding: 0.75rem 1.25rem;
   box-shadow: var(--shadow-sm);
 }
 
@@ -501,11 +501,12 @@ const confirmDelete = async () => {
 
 .search-box input {
   width: 100%;
-  padding: 0.65rem 0.75rem 0.65rem 2.25rem;
+  padding: 0.45rem 0.75rem 0.45rem 2.25rem;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
   background-color: var(--bg-body);
   color: var(--text-title);
+  font-size: 0.85rem;
 }
 
 .filter-options {
@@ -517,8 +518,13 @@ const confirmDelete = async () => {
 .filter-options label {
   font-weight: 600;
   color: var(--text-title);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   white-space: nowrap;
+}
+
+.filter-bar :deep(.select-trigger) {
+  background-color: var(--bg-body);
+  padding: 0.45rem 0.75rem;
 }
 
 .table-container {
@@ -551,17 +557,19 @@ const confirmDelete = async () => {
   text-align: left;
 }
 
-.data-table th, .data-table td {
-  padding: 1rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
 .data-table th {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border-color);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.data-table td {
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .data-table tbody tr:hover {

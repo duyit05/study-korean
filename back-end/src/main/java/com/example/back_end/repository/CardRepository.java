@@ -21,4 +21,6 @@ public interface CardRepository extends JpaRepository<Card, Long> {
 
     @Query("SELECT COUNT(c) FROM Card c WHERE c.studySet.id IN :studySetIds")
     long countByStudySetIdIn(@Param("studySetIds") List<Long> studySetIds);
+
+    long countByStudySetId(Long studySetId);
 }

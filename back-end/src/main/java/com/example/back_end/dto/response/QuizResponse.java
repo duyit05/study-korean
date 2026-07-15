@@ -13,6 +13,7 @@ public class QuizResponse {
     private String title;
     private String quizType;
     private String topikLevel;
+    private Long topikLevelId;
     private Integer timeLimitMins;
     private Integer totalScore;
     private LocalDateTime dueDate;
