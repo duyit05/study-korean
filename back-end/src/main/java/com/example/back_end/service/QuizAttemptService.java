@@ -146,7 +146,7 @@ public class QuizAttemptService {
         QuizAttempt attempt = quizAttemptRepository.findById(attemptId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
-        Map<Long, QuizAnswer> answersMap = quizAnswerRepository.findByAttemptId(attemptId).stream()
+        Map<Long, QuizAnswer> answersMap = quizAnswerRepository.findByAttemptIdInWithQuestion(List.of(attemptId)).stream()
                 .collect(Collectors.toMap(QuizAnswer::getId, Function.identity()));
 
         for (GradeAttemptRequest.AnswerGrade grade : request.getGrades()) {
@@ -161,7 +161,7 @@ public class QuizAttemptService {
         }
 
         // Recalculate attempt scores
-        List<QuizAnswer> answers = quizAnswerRepository.findByAttemptId(attemptId);
+        List<QuizAnswer> answers = quizAnswerRepository.findByAttemptIdInWithQuestion(List.of(attemptId));
         BigDecimal listeningScore = BigDecimal.ZERO;
         BigDecimal readingScore = BigDecimal.ZERO;
         BigDecimal writingScore = BigDecimal.ZERO;
@@ -212,7 +212,7 @@ public class QuizAttemptService {
     public QuizAttemptResponse getAttemptDetails(Long attemptId) {
         QuizAttempt attempt = quizAttemptRepository.findById(attemptId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
-        List<QuizAnswer> answers = quizAnswerRepository.findByAttemptId(attemptId);
+        List<QuizAnswer> answers = quizAnswerRepository.findByAttemptIdInWithQuestion(List.of(attemptId));
         return quizAttemptMapper.toResponse(attempt, answers);
     }
 }

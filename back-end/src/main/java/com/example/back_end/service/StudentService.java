@@ -182,7 +182,7 @@ public class StudentService {
         paymentRepository.deleteAll(paymentRepository.findByStudentId(user.getId()));
 
         // 5. Remove student from all classes they are enrolled in
-        List<Class> studentClasses = classRepository.findByStudentsId(user.getId());
+        List<Class> studentClasses = classRepository.findByStudentsIdWithRelations(user.getId());
         for (Class sc : studentClasses) {
             sc.getStudents().remove(user);
             classRepository.save(sc);
@@ -190,8 +190,9 @@ public class StudentService {
 
         // 6. Delete quiz attempts and their quiz answers
         List<QuizAttempt> attempts = quizAttemptRepository.findByStudentId(user.getId());
-        for (QuizAttempt attempt : attempts) {
-            quizAnswerRepository.deleteAll(quizAnswerRepository.findByAttemptId(attempt.getId()));
+        List<Long> attemptIds = attempts.stream().map(QuizAttempt::getId).toList();
+        if (!attemptIds.isEmpty()) {
+            quizAnswerRepository.deleteAll(quizAnswerRepository.findByAttemptIdIn(attemptIds));
         }
         quizAttemptRepository.deleteAll(attempts);
 

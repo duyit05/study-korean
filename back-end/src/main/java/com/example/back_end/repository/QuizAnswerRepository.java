@@ -12,6 +12,8 @@ import java.util.List;
 public interface QuizAnswerRepository extends JpaRepository<QuizAnswer, Long> {
     List<QuizAnswer> findByAttemptId(Long attemptId);
 
+    List<QuizAnswer> findByAttemptIdIn(List<Long> attemptIds);
+
     @Query("SELECT qa FROM QuizAnswer qa " +
            "JOIN FETCH qa.question q " +
            "WHERE qa.attempt.id IN :attemptIds")

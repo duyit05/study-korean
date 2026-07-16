@@ -188,8 +188,9 @@ public class QuizService {
 
         // Delete student answers for attempts of this quiz
         List<QuizAttempt> attempts = quizAttemptRepository.findByQuizId(id);
-        for (QuizAttempt attempt : attempts) {
-            List<QuizAnswer> answers = quizAnswerRepository.findByAttemptId(attempt.getId());
+        List<Long> attemptIds = attempts.stream().map(QuizAttempt::getId).toList();
+        if (!attemptIds.isEmpty()) {
+            List<QuizAnswer> answers = quizAnswerRepository.findByAttemptIdIn(attemptIds);
             quizAnswerRepository.deleteAll(answers);
         }
 

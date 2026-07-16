@@ -5,6 +5,9 @@ import com.example.back_end.dto.response.ClassResponse;
 import com.example.back_end.entity.Class;
 import com.example.back_end.entity.User;
 import com.example.back_end.enums.ClassStatus;
+import com.example.back_end.enums.UserRole;
+import com.example.back_end.exception.AppException;
+import com.example.back_end.exception.ErrorCode;
 import com.example.back_end.mapper.ClassMapper;
 import com.example.back_end.repository.ClassRepository;
 import com.example.back_end.repository.UserRepository;
@@ -52,14 +55,14 @@ public class ClassService {
         User teacher = userService.getCurrentUser();
 
         com.example.back_end.entity.TopikLevel topikLevel = topikLevelRepository.findById(request.getTopikLevelId())
-                .orElseThrow(() -> new com.example.back_end.exception.AppException(
-                        com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.RESOURCE_NOT_FOUND));
 
         Course course = null;
         if (request.getCourseId() != null) {
             course = courseRepository.findById(request.getCourseId())
-                    .orElseThrow(() -> new com.example.back_end.exception.AppException(
-                            com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
+                    .orElseThrow(() -> new AppException(
+                            ErrorCode.RESOURCE_NOT_FOUND));
         }
 
         Class clazz = Class.builder()
@@ -79,15 +82,15 @@ public class ClassService {
     @Transactional
     public ClassResponse enrollStudent(Long classId, Long studentId) {
         Class clazz = classRepository.findById(classId)
-                .orElseThrow(() -> new com.example.back_end.exception.AppException(
-                        com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.RESOURCE_NOT_FOUND));
 
         User student = userRepository.findById(studentId)
-                .orElseThrow(() -> new com.example.back_end.exception.AppException(
-                        com.example.back_end.exception.ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.USER_NOT_FOUND));
 
-        if (student.getRole() != com.example.back_end.enums.UserRole.STUDENT) {
-            throw new com.example.back_end.exception.AppException(com.example.back_end.exception.ErrorCode.INVALID_KEY);
+        if (student.getRole() != UserRole.STUDENT) {
+            throw new AppException(ErrorCode.INVALID_KEY);
         }
 
         // Check if student is already enrolled in this class
@@ -103,8 +106,8 @@ public class ClassService {
     @Transactional
     public void deleteClass(Long id) {
         Class clazz = classRepository.findById(id)
-                .orElseThrow(() -> new com.example.back_end.exception.AppException(
-                        com.example.back_end.exception.ErrorCode.RESOURCE_NOT_FOUND));
+                .orElseThrow(() -> new AppException(
+                        ErrorCode.RESOURCE_NOT_FOUND));
 
         // Since it is @ManyToMany, clear the list of students to remove rows in the
         // join table

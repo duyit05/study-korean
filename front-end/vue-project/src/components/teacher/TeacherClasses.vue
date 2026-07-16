@@ -139,7 +139,8 @@
       <!-- Tab Content: File Sách / Materials -->
       <div v-if="activeTab === 'materials'" class="tab-content materials-tab" style="padding: 1.5rem 0;">
         <div class="tab-actions-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; gap: 1rem; flex-wrap: wrap;">
-          <div class="materials-filter-box">
+        <div class="materials-filter-box">
+          <div class="search-input-wrapper">
             <AppIcon name="search" size="16" class="filter-search-icon" />
             <input 
               type="text" 
@@ -147,8 +148,9 @@
               placeholder="Tìm kiếm tài liệu..."
               class="filter-search-input"
             >
-            <AppSelect v-model="materialTypeFilter" :options="materialTypeOptions" placeholder="Tất cả định dạng" style="max-width: 200px;" />
           </div>
+          <AppSelect v-model="materialTypeFilter" :options="materialTypeOptions" placeholder="Tất cả định dạng" style="max-width: 200px;" />
+        </div>
           <button class="primary-btn-sm" @click="triggerFileInput">
             <AppIcon name="plus" size="14" />
             Tải tài liệu lên
@@ -1893,21 +1895,37 @@ const formatSessionDateTime = (dateStr) => {
   flex: 1;
 }
 
+
 .filter-search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
   color: var(--text-muted);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
 }
 
 .filter-search-input {
-  flex: 1;
-  max-width: 320px;
-  padding: 0.5rem 0.75rem;
+  display: block;
+  width: 100%;          /* quan trọng: lấp đầy .search-input-wrapper */
+  height: 44px;
+  box-sizing: border-box;
+  padding: 0 0.75rem 0 2.25rem;
   border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   background-color: var(--bg-body);
   color: var(--text-title);
   font-size: 0.85rem;
 }
-
+.search-input-wrapper {
+  position: relative;
+  flex: 1 1 auto;      /* grow + shrink, không cố định theo nội dung */
+  width: 100%;         /* ép chiếm hết phần được flex phân cho, không phụ thuộc content */
+  max-width: 320px;    /* giữ giới hạn như thiết kế ban đầu */
+  min-width: 200px;    /* tránh bị bóp quá nhỏ trên màn hẹp */
+}
 .filter-search-input:focus {
   border-color: var(--primary);
   outline: none;

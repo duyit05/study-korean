@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -59,9 +60,8 @@ public class AuthenticationController {
 
     @PostMapping("/logout")
     public ApiResponse<Void> logout(
-            @org.springframework.web.bind.annotation.RequestHeader(value = "Authorization", required = false) String authHeader,
-            @RequestBody(required = false) RefreshRequest request
-    ) {
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody(required = false) RefreshRequest request) {
         String refreshToken = request != null ? request.getRefreshToken() : null;
         userService.logout(authHeader, refreshToken);
         return ApiResponse.<Void>builder()

@@ -26,11 +26,12 @@ public class ClassMapper {
     private final AssignedStudySetRepository assignedStudySetRepository;
 
     public ClassResponse toResponse(Class c) {
-        if (c == null) return null;
+        if (c == null)
+            return null;
 
-        java.util.Map<Long, List<CardProgress>> progressMap = java.util.Map.of();
-        java.util.Map<Long, List<QuizAttempt>> attemptsMap = java.util.Map.of();
-        java.util.Map<Long, Long> cardCountsMap = java.util.Map.of();
+        Map<Long, List<CardProgress>> progressMap = Map.of();
+        Map<Long, List<QuizAttempt>> attemptsMap = Map.of();
+        Map<Long, Long> cardCountsMap = Map.of();
         List<AssignedStudySet> assigned = List.of();
         long totalCards = 0;
 
@@ -41,19 +42,19 @@ public class ClassMapper {
                     .distinct()
                     .collect(Collectors.toList());
             totalCards = studySetIds.isEmpty() ? 0 : cardRepository.countByStudySetIdIn(studySetIds);
-            
+
             if (!studySetIds.isEmpty()) {
                 List<Object[]> cardCounts = cardRepository.countCardsByStudySetIds(studySetIds);
                 cardCountsMap = cardCounts.stream()
                         .collect(Collectors.toMap(
                                 row -> (Long) row[0],
-                                row -> (Long) row[1]
-                        ));
+                                row -> (Long) row[1]));
             }
         }
 
         if (c.getStudents() != null && !c.getStudents().isEmpty()) {
-            List<Long> studentIds = c.getStudents().stream().map(student -> student.getId()).collect(Collectors.toList());
+            List<Long> studentIds = c.getStudents().stream().map(student -> student.getId())
+                    .collect(Collectors.toList());
             List<CardProgress> progressList = cardProgressRepository.findByStudentIdIn(studentIds);
             List<QuizAttempt> attemptsList = quizAttemptRepository.findByStudentIdInWithQuiz(studentIds);
 
@@ -66,13 +67,13 @@ public class ClassMapper {
 
     public ClassResponse toResponse(
             Class c,
-            java.util.Map<Long, List<CardProgress>> progressMap,
-            java.util.Map<Long, List<QuizAttempt>> attemptsMap,
+            Map<Long, List<CardProgress>> progressMap,
+            Map<Long, List<QuizAttempt>> attemptsMap,
             long totalCards,
             List<AssignedStudySet> assigned,
-            java.util.Map<Long, Long> cardCountsMap
-    ) {
-        if (c == null) return null;
+            Map<Long, Long> cardCountsMap) {
+        if (c == null)
+            return null;
 
         String name = "";
         String schedule = "";
@@ -103,36 +104,38 @@ public class ClassMapper {
         List<ClassResponse.StudentDto> studentDtos = List.of();
         if (c.getStudents() != null) {
             studentDtos = c.getStudents().stream()
-                .map(student -> {
-                    Long studentId = student.getId();
-                    
-                    // vocabProgress calculation based on repetitions > 0
-                    List<CardProgress> progressList = progressMap.getOrDefault(studentId, List.of());
-                    long learnedCount = progressList.stream().filter(p -> p.getRepetitions() > 0).count();
-                    int vocabProgress = totalCards > 0 ? (int) (learnedCount * 100 / totalCards) : 0;
-                    
-                    // avgScore calculation as overall percentage of quiz completion
-                    List<QuizAttempt> attempts = attemptsMap.getOrDefault(studentId, List.of());
-                    double averagePercentage = attempts.stream()
-                        .filter(a -> "COMPLETED".equalsIgnoreCase(a.getStatus()))
-                        .mapToDouble(a -> {
-                            double earned = a.getScore() != null ? a.getScore().doubleValue() : 0.0;
-                            double total = a.getQuiz() != null && a.getQuiz().getTotalScore() != null ? a.getQuiz().getTotalScore() : 10.0;
-                            return total > 0 ? (earned * 100.0 / total) : 0.0;
-                        })
-                        .average()
-                        .orElse(0.0);
-                    int avgScore = (int) Math.round(averagePercentage);
+                    .map(student -> {
+                        Long studentId = student.getId();
 
-                    return ClassResponse.StudentDto.builder()
-                        .id(studentId)
-                        .name(student.getFullName() != null ? student.getFullName() : student.getUsername())
-                        .email(student.getEmail())
-                        .vocabProgress(vocabProgress)
-                        .avgScore(avgScore)
-                        .build();
-                })
-                .collect(Collectors.toList());
+                        // vocabProgress calculation based on repetitions > 0
+                        List<CardProgress> progressList = progressMap.getOrDefault(studentId, List.of());
+                        long learnedCount = progressList.stream().filter(p -> p.getRepetitions() > 0).count();
+                        int vocabProgress = totalCards > 0 ? (int) (learnedCount * 100 / totalCards) : 0;
+
+                        // avgScore calculation as overall percentage of quiz completion
+                        List<QuizAttempt> attempts = attemptsMap.getOrDefault(studentId, List.of());
+                        double averagePercentage = attempts.stream()
+                                .filter(a -> "COMPLETED".equalsIgnoreCase(a.getStatus()))
+                                .mapToDouble(a -> {
+                                    double earned = a.getScore() != null ? a.getScore().doubleValue() : 0.0;
+                                    double total = a.getQuiz() != null && a.getQuiz().getTotalScore() != null
+                                            ? a.getQuiz().getTotalScore()
+                                            : 10.0;
+                                    return total > 0 ? (earned * 100.0 / total) : 0.0;
+                                })
+                                .average()
+                                .orElse(0.0);
+                        int avgScore = (int) Math.round(averagePercentage);
+
+                        return ClassResponse.StudentDto.builder()
+                                .id(studentId)
+                                .name(student.getFullName() != null ? student.getFullName() : student.getUsername())
+                                .email(student.getEmail())
+                                .vocabProgress(vocabProgress)
+                                .avgScore(avgScore)
+                                .build();
+                    })
+                    .collect(Collectors.toList());
         }
 
         Long courseId = c.getCourse() != null ? c.getCourse().getId() : null;
@@ -146,7 +149,8 @@ public class ClassMapper {
                 .schedule(schedule)
                 .room(room)
                 .code(randomCode)
-                .teacherName(c.getTeacher().getFullName() != null ? c.getTeacher().getFullName() : c.getTeacher().getUsername())
+                .teacherName(c.getTeacher().getFullName() != null ? c.getTeacher().getFullName()
+                        : c.getTeacher().getUsername())
                 .studentsCount(studentDtos.size())
                 .status(c.getStatus() != null ? c.getStatus().name() : "ACTIVE")
                 .startedAt(c.getStartedAt())
@@ -157,7 +161,8 @@ public class ClassMapper {
     }
 
     public List<ClassResponse> toResponses(List<Class> classes) {
-        if (classes == null) return List.of();
+        if (classes == null)
+            return List.of();
 
         List<Long> studentIds = classes.stream()
                 .flatMap(c -> c.getStudents() != null ? c.getStudents().stream() : java.util.stream.Stream.empty())
@@ -165,10 +170,10 @@ public class ClassMapper {
                 .distinct()
                 .collect(Collectors.toList());
 
-        java.util.Map<Long, List<CardProgress>> progressMap = java.util.Map.of();
-        java.util.Map<Long, List<QuizAttempt>> attemptsMap = java.util.Map.of();
-        java.util.Map<Long, List<AssignedStudySet>> assignedMap = java.util.Map.of();
-        java.util.Map<Long, Long> studySetCardCounts = java.util.Map.of();
+        Map<Long, List<CardProgress>> progressMap = Map.of();
+        Map<Long, List<QuizAttempt>> attemptsMap = Map.of();
+        Map<Long, List<AssignedStudySet>> assignedMap = Map.of();
+        Map<Long, Long> studySetCardCounts = Map.of();
 
         if (!studentIds.isEmpty()) {
             List<CardProgress> allProgress = cardProgressRepository.findByStudentIdIn(studentIds);
@@ -192,15 +197,14 @@ public class ClassMapper {
                 studySetCardCounts = cardCounts.stream()
                         .collect(Collectors.toMap(
                                 row -> (Long) row[0],
-                                row -> (Long) row[1]
-                        ));
+                                row -> (Long) row[1]));
             }
         }
 
-        final java.util.Map<Long, List<CardProgress>> finalProgressMap = progressMap;
-        final java.util.Map<Long, List<QuizAttempt>> finalAttemptsMap = attemptsMap;
-        final java.util.Map<Long, List<AssignedStudySet>> finalAssignedMap = assignedMap;
-        final java.util.Map<Long, Long> finalCardCounts = studySetCardCounts;
+        final Map<Long, List<CardProgress>> finalProgressMap = progressMap;
+        final Map<Long, List<QuizAttempt>> finalAttemptsMap = attemptsMap;
+        final Map<Long, List<AssignedStudySet>> finalAssignedMap = assignedMap;
+        final Map<Long, Long> finalCardCounts = studySetCardCounts;
 
         return classes.stream()
                 .map(c -> {
@@ -210,16 +214,20 @@ public class ClassMapper {
                             .distinct()
                             .mapToLong(setId -> finalCardCounts.getOrDefault(setId, 0L))
                             .sum();
-                    return toResponse(c, finalProgressMap, finalAttemptsMap, classTotalCards, assigned, finalCardCounts);
+                    return toResponse(c, finalProgressMap, finalAttemptsMap, classTotalCards, assigned,
+                            finalCardCounts);
                 })
                 .collect(Collectors.toList());
     }
 
-    private List<ClassResponse.AssignedStudySetDto> mapAssignedStudySets(List<AssignedStudySet> assigned, java.util.Map<Long, Long> cardCountsMap) {
-        if (assigned == null) return List.of();
+    private List<ClassResponse.AssignedStudySetDto> mapAssignedStudySets(List<AssignedStudySet> assigned,
+            Map<Long, Long> cardCountsMap) {
+        if (assigned == null)
+            return List.of();
         return assigned.stream()
                 .map(a -> {
-                    long count = cardCountsMap != null ? cardCountsMap.getOrDefault(a.getStudySet().getId(), 0L) : cardRepository.countByStudySetId(a.getStudySet().getId());
+                    long count = cardCountsMap != null ? cardCountsMap.getOrDefault(a.getStudySet().getId(), 0L)
+                            : cardRepository.countByStudySetId(a.getStudySet().getId());
                     return ClassResponse.AssignedStudySetDto.builder()
                             .id(a.getId())
                             .studySetId(a.getStudySet().getId())
