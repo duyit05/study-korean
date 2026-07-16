@@ -11,36 +11,108 @@
       </button>
     </div>
 
-    <!-- Classes Grid -->
-    <div class="classes-grid">
-      <div 
-        v-for="cls in classes" 
-        :key="cls.id" 
-        class="class-card"
-        :class="{ active: selectedClass && selectedClass.id === cls.id }"
-        @click="selectedClass = cls"
-      >
-        <div class="class-header">
-          <div class="class-badge">한</div>
-          <h3>{{ cls.name }}</h3>
+    <!-- Filter & Search -->
+    <div class="filter-card">
+      <div class="search-box">
+        <AppIcon name="search" size="16" class="search-icon" />
+        <input
+          type="text"
+          v-model="classSearchQuery"
+          placeholder="Tìm kiếm lớp học theo tên, phòng học hoặc lịch học..."
+        />
+      </div>
+      <div class="filter-options">
+        <div class="filter-group">
+          <label>Cấp độ</label>
+          <AppSelect
+            id="classLevelFilter"
+            v-model="selectedClassLevelFilter"
+            :options="classLevelFilterOptions"
+            placeholder="Tất cả cấp độ"
+            style="min-width: 150px;"
+          />
         </div>
-        <div class="class-body">
-          <div class="info-row">
-            <AppIcon name="calendar" size="16" class="icon" />
-            <span>{{ cls.schedule }}</span>
+      </div>
+    </div>
+
+    <!-- Content Card wrapping grid + pagination -->
+    <div class="content-card">
+      <!-- Classes Grid -->
+      <div class="classes-grid">
+        <div
+          v-if="paginatedClasses.length === 0"
+          class="empty-grid"
+          style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 1rem; color: var(--text-muted); gap: 0.75rem;"
+        >
+          <AppIcon name="book" size="40" />
+          <p>Không tìm thấy lớp học nào.</p>
+        </div>
+        <div 
+          v-for="cls in paginatedClasses" 
+          :key="cls.id" 
+          class="class-card"
+          :class="{ active: selectedClass && selectedClass.id === cls.id }"
+          @click="selectedClass = cls"
+        >
+          <div class="class-header">
+            <div class="class-badge">한</div>
+            <h3>{{ cls.name }}</h3>
           </div>
-          <div class="info-row">
-            <AppIcon name="search" size="16" class="icon" />
-            <span>{{ cls.room }}</span>
+          <div class="class-body">
+            <div class="info-row">
+              <AppIcon name="calendar" size="16" class="icon" />
+              <span>{{ cls.schedule }}</span>
+            </div>
+            <div class="info-row">
+              <AppIcon name="search" size="16" class="icon" />
+              <span>{{ cls.room }}</span>
+            </div>
+            <div class="info-row code">
+              <strong>Mã lớp:</strong>
+              <span class="code-badge">{{ cls.code }}</span>
+            </div>
           </div>
-          <div class="info-row code">
-            <strong>Mã lớp:</strong>
-            <span class="code-badge">{{ cls.code }}</span>
+          <div class="class-footer">
+            <span>{{ cls.studentsCount }} Học viên</span>
+            <span class="detail-link">Xem chi tiết &rarr;</span>
           </div>
         </div>
-        <div class="class-footer">
-          <span>{{ cls.studentsCount }} Học viên</span>
-          <span class="detail-link">Xem chi tiết &rarr;</span>
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="totalClassElements > 0" class="pagination-bar">
+        <div class="pagination-info">
+          Đang hiển thị <strong>{{ startClassIndex }} - {{ endClassIndex }}</strong> trong số <strong>{{ totalClassElements }}</strong> lớp học
+        </div>
+        <div class="pagination-controls">
+          <div class="page-buttons">
+            <button class="page-nav-btn" :disabled="currentClassPage === 1" @click="currentClassPage = 1" title="Trang đầu">
+              <span style="display: inline-flex; align-items: center; margin-right: -4px;">
+                <AppIcon name="chevron-left" size="12" />
+                <AppIcon name="chevron-left" size="12" style="margin-left: -6px;" />
+              </span>
+            </button>
+            <button class="page-nav-btn" :disabled="currentClassPage === 1" @click="currentClassPage--" title="Trang trước">
+              <AppIcon name="chevron-left" size="12" />
+            </button>
+            <button
+              v-for="page in classPageNumbers"
+              :key="page"
+              class="page-num-btn"
+              :class="{ active: currentClassPage === page, dots: page === '...' }"
+              :disabled="page === '...'"
+              @click="typeof page === 'number' && (currentClassPage = page)"
+            >{{ page }}</button>
+            <button class="page-nav-btn" :disabled="currentClassPage === totalClassPages" @click="currentClassPage++" title="Trang sau">
+              <AppIcon name="chevron-right" size="12" />
+            </button>
+            <button class="page-nav-btn" :disabled="currentClassPage === totalClassPages" @click="currentClassPage = totalClassPages" title="Trang cuối">
+              <span style="display: inline-flex; align-items: center; margin-left: -4px;">
+                <AppIcon name="chevron-right" size="12" style="margin-right: -6px;" />
+                <AppIcon name="chevron-right" size="12" />
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -53,6 +125,7 @@
           <p>{{ selectedClass.schedule }} | {{ selectedClass.room }}</p>
         </div>
         <div class="header-actions">
+          <button class="edit-btn-sm" @click="openEditClassModal">Chỉnh sửa lớp</button>
           <button class="delete-btn-sm" @click="handleDeleteClass(selectedClass.id)">Xóa lớp học</button>
           <button class="close-btn" @click="selectedClass = null">&times;</button>
         </div>
@@ -398,6 +471,46 @@
       </div>
     </div>
 
+    <!-- Edit Class Modal -->
+    <div v-if="showEditModal" class="modal-overlay">
+      <div class="modal-content animate-scale">
+        <div class="modal-header">
+          <h3>Chỉnh sửa lớp học</h3>
+          <button class="close-btn" @click="showEditModal = false">&times;</button>
+        </div>
+        <form @submit.prevent="handleUpdateClass" class="modal-form">
+          <div class="form-group">
+            <label for="editClassName">Tên lớp học</label>
+            <AppSelect id="editClassName" v-model="editClassLevelId" :options="levelOptions" placeholder="-- Chọn lớp học từ Cấp độ TOPIK --" />
+          </div>
+          <div class="form-group">
+            <label for="editClassCourse">Khóa học liên kết</label>
+            <AppSelect id="editClassCourse" v-model="editClassCourseId" :options="courseOptions" placeholder="-- Không liên kết khóa học --" />
+          </div>
+          <div class="form-group">
+            <label for="editClassSchedule">Lịch học</label>
+            <input type="text" id="editClassSchedule" v-model="editClassSchedule" placeholder="Ví dụ: Thứ 2, 4, 6 (18:00 - 19:30)" required>
+          </div>
+          <div class="form-group">
+            <label for="editClassRoom">Phòng học / Link Zoom</label>
+            <input type="text" id="editClassRoom" v-model="editClassRoom" placeholder="Ví dụ: Online Zoom A2 hoặc Phòng 401" required>
+          </div>
+          <div class="form-group">
+            <label for="editClassStatus">Trạng thái lớp học</label>
+            <AppSelect id="editClassStatus" v-model="editClassStatus" :options="classStatusOptions" placeholder="-- Chọn trạng thái --" />
+          </div>
+          <div class="form-group">
+            <label for="editClassNotes">Ghi chú lớp học</label>
+            <textarea id="editClassNotes" v-model="editClassNotes" placeholder="Ghi chú lớp học..." style="width: 100%; min-height: 80px; padding: 0.65rem; border: 1px solid var(--border-color); border-radius: var(--radius-sm); font-size: 0.9rem; font-family: inherit; resize: vertical; background-color: var(--bg-body); color: var(--text-title);"></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" @click="showEditModal = false">Hủy bỏ</button>
+            <button type="submit" class="submit-btn">Cập nhật</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <!-- Add Student Modal -->
     <div v-if="showEnrollModal" class="modal-overlay">
       <div class="modal-content animate-scale">
@@ -671,9 +784,25 @@ const materials = computed(() => materialStore.materials)
 const levelOptions = computed(() => {
   return topikLevels.value.map(lvl => ({ label: lvl.name, value: lvl.id }))
 })
+const classLevelFilterOptions = computed(() => [
+  { value: '', label: 'Tất cả cấp độ' },
+  ...topikLevels.value.map(lvl => ({ value: lvl.name, label: lvl.name }))
+])
 const courseOptions = computed(() => {
   const list = courses.value.map(c => ({ label: `${c.title} (${c.level})`, value: c.id }))
   return [{ label: '-- Không liên kết khóa học --', value: '' }, ...list]
+})
+const classStatusLabels = {
+  'ACTIVE': 'Hoạt động (Active)',
+  'PAUSED': 'Tạm dừng (Paused)',
+  'COMPLETED': 'Hoàn thành (Completed)',
+  'CANCELLED': 'Đã hủy (Cancelled)'
+}
+const classStatusOptions = computed(() => {
+  return Object.keys(classStatusLabels).map(status => ({
+    label: classStatusLabels[status],
+    value: status
+  }))
 })
 const sessionStatusLabels = {
   'SCHEDULED': 'Chờ diễn ra (Scheduled)',
@@ -711,6 +840,7 @@ onMounted(async () => {
     await courseStore.fetchCourses()
     await sessionStore.fetchStatuses()
     await materialStore.fetchMaterialTypes()
+    await loadClassesFromServer()
   } catch (e) {
     console.error("Failed to fetch topics, courses, or metadata enums:", e)
   }
@@ -723,6 +853,71 @@ const classes = computed(() => {
     students: cls.students || [],
     studentsCount: cls.studentsCount || 0
   }))
+})
+
+// Search & Filter & Pagination for Classes (Server-side)
+const classSearchQuery = ref('')
+const selectedClassLevelFilter = ref('')
+const currentClassPage = ref(1)
+const classesPerPage = 6
+const totalClassElements = ref(0)
+const totalClassPages = ref(1)
+
+const loadClassesFromServer = async () => {
+  try {
+    const params = {
+      page: currentClassPage.value,
+      size: classesPerPage,
+      unpaged: false
+    }
+    if (classSearchQuery.value.trim()) {
+      params.search = classSearchQuery.value.trim()
+    }
+    if (selectedClassLevelFilter.value) {
+      params.level = selectedClassLevelFilter.value
+    }
+    const pageData = await studySetStore.fetchClasses('TEACHER', true, params)
+    if (pageData && pageData.items) {
+      totalClassElements.value = pageData.totalElements || 0
+      totalClassPages.value = pageData.totalPage || 1
+    } else {
+      totalClassElements.value = (studySetStore.classes || []).length
+      totalClassPages.value = 1
+    }
+  } catch (err) {
+    console.error("Failed to load classes from server:", err)
+    toast.error("Không thể tải danh sách lớp học từ máy chủ.")
+  }
+}
+
+const paginatedClasses = computed(() => classes.value)
+
+const startClassIndex = computed(() => totalClassElements.value === 0 ? 0 : (currentClassPage.value - 1) * classesPerPage + 1)
+const endClassIndex = computed(() => Math.min(currentClassPage.value * classesPerPage, totalClassElements.value))
+
+const classPageNumbers = computed(() => {
+  const pages = []
+  const total = totalClassPages.value
+  const current = currentClassPage.value
+  if (total <= 5) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+  } else if (current <= 3) {
+    pages.push(1, 2, 3, 4, '...', total)
+  } else if (current >= total - 2) {
+    pages.push(1, '...', total - 3, total - 2, total - 1, total)
+  } else {
+    pages.push(1, '...', current - 1, current, current + 1, '...', total)
+  }
+  return pages
+})
+
+watch([classSearchQuery, selectedClassLevelFilter], () => {
+  currentClassPage.value = 1
+  loadClassesFromServer()
+})
+
+watch(currentClassPage, () => {
+  loadClassesFromServer()
 })
 
 const selectedClass = ref(null)
@@ -899,6 +1094,7 @@ const handleCreateClass = async () => {
       notes: ''
     })
     toast.success("Tạo lớp học mới thành công!")
+    await loadClassesFromServer()
   } catch (e) {
     console.error("Failed to create class via API:", e)
     toast.error("Tạo lớp học mới thất bại.")
@@ -918,9 +1114,60 @@ const handleDeleteClass = async (classId) => {
     await studySetStore.deleteClass(classId)
     selectedClass.value = null
     toast.success("Xóa lớp học thành công!")
+    await loadClassesFromServer()
   } catch (e) {
     console.error("Failed to delete class:", e)
     toast.error("Có lỗi xảy ra khi xóa lớp học.")
+  }
+}
+
+// Edit Class Fields
+const showEditModal = ref(false)
+const editClassLevelId = ref('')
+const editClassCourseId = ref('')
+const editClassSchedule = ref('')
+const editClassRoom = ref('')
+const editClassStatus = ref('')
+const editClassNotes = ref('')
+
+const openEditClassModal = () => {
+  if (!selectedClass.value) return
+  editClassLevelId.value = selectedClass.value.topikLevel?.id || selectedClass.value.topikLevelId || ''
+  editClassCourseId.value = selectedClass.value.courseId || ''
+  editClassSchedule.value = selectedClass.value.schedule || ''
+  editClassRoom.value = selectedClass.value.room || ''
+  editClassStatus.value = selectedClass.value.status || 'ACTIVE'
+  editClassNotes.value = selectedClass.value.notes || ''
+  showEditModal.value = true
+}
+
+const handleUpdateClass = async () => {
+  if (!editClassLevelId.value || !editClassSchedule.value || !editClassRoom.value || !selectedClass.value) return
+
+  try {
+    const updated = await studySetStore.updateClass(selectedClass.value.id, {
+      topikLevelId: editClassLevelId.value,
+      courseId: editClassCourseId.value || null,
+      schedule: editClassSchedule.value,
+      room: editClassRoom.value,
+      status: editClassStatus.value,
+      notes: editClassNotes.value
+    })
+    
+    // Update selected class with response data
+    selectedClass.value = {
+      ...selectedClass.value,
+      ...updated,
+      students: selectedClass.value.students || [],
+      assignedStudySets: selectedClass.value.assignedStudySets || []
+    }
+    
+    toast.success("Cập nhật lớp học thành công!")
+    showEditModal.value = false
+    await loadClassesFromServer()
+  } catch (e) {
+    console.error("Failed to update class:", e)
+    toast.error("Cập nhật lớp học thất bại.")
   }
 }
 
@@ -1286,6 +1533,163 @@ const formatSessionDateTime = (dateStr) => {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+/* Filter Card */
+.filter-card {
+  background-color: var(--bg-card);
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 260px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.search-box input {
+  width: 100%;
+  padding: 0.45rem 0.75rem 0.45rem 2.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-body);
+  color: var(--text-title);
+  font-size: 0.85rem;
+}
+
+.search-box input:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+.filter-options {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.filter-group :deep(.select-trigger) {
+  background-color: var(--bg-body);
+  padding: 0.45rem 0.75rem;
+  min-width: 150px;
+}
+
+/* Content Card */
+.content-card {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Pagination */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0.5rem 0 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color);
+  min-height: 56px;
+}
+
+.pagination-info {
+  font-size: 0.9rem;
+  color: var(--text-body);
+  position: absolute;
+  left: 0;
+}
+
+.pagination-info strong {
+  color: var(--text-title);
+  font-weight: 700;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.page-nav-btn, .page-num-btn {
+  height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0 0.5rem;
+}
+
+.page-nav-btn:hover:not(:disabled), .page-num-btn:hover:not(:disabled):not(.dots) {
+  background-color: var(--bg-hover);
+}
+
+.page-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-num-btn.active {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+
+.page-num-btn.dots {
+  border-color: transparent;
+  background-color: transparent;
+  cursor: default;
 }
 
 .header-section {
@@ -1739,6 +2143,22 @@ const formatSessionDateTime = (dateStr) => {
 
 .delete-btn-sm:hover {
   background-color: #ef4444;
+  color: #fff;
+}
+
+.edit-btn-sm {
+  background-color: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.edit-btn-sm:hover {
+  background-color: var(--primary);
   color: #fff;
 }
 

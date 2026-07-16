@@ -2,13 +2,17 @@ package com.example.back_end.configuration;
 
 import com.example.back_end.entity.User;
 import com.example.back_end.repository.UserRepository;
+import com.example.back_end.service.RedisTokenService;
 import com.example.back_end.utils.JwtTokenProvider;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.InsufficientAuthenticationException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -26,7 +30,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
-    private final com.example.back_end.service.RedisTokenService redisTokenService;
+    private final RedisTokenService redisTokenService;
     private final CustomAuthenticationEntryPoint authenticationEntryPoint;
 
     @Override
@@ -37,7 +41,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(jwt)) {
                 if (redisTokenService.isAccessTokenBlacklisted(jwt)) {
-                    throw new org.springframework.security.authentication.InsufficientAuthenticationException("Token is blacklisted");
+                    throw new InsufficientAuthenticationException("Token is blacklisted");
                 }
                 if (tokenProvider.validateToken(jwt)) {
                     String username = tokenProvider.getUsernameFromJWT(jwt);
@@ -46,7 +50,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                             .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
                     if (user.getIsActive() != null && !user.getIsActive()) {
-                        throw new org.springframework.security.authentication.DisabledException("User is blocked");
+                        throw new DisabledException("User is blocked");
                     }
 
                     SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
@@ -58,7 +62,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 }
             }
-        } catch (org.springframework.security.core.AuthenticationException ex) {
+        } catch (AuthenticationException ex) {
             authenticationEntryPoint.commence(request, response, ex);
             return;
         } catch (Exception ex) {

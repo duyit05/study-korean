@@ -12,6 +12,7 @@ public class ClassResponse {
     private Long id;
     private Long courseId;
     private String courseTitle;
+    private Long topikLevelId;
     private String name;
     private String schedule;
     private String room;

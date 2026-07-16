@@ -3,11 +3,14 @@ package com.example.back_end.service;
 import com.example.back_end.dto.request.StudentCreateRequest;
 import com.example.back_end.dto.request.StudentUpdateRequest;
 import com.example.back_end.dto.response.StudentResponse;
+import com.example.back_end.dto.response.PageResponse;
 import com.example.back_end.dto.response.StudentProgressResponse;
+import com.example.back_end.entity.CardProgress;
 import com.example.back_end.entity.Class;
 import com.example.back_end.entity.QuizAttempt;
 import com.example.back_end.entity.StudentProfile;
 import com.example.back_end.entity.User;
+import com.example.back_end.enums.CardState;
 import com.example.back_end.enums.UserRole;
 import com.example.back_end.exception.AppException;
 import com.example.back_end.exception.ErrorCode;
@@ -15,6 +18,11 @@ import com.example.back_end.mapper.StudentMapper;
 import com.example.back_end.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,12 +65,13 @@ public class StudentService {
     }
 
     @Transactional(readOnly = true)
-    public com.example.back_end.dto.response.PageResponse<StudentResponse> getPaginatedStudents(
+    public PageResponse<StudentResponse> getPaginatedStudents(
             int pageNo, int pageSize, String search, String level, Boolean isActive) {
         int page = Math.max(0, pageNo - 1);
-        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, pageSize, org.springframework.data.domain.Sort.by("id").descending());
+        Pageable pageable = PageRequest.of(page,
+                pageSize, Sort.by("id").descending());
 
-        org.springframework.data.domain.Page<User> pageResult = userRepository.findStudentsWithFiltersPage(
+        Page<User> pageResult = userRepository.findStudentsWithFiltersPage(
                 UserRole.STUDENT, search, level, isActive, pageable);
 
         List<Long> pageStudentIds = pageResult.getContent().stream()
@@ -77,7 +86,7 @@ public class StudentService {
                 .map(student -> studentMapper.toResponse(student, profileMap.get(student.getId())))
                 .collect(Collectors.toList());
 
-        return com.example.back_end.dto.response.PageResponse.<StudentResponse>builder()
+        return PageResponse.<StudentResponse>builder()
                 .pageNo(page + 1)
                 .pageSize(pageSize)
                 .totalPage(pageResult.getTotalPages())
@@ -205,7 +214,7 @@ public class StudentService {
         User student = userRepository.findById(studentId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        List<Class> classes = classRepository.findByStudentsId(studentId);
+        List<Class> classes = classRepository.findByStudentsIdWithRelations(studentId);
         List<StudentProgressResponse.ClassInfo> classInfos = classes.stream()
                 .map(c -> {
                     String name = "";
@@ -235,10 +244,12 @@ public class StudentService {
                         .build())
                 .collect(Collectors.toList());
 
-        // Fix N+2: use aggregate DB queries instead of lazy-traversing card -> studySet per row
-        List<com.example.back_end.entity.CardProgress> cardProgresses = cardProgressRepository.findByStudentId(studentId);
+        // Fix N+2: use aggregate DB queries instead of lazy-traversing card -> studySet
+        // per row
+        List<CardProgress> cardProgresses = cardProgressRepository
+                .findByStudentId(studentId);
         int totalLearned = (int) cardProgresses.stream().filter(cp -> cp.getRepetitions() > 0).count();
-        int totalReview  = (int) cardProgresses.stream().filter(cp -> cp.getState() == com.example.back_end.enums.CardState.REVIEW).count();
+        int totalReview = (int) cardProgresses.stream().filter(cp -> cp.getState() == CardState.REVIEW).count();
         // Query distinct studySet IDs directly — avoids N+N lazy proxy traversals
         int totalSets = cardProgressRepository.findDistinctStudySetIdsByStudentId(studentId).size();
 

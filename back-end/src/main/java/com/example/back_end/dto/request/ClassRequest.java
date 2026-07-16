@@ -18,4 +18,6 @@ public class ClassRequest {
     private String room;
 
     private String notes;
+
+    private String status;
 }

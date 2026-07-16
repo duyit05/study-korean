@@ -133,15 +133,21 @@ export const useStudySetStore = defineStore('studySet', () => {
     }
   };
 
-  const fetchClasses = async (role, force = false) => {
-    if (classes.value.length > 0 && !force) return classes.value;
+  const fetchClasses = async (role, force = false, params = {}) => {
+    const hasParams = Object.keys(params).length > 0;
+    if (classes.value.length > 0 && !force && !hasParams) return classes.value;
     loading.value = true;
     errorMessage.value = '';
     try {
       const endpoint = role === 'TEACHER' ? '/classes/teacher' : '/classes/student';
-      const response = await api.get(endpoint);
-      classes.value = response.data || [];
-      return classes.value;
+      const response = await api.get(endpoint, { params });
+      if (response.data && response.data.items) {
+        classes.value = response.data.items;
+        return response.data;
+      } else {
+        classes.value = response.data || [];
+        return classes.value;
+      }
     } catch (error) {
       errorMessage.value = error.message;
       throw error;
@@ -158,6 +164,25 @@ export const useStudySetStore = defineStore('studySet', () => {
       const newClass = response.data;
       classes.value.push(newClass);
       return newClass;
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
+  const updateClass = async (classId, payload) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      const response = await api.put(`/classes/${classId}`, payload);
+      const updatedClass = response.data;
+      const idx = classes.value.findIndex(c => c.id === classId);
+      if (idx !== -1) {
+        classes.value[idx] = updatedClass;
+      }
+      return updatedClass;
     } catch (error) {
       errorMessage.value = error.message;
       throw error;
@@ -269,6 +294,7 @@ export const useStudySetStore = defineStore('studySet', () => {
     deleteCard,
     fetchClasses,
     createClass,
+    updateClass,
     deleteClass,
     studentsList,
     fetchStudents,

@@ -14,6 +14,11 @@ import com.example.back_end.repository.UserRepository;
 import com.example.back_end.repository.TopikLevelRepository;
 import com.example.back_end.repository.CourseRepository;
 import com.example.back_end.entity.Course;
+import com.example.back_end.dto.response.PageResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +45,40 @@ public class ClassService {
     public List<ClassResponse> getTeacherClasses() {
         User teacher = userService.getCurrentUser();
         List<Class> classes = classRepository.findByTeacherIdWithRelations(teacher.getId());
+        return classMapper.toResponses(classes);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<ClassResponse> getTeacherClassesPaginated(int pageNo, int pageSize, String search,
+            String level) {
+        User teacher = userService.getCurrentUser();
+        int page = Math.max(0, pageNo - 1);
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by("id").descending());
+
+        Page<Class> pageResult = classRepository.findByTeacherIdWithFiltersPage(teacher.getId(), search, level,
+                pageable);
+
+        List<Class> classes = pageResult.getContent();
+        if (!classes.isEmpty()) {
+            List<Long> classIds = classes.stream().map(Class::getId).collect(Collectors.toList());
+            classRepository.fetchStudentsForClasses(classIds);
+        }
+
+        List<ClassResponse> items = classMapper.toResponses(classes);
+
+        return PageResponse.<ClassResponse>builder()
+                .pageNo(page + 1)
+                .pageSize(pageSize)
+                .totalPage(pageResult.getTotalPages())
+                .totalElements(pageResult.getTotalElements())
+                .items(items)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<ClassResponse> getTeacherClassesWithFilters(String search, String level) {
+        User teacher = userService.getCurrentUser();
+        List<Class> classes = classRepository.findByTeacherIdWithFilters(teacher.getId(), search, level);
         return classMapper.toResponses(classes);
     }
 
@@ -101,6 +140,44 @@ public class ClassService {
         }
 
         return classMapper.toResponse(clazz);
+    }
+
+    @Transactional
+    public ClassResponse updateClass(Long id, ClassRequest request) {
+        User teacher = userService.getCurrentUser();
+        Class clazz = classRepository.findById(id)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        // Validate authority: Only class teacher or ADMIN can update the class
+        if (teacher.getRole() != UserRole.TEACHER && !clazz.getTeacher().getId().equals(teacher.getId())) {
+            throw new AppException(ErrorCode.FORBIDDEN);
+        }
+
+        com.example.back_end.entity.TopikLevel topikLevel = topikLevelRepository.findById(request.getTopikLevelId())
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        Course course = null;
+        if (request.getCourseId() != null) {
+            course = courseRepository.findById(request.getCourseId())
+                    .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+        }
+
+        clazz.setTopikLevel(topikLevel);
+        clazz.setCourse(course);
+        clazz.setSchedule(request.getSchedule());
+        clazz.setRoom(request.getRoom());
+        clazz.setNotes(request.getNotes());
+
+        if (request.getStatus() != null) {
+            try {
+                clazz.setStatus(ClassStatus.valueOf(request.getStatus().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                // Keep default or current status if invalid status is sent
+            }
+        }
+
+        Class updated = classRepository.save(clazz);
+        return classMapper.toResponse(updated);
     }
 
     @Transactional

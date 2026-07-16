@@ -145,6 +145,7 @@ public class ClassMapper {
                 .id(c.getId())
                 .courseId(courseId)
                 .courseTitle(courseTitle)
+                .topikLevelId(c.getTopikLevel() != null ? c.getTopikLevel().getId() : null)
                 .name(name)
                 .schedule(schedule)
                 .room(room)

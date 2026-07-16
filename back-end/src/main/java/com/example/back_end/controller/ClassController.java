@@ -3,6 +3,7 @@ package com.example.back_end.controller;
 import com.example.back_end.dto.request.ClassRequest;
 import com.example.back_end.dto.response.ApiResponse;
 import com.example.back_end.dto.response.ClassResponse;
+import com.example.back_end.dto.response.PageResponse;
 import com.example.back_end.enums.MaterialType;
 import com.example.back_end.service.ClassService;
 import lombok.RequiredArgsConstructor;
@@ -41,12 +42,25 @@ public class ClassController {
     }
 
     @GetMapping("/teacher")
-    public ApiResponse<List<ClassResponse>> getTeacherClasses() {
-        List<ClassResponse> list = classService.getTeacherClasses();
-        return ApiResponse.<List<ClassResponse>>builder()
+    public ApiResponse<?> getTeacherClasses(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "6") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String level,
+            @RequestParam(defaultValue = "true") boolean unpaged) {
+        if (unpaged) {
+            List<ClassResponse> list = classService.getTeacherClassesWithFilters(search, level);
+            return ApiResponse.<List<ClassResponse>>builder()
+                    .code(HttpStatus.OK.value())
+                    .message("Lấy danh sách lớp thành công.")
+                    .data(list)
+                    .build();
+        }
+        PageResponse<ClassResponse> data = classService.getTeacherClassesPaginated(page, size, search, level);
+        return ApiResponse.<PageResponse<ClassResponse>>builder()
                 .code(HttpStatus.OK.value())
                 .message("Lấy danh sách lớp thành công.")
-                .data(list)
+                .data(data)
                 .build();
     }
 
@@ -66,6 +80,16 @@ public class ClassController {
         return ApiResponse.<ClassResponse>builder()
                 .code(HttpStatus.OK.value())
                 .message("Thêm học viên vào lớp thành công.")
+                .data(data)
+                .build();
+    }
+
+    @PutMapping("/{id}")
+    public ApiResponse<ClassResponse> updateClass(@PathVariable Long id, @Valid @RequestBody ClassRequest request) {
+        ClassResponse data = classService.updateClass(id, request);
+        return ApiResponse.<ClassResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Cập nhật lớp học thành công.")
                 .data(data)
                 .build();
     }
