@@ -35,7 +35,7 @@ api.interceptors.request.use(
     activeRequestsCount++;
     updateLoadingState();
     try {
-      const savedUser = localStorage.getItem('sk_user');
+      const savedUser = localStorage.getItem('sk_user') || sessionStorage.getItem('sk_user');
       if (savedUser) {
         const user = JSON.parse(savedUser);
         if (user && user.token) {
@@ -84,6 +84,7 @@ api.interceptors.response.use(
     // 403: Tài khoản bị khóa do share IP → không refresh, clear ngay
     if (status === 403 && errorCode === 1050) {
       localStorage.removeItem('sk_user');
+      sessionStorage.removeItem('sk_user');
       window.dispatchEvent(new CustomEvent('account-locked', { detail: { message: msg } }));
       window.location.href = '/login?reason=locked';
       return Promise.reject(new Error(msg));
@@ -92,6 +93,7 @@ api.interceptors.response.use(
     // 401 SESSION_HIJACKED: bị kick → không refresh, redirect login
     if (status === 401 && errorCode === 1049) {
       localStorage.removeItem('sk_user');
+      sessionStorage.removeItem('sk_user');
       window.dispatchEvent(new CustomEvent('session-kicked', { detail: { message: msg } }));
       window.location.href = '/login';
       return Promise.reject(new Error(msg));
@@ -115,7 +117,12 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const savedUserStr = localStorage.getItem('sk_user');
+        let savedUserStr = localStorage.getItem('sk_user');
+        let isSession = false;
+        if (!savedUserStr) {
+          savedUserStr = sessionStorage.getItem('sk_user');
+          isSession = true;
+        }
         if (!savedUserStr) throw new Error("No user session");
 
         const savedUser = JSON.parse(savedUserStr);
@@ -135,7 +142,11 @@ api.interceptors.response.use(
           if (authData.avatarUrl) {
             savedUser.avatar = authData.avatarUrl;
           }
-          localStorage.setItem('sk_user', JSON.stringify(savedUser));
+          if (isSession) {
+            sessionStorage.setItem('sk_user', JSON.stringify(savedUser));
+          } else {
+            localStorage.setItem('sk_user', JSON.stringify(savedUser));
+          }
 
           processQueue(null, authData.token);
           isRefreshing = false;
@@ -152,6 +163,7 @@ api.interceptors.response.use(
 
         // Clear local storage and redirect to login on refresh token expiration
         localStorage.removeItem('sk_user');
+        sessionStorage.removeItem('sk_user');
         window.location.href = '/login';
         return Promise.reject(new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."));
       }

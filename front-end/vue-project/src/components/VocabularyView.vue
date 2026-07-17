@@ -2,9 +2,18 @@
   <div class="vocab-container animate-fade">
     <!-- Header -->
     <div class="vocab-header-section">
-      <div>
+      <div v-if="!selectedSet">
         <h2>Học Từ Vựng & Flashcard 🗂️</h2>
         <p>Chọn bộ từ vựng dưới đây để học và ôn tập bằng thẻ ghi nhớ thông minh.</p>
+      </div>
+      <div v-else class="selected-header-left animate-fade">
+        <button class="back-link-btn" @click="selectedSet = null">
+          <AppIcon name="chevron-left" size="14" /> Quay lại
+        </button>
+        <div class="selected-set-info">
+          <h2>{{ selectedSet.title || selectedSet.name }}</h2>
+          <p>{{ selectedSet.description }}</p>
+        </div>
       </div>
       <div class="vocab-mode-toggle" v-if="selectedSet">
         <button 
@@ -33,8 +42,11 @@
       >
         <div class="set-meta">
           <span class="vocab-count-badge">{{ set.wordCount || 0 }} Từ</span>
+          <span v-if="set.classNames && set.classNames.length > 0" class="class-assigned-badge">
+            Lớp: {{ set.classNames.join(', ') }}
+          </span>
         </div>
-        <h3>{{ set.name }}</h3>
+        <h3>{{ set.title || set.name }}</h3>
         <p>{{ set.description }}</p>
         
         <div class="set-progress">
@@ -58,15 +70,6 @@
 
     <!-- Mode 2: Vocabularies Inside Selected Set -->
     <div v-else class="selected-set-view">
-      <!-- Back navigation button -->
-      <button class="back-link-btn" @click="selectedSet = null">
-        <AppIcon name="chevron-left" size="16" /> Quay lại danh sách bộ từ
-      </button>
-
-      <div class="set-title-row">
-        <h3>{{ selectedSet.name }}</h3>
-        <p>{{ selectedSet.description }}</p>
-      </div>
 
       <!-- LIST VIEW -->
       <div v-if="viewMode === 'list'" class="list-mode-layout animate-scale">
@@ -296,10 +299,29 @@ const selectSet = async (set, mode) => {
     try {
       const studySetStore = useStudySetStore()
       const cards = await studySetStore.fetchCardsForSet(set.id)
-      selectedSet.value.words = cards || []
+      set.words = (cards || []).map(card => ({
+        id: card.id,
+        word: card.korean || card.word,
+        meaning: card.vietnamese || card.meaning,
+        pronunciation: card.pronunciation || '',
+        example: card.example || '',
+        exampleMeaning: card.exampleMeaning || '',
+        status: card.status || 'unlearned'
+      }))
+      selectedSet.value.words = set.words
     } catch (e) {
       console.warn("Failed to load cards for set:", e)
     }
+  } else {
+    selectedSet.value.words = set.words.map(card => ({
+      id: card.id,
+      word: card.korean || card.word,
+      meaning: card.vietnamese || card.meaning,
+      pronunciation: card.pronunciation || '',
+      example: card.example || '',
+      exampleMeaning: card.exampleMeaning || '',
+      status: card.status || 'unlearned'
+    }))
   }
 }
 
@@ -480,6 +502,10 @@ const updateWordStatus = (wordId, status) => {
 
 .set-meta {
   margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .vocab-count-badge {
@@ -489,6 +515,16 @@ const updateWordStatus = (wordId, status) => {
   font-weight: 700;
   padding: 0.25rem 0.6rem;
   border-radius: 50px;
+}
+
+.class-assigned-badge {
+  background-color: var(--bg-badge);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 50px;
+  border: 1px solid var(--border-color);
 }
 
 .study-set-card h3 {
@@ -988,5 +1024,43 @@ const updateWordStatus = (wordId, status) => {
     flex-direction: column;
     align-items: flex-start;
   }
+  .selected-header-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+}
+
+.selected-header-left {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.selected-header-left .back-link-btn {
+  margin-bottom: 0;
+  padding: 0.5rem 0.85rem;
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-badge);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+}
+
+.selected-header-left .back-link-btn:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--primary);
+  transform: translateX(-3px);
+}
+
+.selected-set-info h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text-title);
+  margin-bottom: 0.15rem;
+}
+
+.selected-set-info p {
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 </style>

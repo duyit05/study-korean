@@ -112,6 +112,7 @@
     <main class="app-main-content">
       <router-view 
         :user="user"
+        :classes="classes"
         :study-sets="studySets"
         :quizzes="quizzes"
         :schedule="schedule"
@@ -132,6 +133,7 @@ import { useAuthStore } from '../stores/auth'
 import AppIcon from '../components/icons/AppIcon.vue'
 
 const props = defineProps({
+  classes: Array,
   studySets: Array,
   quizzes: Array,
   schedule: Array
@@ -476,7 +478,14 @@ onMounted(() => {
 
 .app-main-content {
   flex-grow: 1;
+  padding: 2rem;
   background-color: var(--bg-body);
   transition: background-color var(--transition-normal);
+}
+
+@media (max-width: 768px) {
+  .app-main-content {
+    padding: 1rem;
+  }
 }
 </style>

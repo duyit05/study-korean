@@ -35,6 +35,7 @@ const user = computed({
 })
 const studySets = computed(() => studySetStore.studySets)
 const quizzes = computed(() => quizStore.quizzes)
+const classes = computed(() => studySetStore.classes)
 const schedule = computed(() => {
   const list = []
   const dbClasses = studySetStore.classes || []
@@ -125,13 +126,56 @@ onMounted(async () => {
   // Load from database if user is logged in
   if (user.value) {
     try {
-      await studySetStore.fetchStudySets();
       if (user.value.role === 'TEACHER') {
+        await studySetStore.fetchStudySets();
         await quizStore.fetchMyCreatedQuizzes();
         await studySetStore.fetchClasses('TEACHER');
       } else {
-        await quizStore.fetchQuizzesByClass(1);
         await studySetStore.fetchClasses('STUDENT');
+        const studentClasses = studySetStore.classes || [];
+        
+        // Filter and map only study sets assigned to student's classes with class metadata
+        const assignedSetsMap = new Map();
+        studentClasses.forEach(cls => {
+          if (cls.assignedStudySets && Array.isArray(cls.assignedStudySets)) {
+            cls.assignedStudySets.forEach(as => {
+              const className = `${cls.name} (${cls.teacherName || 'Giáo viên'})`;
+              const existing = assignedSetsMap.get(as.studySetId);
+              if (existing) {
+                if (!existing.classNames.includes(className)) {
+                  existing.classNames.push(className);
+                }
+              } else {
+                assignedSetsMap.set(as.studySetId, {
+                  id: as.studySetId,
+                  title: as.studySetTitle,
+                  description: as.studySetDescription,
+                  wordCount: as.wordCount,
+                  classNames: [className],
+                  words: []
+                });
+              }
+            });
+          }
+        });
+        studySetStore.studySets = Array.from(assignedSetsMap.values());
+
+        let allQuizzes = [];
+        if (studentClasses.length > 0) {
+          for (const cls of studentClasses) {
+            try {
+              const res = await api.get(`/quizzes/class/${cls.id}`);
+              if (res && res.data) {
+                allQuizzes = allQuizzes.concat(res.data);
+              }
+            } catch (e) {
+              console.warn(`Failed to fetch quizzes for class ${cls.id}:`, e);
+            }
+          }
+          quizStore.quizzes = allQuizzes;
+        } else {
+          await quizStore.fetchQuizzesByClass(1);
+        }
       }
     } catch (e) {
       console.warn("Error loading database resources:", e);
@@ -162,7 +206,14 @@ const handleLoginSuccess = async (userData) => {
   // Seed notifications list for new general logins if empty
   if (!userData.notifications) {
     user.value.notifications = [
-      { id: 1, title: 'Chào mừng bạn!', message: 'Bắt đầu học tiếng Hàn ngay hôm nay nhé.', isRead: false }
+      { 
+        id: 1, 
+        title: 'Chào mừng bạn!', 
+        content: 'Bắt đầu học tiếng Hàn ngay hôm nay nhé.', 
+        sender: 'Hệ thống', 
+        date: new Date().toISOString(), 
+        isRead: false 
+      }
     ]
     user.value.joinedClasses = []
     user.value.streak = 1
@@ -173,13 +224,56 @@ const handleLoginSuccess = async (userData) => {
 
   // Fetch logged in user's resources
   try {
-    await studySetStore.fetchStudySets();
     if (userData.role === 'TEACHER') {
+      await studySetStore.fetchStudySets();
       await quizStore.fetchMyCreatedQuizzes();
       await studySetStore.fetchClasses('TEACHER');
     } else {
-      await quizStore.fetchQuizzesByClass(1);
       await studySetStore.fetchClasses('STUDENT');
+      const studentClasses = studySetStore.classes || [];
+      
+      // Filter and map only study sets assigned to student's classes with class metadata
+      const assignedSetsMap = new Map();
+      studentClasses.forEach(cls => {
+        if (cls.assignedStudySets && Array.isArray(cls.assignedStudySets)) {
+          cls.assignedStudySets.forEach(as => {
+            const className = `${cls.name} (${cls.teacherName || 'Giáo viên'})`;
+            const existing = assignedSetsMap.get(as.studySetId);
+            if (existing) {
+              if (!existing.classNames.includes(className)) {
+                existing.classNames.push(className);
+              }
+            } else {
+              assignedSetsMap.set(as.studySetId, {
+                id: as.studySetId,
+                title: as.studySetTitle,
+                description: as.studySetDescription,
+                wordCount: as.wordCount,
+                classNames: [className],
+                words: []
+              });
+            }
+          });
+        }
+      });
+      studySetStore.studySets = Array.from(assignedSetsMap.values());
+
+      let allQuizzes = [];
+      if (studentClasses.length > 0) {
+        for (const cls of studentClasses) {
+          try {
+            const res = await api.get(`/quizzes/class/${cls.id}`);
+            if (res && res.data) {
+              allQuizzes = allQuizzes.concat(res.data);
+            }
+          } catch (e) {
+            console.warn(`Failed to fetch quizzes for class ${cls.id}:`, e);
+          }
+        }
+        quizStore.quizzes = allQuizzes;
+      } else {
+        await quizStore.fetchQuizzesByClass(1);
+      }
     }
   } catch (e) {
     console.error("Error loading user resources after login:", e);
@@ -289,6 +383,7 @@ const handleSaveProfile = async ({ name, email, avatar }) => {
 
 <template>
   <router-view 
+    :classes="classes"
     :study-sets="studySets"
     :quizzes="quizzes"
     :schedule="schedule"
@@ -381,7 +476,6 @@ const handleSaveProfile = async ({ name, email, avatar }) => {
 
 .loading-text {
   margin-top: 1.5rem;
-  font-family: 'Inter', sans-serif;
   font-size: 1rem;
   font-weight: 600;
   color: var(--text-title, #2d3748);
@@ -424,7 +518,6 @@ const handleSaveProfile = async ({ name, email, avatar }) => {
   align-items: center;
   gap: 10px;
   padding: 14px 20px;
-  font-family: 'Inter', sans-serif;
   font-size: 14px;
   font-weight: 500;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);

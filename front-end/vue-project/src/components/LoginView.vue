@@ -34,7 +34,7 @@
 
     <!-- Right form panel -->
     <div class="form-panel">
-      <div class="form-card">
+      <div class="form-card" :class="{ 'register-card': isRegisterMode }">
         <!-- Header -->
         <div class="form-header">
           <div class="logo-badge">
@@ -79,6 +79,14 @@
                 <AppIcon :name="showPassword ? 'eye-off' : 'eye'" size="16" />
               </button>
             </div>
+          </div>
+
+          <div class="form-options">
+            <label class="checkbox-container">
+              <input type="checkbox" v-model="rememberMe">
+              <span class="checkmark"></span>
+              Ghi nhớ đăng nhập
+            </label>
           </div>
 
           <div v-if="errorMessage" class="error-box animate-scale">
@@ -184,7 +192,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import AppIcon from './icons/AppIcon.vue'
 import { useAuthStore } from '../stores/auth'
 
@@ -201,6 +209,15 @@ const showRegConfirmPassword = ref(false)
 
 const username = ref('')
 const password = ref('')
+const rememberMe = ref(false)
+
+onMounted(() => {
+  const savedUsername = localStorage.getItem('sk_remembered_username')
+  if (savedUsername) {
+    username.value = savedUsername
+    rememberMe.value = true
+  }
+})
 
 const regFullName = ref('')
 const regUsername = ref('')
@@ -237,7 +254,7 @@ const handleLogin = async () => {
     return
   }
   try {
-    const userData = await authStore.login(username.value, password.value)
+    const userData = await authStore.login(username.value, password.value, rememberMe.value)
     emit('login-success', userData)
   } catch (error) {
     // handled by store
@@ -287,7 +304,7 @@ const handleRegister = async () => {
 /* ─── Left decorative panel ─── */
 .deco-panel {
   position: relative;
-  flex: 0 0 44%;
+  flex: 0 0 40%;
   background: linear-gradient(145deg, #2A1F17 0%, #3E3026 50%, #56453A 100%);
   overflow: hidden;
   display: flex;
@@ -409,6 +426,11 @@ const handleRegister = async () => {
   border-radius: var(--radius-lg);
   padding: 2.75rem 2.5rem;
   box-shadow: var(--shadow-lg);
+  transition: max-width var(--transition-normal, 0.3s) ease;
+}
+
+.form-card.register-card {
+  max-width: 640px;
 }
 
 /* ─── Form header ─── */
@@ -603,6 +625,80 @@ h1 {
 .toggle-mode a:hover {
   color: var(--primary-hover);
   text-decoration: underline;
+}
+
+/* ─── Checkbox Options ─── */
+.form-options {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: -0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding-left: 28px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  user-select: none;
+  transition: color var(--transition-fast);
+}
+
+.checkbox-container:hover {
+  color: var(--text-title);
+}
+
+.checkbox-container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkmark {
+  position: absolute;
+  left: 0;
+  height: 18px;
+  width: 18px;
+  background-color: var(--bg-app);
+  border: 1.5px solid var(--border-color);
+  border-radius: 6px;
+  transition: all var(--transition-fast);
+}
+
+.checkbox-container:hover input ~ .checkmark {
+  border-color: var(--border-color-hover);
+}
+
+.checkbox-container input:checked ~ .checkmark {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+
+.checkbox-container input:checked ~ .checkmark:after {
+  display: block;
+}
+
+.checkbox-container .checkmark:after {
+  left: 5px;
+  top: 2px;
+  width: 5px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 /* ─── Footer ─── */

@@ -67,20 +67,24 @@
           <h3 class="section-title">Lớp học của tôi</h3>
           <div class="classes-list">
             <div 
-              v-for="cls in user.joinedClasses" 
+              v-for="cls in classes" 
               :key="cls.id" 
               class="class-item-card"
             >
               <div class="class-info">
                 <h4>{{ cls.name }}</h4>
                 <div class="class-meta">
-                  <span class="teacher"><AppIcon name="profile" size="14" /> {{ cls.teacher }}</span>
+                  <span class="teacher"><AppIcon name="profile" size="14" /> {{ cls.teacherName || 'Chưa phân công' }}</span>
                   <span class="schedule"><AppIcon name="clock" size="14" /> {{ cls.schedule }}</span>
                 </div>
               </div>
               <div class="class-action">
                 <span class="room-badge">{{ cls.room }}</span>
               </div>
+            </div>
+            <div v-if="!classes || classes.length === 0" class="empty-state">
+              <AppIcon name="alert" size="32" />
+              <p>Bạn chưa tham gia lớp học nào.</p>
             </div>
           </div>
         </div>
@@ -205,6 +209,10 @@ import AppIcon from './icons/AppIcon.vue'
 const props = defineProps({
   user: {
     type: Object,
+    required: true
+  },
+  classes: {
+    type: Array,
     required: true
   },
   studySets: {

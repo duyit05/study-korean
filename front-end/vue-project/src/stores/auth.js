@@ -10,7 +10,7 @@ export const useAuthStore = defineStore('auth', () => {
   // Helper to safely load user on init
   const loadUserFromStorage = () => {
     try {
-      const savedUser = localStorage.getItem('sk_user');
+      const savedUser = localStorage.getItem('sk_user') || sessionStorage.getItem('sk_user');
       if (savedUser) {
         user.value = JSON.parse(savedUser);
       }
@@ -22,7 +22,7 @@ export const useAuthStore = defineStore('auth', () => {
   // Initial load
   loadUserFromStorage();
 
-  const login = async (username, password) => {
+  const login = async (username, password, rememberMe = false) => {
     loading.value = true;
     errorMessage.value = '';
     
@@ -48,7 +48,15 @@ export const useAuthStore = defineStore('auth', () => {
         };
 
         user.value = userData;
-        localStorage.setItem('sk_user', JSON.stringify(userData));
+        if (rememberMe) {
+          localStorage.setItem('sk_user', JSON.stringify(userData));
+          localStorage.setItem('sk_remembered_username', username);
+          sessionStorage.removeItem('sk_user');
+        } else {
+          sessionStorage.setItem('sk_user', JSON.stringify(userData));
+          localStorage.removeItem('sk_user');
+          localStorage.removeItem('sk_remembered_username');
+        }
         return userData;
       } else {
         throw new Error("Không nhận được dữ liệu phản hồi hợp lệ.");
@@ -90,6 +98,7 @@ export const useAuthStore = defineStore('auth', () => {
       errorMessage.value = '';
       try {
         localStorage.removeItem('sk_user');
+        sessionStorage.removeItem('sk_user');
       } catch (e) {
         console.warn("Storage access failed:", e);
       }
