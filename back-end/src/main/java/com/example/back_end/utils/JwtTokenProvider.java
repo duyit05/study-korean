@@ -50,11 +50,18 @@ public class JwtTokenProvider {
     }
 
     public String generateToken(UserDetails userDetails) {
+        return generateToken(userDetails, null);
+    }
+
+    public String generateToken(UserDetails userDetails, String sessionId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + jwtExpirationInMs);
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", userDetails.getAuthorities());
+        if (sessionId != null) {
+            claims.put("sid", sessionId);
+        }
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -73,6 +80,19 @@ public class JwtTokenProvider {
                 .getBody();
 
         return claims.getSubject();
+    }
+
+    public String getSessionIdFromJWT(String token) {
+        try {
+            Claims claims = Jwts.parserBuilder()
+                    .setSigningKey(jwtSecret)
+                    .build()
+                    .parseClaimsJws(token)
+                    .getBody();
+            return (String) claims.get("sid");
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     public boolean validateToken(String authToken) {

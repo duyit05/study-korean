@@ -8,6 +8,7 @@ import com.example.back_end.dto.request.LoginRequest;
 import com.example.back_end.entity.User;
 import com.example.back_end.service.UserService;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -38,14 +39,25 @@ public class AuthenticationController {
     }
 
     @PostMapping("/login")
-    public ApiResponse<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
-        AuthResponse authResponse = userService.login(request);
+    public ApiResponse<AuthResponse> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
+        String clientIp = getClientIp(httpRequest);
+        AuthResponse authResponse = userService.login(request, clientIp);
 
         return ApiResponse.<AuthResponse>builder()
                 .code(HttpStatus.OK.value())
                 .message("Đăng nhập thành công.")
                 .data(authResponse)
                 .build();
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 
     @PostMapping("/refresh")

@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -78,7 +79,7 @@ public class UserService {
         return savedUser;
     }
 
-    public AuthResponse login(LoginRequest request) {
+    public AuthResponse login(LoginRequest request, String clientIp) {
         User user = userRepository.findByUsername(request.getUsername())
                 .or(() -> userRepository.findByEmail(request.getUsername()))
                 .orElseThrow(() -> {
@@ -93,12 +94,34 @@ public class UserService {
             throw new AppException(ErrorCode.INVALID_PASSWORD);
         }
 
+        // ─── Lớp 2: IP Tracking ──────────────────────────────────────
+        long distinctIpCount = redisTokenService.trackLoginIp(user.getUsername(), clientIp);
+
+        if (distinctIpCount > 2) {
+            // Auto-lock account
+            user.setIsActive(false);
+            userRepository.save(user);
+            redisTokenService.deleteActiveSession(user.getUsername());
+            redisTokenService.deleteRefreshToken(user.getUsername());
+            log.warn("Account auto-locked due to IP sharing: username={}, ip={}, ipCount={}",
+                    user.getUsername(), clientIp, distinctIpCount);
+            throw new AppException(ErrorCode.ACCOUNT_LOCKED_SHARING);
+        }
+
+        boolean ipWarning = (distinctIpCount == 2);
+
         UserDetails userDetails = org.springframework.security.core.userdetails.User.withUsername(user.getUsername())
                 .password(user.getPasswordHash())
                 .authorities("ROLE_" + user.getRole().name())
                 .build();
 
-        String token = jwtTokenProvider.generateToken(userDetails);
+        // ─── Lớp 1: Active Session ───────────────────────────────────
+        String sessionId = UUID.randomUUID().toString();
+        redisTokenService.saveActiveSession(
+                user.getUsername(), sessionId,
+                jwtTokenProvider.getRefreshTokenExpirationInSec());
+
+        String token = jwtTokenProvider.generateToken(userDetails, sessionId);
         String refreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
 
         // Save refresh token in Redis
@@ -112,6 +135,10 @@ public class UserService {
                 .fullName(user.getFullName())
                 .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole())
+                .ipWarning(ipWarning ? true : null)
+                .warningMessage(ipWarning
+                    ? "⚠️ Tài khoản của bạn đã đăng nhập từ nhiều nơi hôm nay. Nếu không phải bạn, vui lòng liên hệ giáo viên ngay."
+                    : null)
                 .build();
     }
 
@@ -142,7 +169,13 @@ public class UserService {
                 .authorities("ROLE_" + user.getRole().name())
                 .build();
 
-        String newAccessToken = jwtTokenProvider.generateToken(userDetails);
+        // Rotate sessionId khi refresh
+        String newSessionId = UUID.randomUUID().toString();
+        redisTokenService.saveActiveSession(
+                user.getUsername(), newSessionId,
+                jwtTokenProvider.getRefreshTokenExpirationInSec());
+
+        String newAccessToken = jwtTokenProvider.generateToken(userDetails, newSessionId);
         String newRefreshToken = jwtTokenProvider.generateRefreshToken(userDetails);
 
         // Save new refresh token in Redis
@@ -160,6 +193,8 @@ public class UserService {
     }
 
     public void logout(String authHeader, String refreshToken) {
+        String username = null;
+
         // 1. Blacklist the Access Token
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String accessToken = authHeader.substring(7);
@@ -175,10 +210,15 @@ public class UserService {
 
         // 2. Delete the Refresh Token from Redis
         if (refreshToken != null && !refreshToken.isEmpty() && jwtTokenProvider.validateRefreshToken(refreshToken)) {
-            String username = jwtTokenProvider.getUsernameFromRefreshToken(refreshToken);
+            username = jwtTokenProvider.getUsernameFromRefreshToken(refreshToken);
             redisTokenService.deleteRefreshToken(username);
         } else {
             log.warn("No valid refresh token provided for eviction.");
+        }
+
+        // 3. Delete Active Session
+        if (username != null) {
+            redisTokenService.deleteActiveSession(username);
         }
     }
 
@@ -206,5 +246,14 @@ public class UserService {
         if (avatarUrl != null)
             user.setAvatarUrl(avatarUrl);
         return userRepository.save(user);
+    }
+
+    @Transactional
+    public void unlockAccount(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+        user.setIsActive(true);
+        userRepository.save(user);
+        log.info("Account unlocked by admin: userId={}, username={}", userId, user.getUsername());
     }
 }

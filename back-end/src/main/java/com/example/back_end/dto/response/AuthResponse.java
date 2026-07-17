@@ -17,4 +17,6 @@ public class AuthResponse {
     private String fullName;
     private String avatarUrl;
     private UserRole role;
+    private Boolean ipWarning;
+    private String warningMessage;
 }

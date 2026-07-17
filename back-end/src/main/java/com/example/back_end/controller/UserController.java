@@ -59,4 +59,13 @@ public class UserController {
                 .data(response)
                 .build();
     }
+
+    @PostMapping("/{userId}/unlock")
+    public ApiResponse<Void> unlockAccount(@PathVariable Long userId) {
+        userService.unlockAccount(userId);
+        return ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("Mở khóa tài khoản thành công.")
+                .build();
+    }
 }

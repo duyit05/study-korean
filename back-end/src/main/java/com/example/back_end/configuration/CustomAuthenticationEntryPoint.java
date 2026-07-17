@@ -25,6 +25,9 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
         if (authException instanceof DisabledException) {
             errorCode = ErrorCode.USER_BLOCKED;
+        } else if (authException.getMessage() != null
+                && authException.getMessage().contains("thiết bị khác")) {
+            errorCode = ErrorCode.SESSION_HIJACKED;
         }
 
         response.setStatus(errorCode.getHttpStatus().value());

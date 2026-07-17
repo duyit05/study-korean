@@ -80,6 +80,19 @@ const schedule = computed(() => {
 const isDark = ref(false)
 const showNotificationDropdown = ref(false)
 
+// Security notification banners
+const securityBanner = ref(null) // { type: 'warning'|'error', message: string }
+const showSecurityBanner = ref(false)
+
+function triggerSecurityBanner(type, message) {
+  securityBanner.value = { type, message }
+  showSecurityBanner.value = true
+  if (type === 'warning') {
+    // Auto-dismiss warning sau 10 giây
+    setTimeout(() => { showSecurityBanner.value = false }, 10000)
+  }
+}
+
 // Safe Storage Wrapper to prevent environment-specific security crashes (e.g. cookies blocked)
 const safeStorage = {
   getItem(key) {
@@ -123,7 +136,22 @@ onMounted(async () => {
     } catch (e) {
       console.warn("Error loading database resources:", e);
     }
+
+    // Hiện IP warning nếu có từ lần login trước
+    if (user.value.ipWarning && user.value.warningMessage) {
+      triggerSecurityBanner('warning', user.value.warningMessage)
+    }
   }
+
+  // Lắng nghe session-kicked event (bị kick do login thiết bị khác)
+  window.addEventListener('session-kicked', (e) => {
+    triggerSecurityBanner('error', e.detail.message)
+  })
+
+  // Lắng nghe account-locked event (bị lock do nhiều IP)
+  window.addEventListener('account-locked', (e) => {
+    triggerSecurityBanner('error', e.detail.message)
+  })
 })
 
 // Authentication Handlers
@@ -158,6 +186,11 @@ const handleLoginSuccess = async (userData) => {
   }
   
   router.push(userData.role === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard')
+
+  // Hiện IP warning ngay sau login nếu có
+  if (userData.ipWarning && userData.warningMessage) {
+    triggerSecurityBanner('warning', userData.warningMessage)
+  }
 }
 
 const handleLogout = () => {
@@ -266,6 +299,18 @@ const handleSaveProfile = async ({ name, email, avatar }) => {
     @login-success="handleLoginSuccess"
   />
 
+  <!-- Security Banner (IP Warning / Session Kicked) -->
+  <Transition name="banner-slide">
+    <div
+      v-if="showSecurityBanner && securityBanner"
+      :class="['security-banner', securityBanner.type === 'error' ? 'security-banner--error' : 'security-banner--warning']"
+    >
+      <span class="security-banner__icon">{{ securityBanner.type === 'error' ? '🔒' : '⚠️' }}</span>
+      <span class="security-banner__msg">{{ securityBanner.message }}</span>
+      <button class="security-banner__close" @click="showSecurityBanner = false">✕</button>
+    </div>
+  </Transition>
+
   <!-- Global Duck Loading Overlay -->
   <div v-if="globalLoading" class="global-duck-loading">
     <div class="duck-wrapper">
@@ -366,5 +411,74 @@ const handleSaveProfile = async ({ name, email, avatar }) => {
     transform: scale(0.4);
     opacity: 0.3;
   }
+}
+
+/* Security Banner */
+.security-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.security-banner--warning {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+}
+
+.security-banner--error {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #fff;
+}
+
+.security-banner__icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.security-banner__msg {
+  flex: 1;
+  line-height: 1.4;
+}
+
+.security-banner__close {
+  background: rgba(255, 255, 255, 0.25);
+  border: none;
+  color: #fff;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.security-banner__close:hover {
+  background: rgba(255, 255, 255, 0.4);
+}
+
+/* Banner slide animation */
+.banner-slide-enter-active,
+.banner-slide-leave-active {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.banner-slide-enter-from,
+.banner-slide-leave-to {
+  transform: translateY(-100%);
+  opacity: 0;
 }
 </style>

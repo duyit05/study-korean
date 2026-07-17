@@ -77,8 +77,27 @@ api.interceptors.response.use(
     updateLoadingState();
 
     const originalRequest = error.config;
+    const status = error.response?.status;
+    const errorCode = error.response?.data?.code;
+    const msg = error.response?.data?.message || '';
 
-    // Handle 401 Unauthorized error (token expired or blacklisted)
+    // 403: Tài khoản bị khóa do share IP → không refresh, clear ngay
+    if (status === 403 && errorCode === 1050) {
+      localStorage.removeItem('sk_user');
+      window.dispatchEvent(new CustomEvent('account-locked', { detail: { message: msg } }));
+      window.location.href = '/login?reason=locked';
+      return Promise.reject(new Error(msg));
+    }
+
+    // 401 SESSION_HIJACKED: bị kick → không refresh, redirect login
+    if (status === 401 && errorCode === 1049) {
+      localStorage.removeItem('sk_user');
+      window.dispatchEvent(new CustomEvent('session-kicked', { detail: { message: msg } }));
+      window.location.href = '/login';
+      return Promise.reject(new Error(msg));
+    }
+
+    // Handle 401 Unauthorized error (token expired or blacklisted) → thử refresh
     if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 

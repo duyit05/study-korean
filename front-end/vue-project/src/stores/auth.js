@@ -42,7 +42,9 @@ export const useAuthStore = defineStore('auth', () => {
           streak: 5,
           xp: 1250,
           isGuest: false,
-          role: authData.role
+          role: authData.role,
+          ipWarning: authData.ipWarning || false,
+          warningMessage: authData.warningMessage || null,
         };
 
         user.value = userData;

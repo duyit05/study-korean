@@ -14,6 +14,7 @@ import com.example.back_end.repository.UserRepository;
 import com.example.back_end.repository.TopikLevelRepository;
 import com.example.back_end.repository.CourseRepository;
 import com.example.back_end.entity.Course;
+import com.example.back_end.entity.TopikLevel;
 import com.example.back_end.dto.response.PageResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -153,7 +154,7 @@ public class ClassService {
             throw new AppException(ErrorCode.FORBIDDEN);
         }
 
-        com.example.back_end.entity.TopikLevel topikLevel = topikLevelRepository.findById(request.getTopikLevelId())
+        TopikLevel topikLevel = topikLevelRepository.findById(request.getTopikLevelId())
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
         Course course = null;

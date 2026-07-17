@@ -1,6 +1,7 @@
 package com.example.back_end.configuration;
 
 import com.example.back_end.entity.User;
+import com.example.back_end.exception.ErrorCode;
 import com.example.back_end.repository.UserRepository;
 import com.example.back_end.service.RedisTokenService;
 import com.example.back_end.utils.JwtTokenProvider;
@@ -51,6 +52,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                     if (user.getIsActive() != null && !user.getIsActive()) {
                         throw new DisabledException("User is blocked");
+                    }
+
+                    // Validate sessionId — Lớp 1: Single Session
+                    String sessionId = tokenProvider.getSessionIdFromJWT(jwt);
+                    String activeSession = redisTokenService.getActiveSession(user.getUsername());
+                    if (sessionId == null || !sessionId.equals(activeSession)) {
+                        throw new InsufficientAuthenticationException(
+                                ErrorCode.SESSION_HIJACKED.getMessage());
                     }
 
                     SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
