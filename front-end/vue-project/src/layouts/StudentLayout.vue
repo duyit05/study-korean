@@ -1,5 +1,5 @@
 <template>
-  <div class="app-layout">
+  <div class="app-layout student-theme">
     <!-- Navbar / Header -->
     <header class="app-header">
       <div class="header-logo" @click="navigateTo('/student/dashboard')">

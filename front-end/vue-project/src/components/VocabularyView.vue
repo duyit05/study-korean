@@ -336,7 +336,13 @@ const startFlashcardMode = () => {
 const getSetProgressPercentage = (set) => {
   const total = set.wordCount || 0
   if (total === 0) return 0
-  const learned = set.learnedCount || 0
+  
+  let learned = 0
+  if (set.words && set.words.length > 0) {
+    learned = set.words.filter(w => w.status === 'learned').length
+  } else {
+    learned = set.learnedCount || 0
+  }
   return Math.round((learned / total) * 100)
 }
 

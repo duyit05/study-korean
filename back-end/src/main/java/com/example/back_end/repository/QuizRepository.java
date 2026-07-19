@@ -1,6 +1,8 @@
 package com.example.back_end.repository;
 
 import com.example.back_end.entity.Quiz;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -18,4 +20,19 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
 
     List<Quiz> findByClazzId(Long clazzId);
     List<Quiz> findByCreatorId(Long creatorId);
+
+    @Query(value = "SELECT q FROM Quiz q LEFT JOIN FETCH q.topikLevel tl " +
+                   "WHERE q.creator.id = :creatorId " +
+                   "AND (:search IS NULL OR :search = '' OR LOWER(q.title) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+                   "AND (:level IS NULL OR :level = '' OR (tl IS NOT NULL AND tl.name = :level))",
+           countQuery = "SELECT COUNT(q) FROM Quiz q LEFT JOIN q.topikLevel tl " +
+                        "WHERE q.creator.id = :creatorId " +
+                        "AND (:search IS NULL OR :search = '' OR LOWER(q.title) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+                        "AND (:level IS NULL OR :level = '' OR (tl IS NOT NULL AND tl.name = :level))")
+    Page<Quiz> findByCreatorIdWithFiltersPage(
+            @Param("creatorId") Long creatorId,
+            @Param("search") String search,
+            @Param("level") String level,
+            Pageable pageable);
 }
+

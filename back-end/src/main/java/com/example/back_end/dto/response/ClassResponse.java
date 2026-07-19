@@ -47,6 +47,7 @@ public class ClassResponse {
         private String studySetTitle;
         private String studySetDescription;
         private Integer wordCount;
+        private Integer learnedCount;
         private String dueDate;
         private String note;
         private String assignedAt;

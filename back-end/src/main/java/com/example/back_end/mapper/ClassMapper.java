@@ -8,6 +8,7 @@ import com.example.back_end.repository.CardProgressRepository;
 import com.example.back_end.repository.CardRepository;
 import com.example.back_end.repository.QuizAttemptRepository;
 import com.example.back_end.repository.AssignedStudySetRepository;
+import com.example.back_end.repository.UserRepository;
 import com.example.back_end.entity.AssignedStudySet;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,7 @@ public class ClassMapper {
     private final CardRepository cardRepository;
     private final QuizAttemptRepository quizAttemptRepository;
     private final AssignedStudySetRepository assignedStudySetRepository;
+    private final UserRepository userRepository;
 
     public ClassResponse toResponse(Class c) {
         if (c == null)
@@ -157,8 +159,39 @@ public class ClassMapper {
                 .startedAt(c.getStartedAt())
                 .notes(notes)
                 .students(studentDtos)
-                .assignedStudySets(mapAssignedStudySets(assigned, cardCountsMap))
+                .assignedStudySets(mapAssignedStudySets(assigned, cardCountsMap, getCurrentStudentId()))
                 .build();
+    }
+
+    private Long getCurrentStudentId() {
+        try {
+            org.springframework.security.core.Authentication auth = 
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated()) {
+                Object principal = auth.getPrincipal();
+                if (principal instanceof com.example.back_end.entity.User) {
+                    com.example.back_end.entity.User user = (com.example.back_end.entity.User) principal;
+                    if (user.getRole() == com.example.back_end.enums.UserRole.STUDENT) {
+                        return user.getId();
+                    }
+                } else if (principal instanceof org.springframework.security.core.userdetails.UserDetails) {
+                    String username = ((org.springframework.security.core.userdetails.UserDetails) principal).getUsername();
+                    com.example.back_end.entity.User user = userRepository.findByUsername(username).orElse(null);
+                    if (user != null && user.getRole() == com.example.back_end.enums.UserRole.STUDENT) {
+                        return user.getId();
+                    }
+                } else {
+                    String username = auth.getName();
+                    com.example.back_end.entity.User user = userRepository.findByUsername(username).orElse(null);
+                    if (user != null && user.getRole() == com.example.back_end.enums.UserRole.STUDENT) {
+                        return user.getId();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return null;
     }
 
     public List<ClassResponse> toResponses(List<Class> classes) {
@@ -222,19 +255,37 @@ public class ClassMapper {
     }
 
     private List<ClassResponse.AssignedStudySetDto> mapAssignedStudySets(List<AssignedStudySet> assigned,
-            Map<Long, Long> cardCountsMap) {
+            Map<Long, Long> cardCountsMap, Long currentStudentId) {
         if (assigned == null)
             return List.of();
+
+        java.util.Map<Long, Long> learnedCountMap = java.util.Map.of();
+        if (currentStudentId != null && !assigned.isEmpty()) {
+            List<Long> studySetIds = assigned.stream()
+                    .map(a -> a.getStudySet().getId())
+                    .distinct()
+                    .collect(Collectors.toList());
+            List<Object[]> learnedCounts = cardProgressRepository.countLearnedCardsByStudySetIds(currentStudentId, studySetIds);
+            learnedCountMap = learnedCounts.stream()
+                    .collect(Collectors.toMap(
+                            row -> (Long) row[0],
+                            row -> (Long) row[1]
+                    ));
+        }
+
+        final java.util.Map<Long, Long> finalLearnedCountMap = learnedCountMap;
         return assigned.stream()
                 .map(a -> {
                     long count = cardCountsMap != null ? cardCountsMap.getOrDefault(a.getStudySet().getId(), 0L)
                             : cardRepository.countByStudySetId(a.getStudySet().getId());
+                    int learnedCount = finalLearnedCountMap.getOrDefault(a.getStudySet().getId(), 0L).intValue();
                     return ClassResponse.AssignedStudySetDto.builder()
                             .id(a.getId())
                             .studySetId(a.getStudySet().getId())
                             .studySetTitle(a.getStudySet().getTitle())
                             .studySetDescription(a.getStudySet().getDescription())
                             .wordCount((int) count)
+                            .learnedCount(learnedCount)
                             .dueDate(a.getDueDate() != null ? a.getDueDate().toString() : null)
                             .note(a.getNote())
                             .assignedAt(a.getAssignedAt() != null ? a.getAssignedAt().toString() : null)

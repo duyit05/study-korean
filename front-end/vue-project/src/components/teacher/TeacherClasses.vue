@@ -197,7 +197,11 @@
               </td>
               <td><span class="score-badge">{{ student.avgScore || 0 }} / 100</span></td>
               <td>
-                <button class="text-btn">Gửi nhắc nhở</button>
+                <div style="display: flex; gap: 0.5rem; align-items: center;">
+                  <button class="text-btn">Gửi nhắc nhở</button>
+                  <span style="color: var(--border-color);">|</span>
+                  <button class="text-btn danger" @click="handleRemoveStudent(student.id)">Xóa khỏi lớp</button>
+                </div>
               </td>
             </tr>
             <tr v-if="!selectedClass.students || selectedClass.students.length === 0">
@@ -742,6 +746,30 @@
         </div>
       </div>
     </div>
+
+    <!-- Remove Student Confirm Modal -->
+    <div v-if="showRemoveStudentConfirmModal" class="modal-overlay">
+      <div class="modal-content animate-scale" style="max-width: 450px;">
+        <div class="modal-header">
+          <h3 style="color: var(--danger);">Xác nhận xóa học viên</h3>
+          <button class="close-btn" @click="showRemoveStudentConfirmModal = false">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 1.25rem 0 0 0;">
+          <p style="font-size: 0.95rem; color: var(--text-body); line-height: 1.5; margin-bottom: 0.5rem;">
+            Bạn có chắc chắn muốn xóa học viên <strong>{{ studentToRemove?.name }}</strong> khỏi lớp học này?
+          </p>
+          <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 1.5rem;">
+            Lưu ý: Hành động này sẽ loại bỏ học viên khỏi lớp học hiện tại và không thể khôi phục tự động.
+          </p>
+          <div class="modal-actions" style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+            <button type="button" class="cancel-btn" @click="showRemoveStudentConfirmModal = false" style="margin: 0;">Hủy bỏ</button>
+            <button type="button" class="submit-btn" @click="confirmRemoveStudent" :disabled="removingStudent" style="background-color: var(--danger); margin: 0;">
+              {{ removingStudent ? 'Đang xóa...' : 'Đồng ý xóa' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -859,7 +887,7 @@ const classes = computed(() => {
 const classSearchQuery = ref('')
 const selectedClassLevelFilter = ref('')
 const currentClassPage = ref(1)
-const classesPerPage = 6
+const classesPerPage = 10
 const totalClassElements = ref(0)
 const totalClassPages = ref(1)
 
@@ -1178,6 +1206,11 @@ const selectedStudentId = ref(null)
 const enrolling = ref(false)
 const loadingStudents = ref(false)
 
+const showRemoveStudentConfirmModal = ref(false)
+const studentToRemove = ref(null)
+const removingStudent = ref(false)
+
+
 const openEnrollModal = async () => {
   loadingStudents.value = true
   showEnrollModal.value = true
@@ -1224,6 +1257,31 @@ const handleEnrollStudent = async () => {
     enrolling.value = false
   }
 }
+
+const handleRemoveStudent = (studentId) => {
+  const student = selectedClass.value.students.find(s => s.id === studentId)
+  if (!student) return
+  studentToRemove.value = student
+  showRemoveStudentConfirmModal.value = true
+}
+
+const confirmRemoveStudent = async () => {
+  if (!studentToRemove.value || !selectedClass.value) return
+  removingStudent.value = true
+  try {
+    await studySetStore.removeStudent(selectedClass.value.id, studentToRemove.value.id)
+    selectedClass.value.students = selectedClass.value.students.filter(s => s.id !== studentToRemove.value.id)
+    toast.success("Xóa học viên khỏi lớp thành công!")
+    showRemoveStudentConfirmModal.value = false
+  } catch (err) {
+    console.error(err)
+    toast.error("Xóa học viên khỏi lớp thất bại.")
+  } finally {
+    removingStudent.value = false
+    studentToRemove.value = null
+  }
+}
+
 
 // Vocabulary assignment state
 const showAssignVocabModal = ref(false)
@@ -1733,7 +1791,7 @@ const formatSessionDateTime = (dateStr) => {
 
 .classes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.25rem;
 }
 
@@ -1964,6 +2022,11 @@ const formatSessionDateTime = (dateStr) => {
 .text-btn:hover {
   text-decoration: underline;
 }
+
+.text-btn.danger {
+  color: var(--danger);
+}
+
 
 .assignments-list {
   display: flex;

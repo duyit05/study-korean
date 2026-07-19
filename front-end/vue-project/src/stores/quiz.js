@@ -10,6 +10,8 @@ export const useQuizStore = defineStore('quiz', () => {
   const questionSections = ref([]);
   const loading = ref(false);
   const errorMessage = ref('');
+  const totalQuizElements = ref(0);
+  const totalQuizPages = ref(1);
 
   const fetchQuestionTypes = async () => {
     try {
@@ -47,14 +49,25 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   };
 
-  const fetchMyCreatedQuizzes = async (force = false) => {
-    if (quizzes.value.length > 0 && !force) return quizzes.value;
+  const fetchMyCreatedQuizzes = async (force = false, params = {}) => {
+    const hasParams = Object.keys(params).length > 0;
+    if (quizzes.value.length > 0 && !force && !hasParams) return quizzes.value;
     loading.value = true;
     errorMessage.value = '';
     try {
-      const response = await api.get('/quizzes/creator');
-      quizzes.value = response.data || [];
-      return quizzes.value;
+      const response = await api.get('/quizzes/creator', { params });
+      // response = ApiResponse, response.data = PageResponse hoặc List
+      if (response.data && response.data.items !== undefined) {
+        // Paginated response
+        quizzes.value = response.data.items;
+        totalQuizElements.value = response.data.totalElements || 0;
+        totalQuizPages.value = response.data.totalPage || 1;
+        return response.data;
+      } else {
+        // Non-paginated (unpaged=true)
+        quizzes.value = response.data || [];
+        return quizzes.value;
+      }
     } catch (error) {
       errorMessage.value = error.message;
       throw error;
@@ -233,6 +246,8 @@ export const useQuizStore = defineStore('quiz', () => {
     questionSections,
     loading,
     errorMessage,
+    totalQuizElements,
+    totalQuizPages,
     fetchQuestionTypes,
     fetchQuestionSections,
     fetchQuizzesByClass,

@@ -2,6 +2,7 @@ package com.example.back_end.service;
 
 import com.example.back_end.dto.request.QuizRequest;
 import com.example.back_end.dto.request.QuestionRequest;
+import com.example.back_end.dto.response.PageResponse;
 import com.example.back_end.dto.response.QuizResponse;
 import com.example.back_end.entity.Class;
 import com.example.back_end.entity.Quiz;
@@ -21,6 +22,10 @@ import com.example.back_end.entity.TopikLevel;
 import com.example.back_end.entity.QuizAttempt;
 import com.example.back_end.entity.QuizAnswer;
 import com.example.back_end.mapper.QuizMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -118,6 +123,27 @@ public class QuizService {
         User creator = userService.getCurrentUser();
         List<Quiz> quizzes = quizRepository.findByCreatorIdWithTopikLevel(creator.getId());
         return quizMapper.toResponses(quizzes);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<QuizResponse> getMyCreatedQuizzesPaginated(int pageNo, int pageSize, String search, String level) {
+        User creator = userService.getCurrentUser();
+        // Convert 1-based pageNo (FE) sang 0-based (Spring)
+        int page = Math.max(0, pageNo - 1);
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by("id").descending());
+
+        Page<Quiz> pageResult = quizRepository.findByCreatorIdWithFiltersPage(
+                creator.getId(), search, level, pageable);
+
+        List<QuizResponse> items = quizMapper.toResponses(pageResult.getContent());
+
+        return PageResponse.<QuizResponse>builder()
+                .pageNo(page + 1)
+                .pageSize(pageSize)
+                .totalPage(pageResult.getTotalPages())
+                .totalElements(pageResult.getTotalElements())
+                .items(items)
+                .build();
     }
 
     @Transactional

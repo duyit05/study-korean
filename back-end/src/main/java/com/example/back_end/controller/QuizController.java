@@ -3,6 +3,7 @@ package com.example.back_end.controller;
 import com.example.back_end.dto.request.QuizRequest;
 import com.example.back_end.dto.request.QuestionRequest;
 import com.example.back_end.dto.response.ApiResponse;
+import com.example.back_end.dto.response.PageResponse;
 import com.example.back_end.dto.response.QuizResponse;
 import com.example.back_end.enums.QuestionSection;
 import com.example.back_end.enums.QuestionType;
@@ -84,12 +85,27 @@ public class QuizController {
     }
 
     @GetMapping("/creator")
-    public ApiResponse<List<QuizResponse>> getMyCreatedQuizzes() {
-        List<QuizResponse> response = quizService.getMyCreatedQuizzes();
-        return ApiResponse.<List<QuizResponse>>builder()
+    public ApiResponse<?> getMyCreatedQuizzes(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String level,
+            @RequestParam(defaultValue = "true") boolean unpaged) {
+        if (unpaged) {
+            // Trả về toàn bộ danh sách (dùng cho dropdown giao bài, assign quiz)
+            List<QuizResponse> list = quizService.getMyCreatedQuizzes();
+            return ApiResponse.<List<QuizResponse>>builder()
+                    .code(HttpStatus.OK.value())
+                    .message("Lấy danh sách đề thi tự tạo thành công.")
+                    .data(list)
+                    .build();
+        }
+        // Phân trang server-side
+        PageResponse<QuizResponse> data = quizService.getMyCreatedQuizzesPaginated(page, size, search, level);
+        return ApiResponse.<PageResponse<QuizResponse>>builder()
                 .code(HttpStatus.OK.value())
                 .message("Lấy danh sách đề thi tự tạo thành công.")
-                .data(response)
+                .data(data)
                 .build();
     }
 

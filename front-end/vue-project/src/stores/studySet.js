@@ -239,6 +239,26 @@ export const useStudySetStore = defineStore('studySet', () => {
     }
   };
 
+  const removeStudent = async (classId, studentId) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      await api.delete(`/classes/${classId}/students/${studentId}`);
+      // Cập nhật local state: xóa student khỏi danh sách của lớp
+      const idx = classes.value.findIndex(c => c.id === classId);
+      if (idx !== -1 && classes.value[idx].students) {
+        classes.value[idx].students = classes.value[idx].students.filter(
+          s => s.id !== studentId
+        );
+      }
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   const assignStudySet = async (payload) => {
     loading.value = true;
     errorMessage.value = '';
@@ -279,6 +299,15 @@ export const useStudySetStore = defineStore('studySet', () => {
     }
   };
 
+  const updateCardProgress = async (cardId, status) => {
+    try {
+      await api.post(`/study-sets/cards/${cardId}/progress`, { status });
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    }
+  };
+
   return {
     studySets,
     classes,
@@ -299,7 +328,9 @@ export const useStudySetStore = defineStore('studySet', () => {
     studentsList,
     fetchStudents,
     enrollStudent,
+    removeStudent,
     assignStudySet,
-    unassignStudySet
+    unassignStudySet,
+    updateCardProgress
   };
 });

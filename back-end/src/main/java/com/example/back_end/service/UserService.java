@@ -128,6 +128,18 @@ public class UserService {
         redisTokenService.saveRefreshToken(user.getUsername(), refreshToken,
                 jwtTokenProvider.getRefreshTokenExpirationInSec());
 
+        Integer xp = null;
+        Integer level = null;
+        Integer streak = null;
+        if (user.getRole() == UserRole.STUDENT) {
+            StudentProfile profile = studentProfileRepository.findByUserId(user.getId()).orElse(null);
+            if (profile != null) {
+                xp = profile.getXp();
+                level = profile.getLevel();
+                streak = profile.getStreak();
+            }
+        }
+
         return AuthResponse.builder()
                 .token(token)
                 .refreshToken(refreshToken)
@@ -139,6 +151,9 @@ public class UserService {
                 .warningMessage(ipWarning
                     ? "⚠️ Tài khoản của bạn đã đăng nhập từ nhiều nơi hôm nay. Nếu không phải bạn, vui lòng liên hệ giáo viên ngay."
                     : null)
+                .xp(xp)
+                .level(level)
+                .streak(streak)
                 .build();
     }
 
@@ -182,6 +197,18 @@ public class UserService {
         redisTokenService.saveRefreshToken(user.getUsername(), newRefreshToken,
                 jwtTokenProvider.getRefreshTokenExpirationInSec());
 
+        Integer xp = null;
+        Integer level = null;
+        Integer streak = null;
+        if (user.getRole() == UserRole.STUDENT) {
+            StudentProfile profile = studentProfileRepository.findByUserId(user.getId()).orElse(null);
+            if (profile != null) {
+                xp = profile.getXp();
+                level = profile.getLevel();
+                streak = profile.getStreak();
+            }
+        }
+
         return AuthResponse.builder()
                 .token(newAccessToken)
                 .refreshToken(newRefreshToken)
@@ -189,6 +216,9 @@ public class UserService {
                 .fullName(user.getFullName())
                 .avatarUrl(user.getAvatarUrl())
                 .role(user.getRole())
+                .xp(xp)
+                .level(level)
+                .streak(streak)
                 .build();
     }
 

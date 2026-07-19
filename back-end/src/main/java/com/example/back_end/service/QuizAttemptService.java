@@ -8,6 +8,7 @@ import com.example.back_end.entity.QuizAnswer;
 import com.example.back_end.entity.QuizAttempt;
 import com.example.back_end.entity.QuizQuestion;
 import com.example.back_end.entity.User;
+import com.example.back_end.entity.StudentProfile;
 import com.example.back_end.exception.AppException;
 import com.example.back_end.exception.ErrorCode;
 import com.example.back_end.repository.QuizAnswerRepository;
@@ -15,6 +16,7 @@ import com.example.back_end.repository.QuizAttemptRepository;
 import com.example.back_end.repository.QuizQuestionRepository;
 import com.example.back_end.repository.QuizRepository;
 import com.example.back_end.repository.UserRepository;
+import com.example.back_end.repository.StudentProfileRepository;
 import com.example.back_end.mapper.QuizAttemptMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +43,7 @@ public class QuizAttemptService {
     private final QuizQuestionRepository quizQuestionRepository;
     private final UserService userService;
     private final QuizAttemptMapper quizAttemptMapper;
+    private final StudentProfileRepository studentProfileRepository;
 
     @Transactional
     public QuizAttemptResponse submitAttempt(Long quizId, QuizSubmitRequest request) {
@@ -138,6 +141,21 @@ public class QuizAttemptService {
         savedAttempt.setTimeTakenSecs(totalTimeTakenMs / 1000);
 
         QuizAttempt finalAttempt = quizAttemptRepository.save(savedAttempt);
+
+        if ("COMPLETED".equalsIgnoreCase(finalAttempt.getStatus())) {
+            int xpReward = totalScore.multiply(BigDecimal.valueOf(10)).intValue();
+            if (xpReward > 0) {
+                StudentProfile profile = studentProfileRepository.findByUserId(student.getId()).orElse(null);
+                if (profile != null) {
+                    profile.setXp(profile.getXp() + xpReward);
+                    profile.setLevel((profile.getXp() / 1000) + 1);
+                    studentProfileRepository.save(profile);
+                    log.info("Student {} earned {} XP for completing quiz {}. Total XP: {}, Level: {}",
+                            student.getUsername(), xpReward, quizId, profile.getXp(), profile.getLevel());
+                }
+            }
+        }
+
         return quizAttemptMapper.toResponse(finalAttempt, savedAnswers);
     }
 
@@ -190,6 +208,23 @@ public class QuizAttemptService {
         attempt.setStatus("COMPLETED");
 
         QuizAttempt gradedAttempt = quizAttemptRepository.save(attempt);
+
+        // Reward student XP
+        BigDecimal totalScore = attempt.getScore();
+        if (totalScore != null) {
+            int xpReward = totalScore.multiply(BigDecimal.valueOf(10)).intValue();
+            if (xpReward > 0) {
+                StudentProfile profile = studentProfileRepository.findByUserId(attempt.getStudent().getId()).orElse(null);
+                if (profile != null) {
+                    profile.setXp(profile.getXp() + xpReward);
+                    profile.setLevel((profile.getXp() / 1000) + 1);
+                    studentProfileRepository.save(profile);
+                    log.info("Student {} earned {} XP for completing/grading quiz {}. Total XP: {}, Level: {}",
+                            attempt.getStudent().getUsername(), xpReward, attempt.getQuiz().getId(), profile.getXp(), profile.getLevel());
+                }
+            }
+        }
+
         return quizAttemptMapper.toResponse(gradedAttempt, answers);
     }
 

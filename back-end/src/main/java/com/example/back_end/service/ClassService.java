@@ -144,6 +144,20 @@ public class ClassService {
     }
 
     @Transactional
+    public void removeStudent(Long classId, Long studentId) {
+        Class clazz = classRepository.findById(classId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        User student = userRepository.findById(studentId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        // Xóa học viên khỏi danh sách (ManyToMany join table)
+        clazz.getStudents().removeIf(s -> s.getId().equals(student.getId()));
+        classRepository.save(clazz);
+    }
+
+
+    @Transactional
     public ClassResponse updateClass(Long id, ClassRequest request) {
         User teacher = userService.getCurrentUser();
         Class clazz = classRepository.findById(id)

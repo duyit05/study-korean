@@ -2,7 +2,7 @@
   <div class="teacher-quizzes animate-fade">
     <div class="header-section">
       <div class="title-area">
-        <h2>Soạn đề thi & bài tập luyện tập</h2>
+        <h2>Soạn đề thi &amp; bài tập luyện tập</h2>
         <p>Soạn thảo đề ôn luyện TOPIK và trắc nghiệm từ vựng tự động chấm điểm.</p>
       </div>
       <button class="primary-btn" @click="openCreateQuizModal">
@@ -11,46 +11,118 @@
       </button>
     </div>
 
-    <!-- Quizzes Grid -->
-    <div class="quizzes-grid">
-      <div 
-        v-for="quiz in quizzes" 
-        :key="quiz.id" 
-        class="quiz-card"
-        :class="{ active: selectedQuiz && selectedQuiz.id === quiz.id }"
-        @click="selectQuiz(quiz)"
-      >
-        <div class="quiz-header">
-          <div class="quiz-icon-badge">한</div>
-          <div class="quiz-title-meta">
-            <h3>{{ quiz.title }}</h3>
-            <span class="type-badge">{{ quiz.topikLevel || 'Luyện tập' }}</span>
+    <!-- Filter & Search -->
+    <div class="filter-card">
+      <div class="search-box">
+        <AppIcon name="search" size="16" class="search-icon" />
+        <input
+          type="text"
+          v-model="quizSearchQuery"
+          placeholder="Tìm kiếm đề thi theo tên..."
+        />
+      </div>
+      <div class="filter-options">
+        <div class="filter-group">
+          <label>Cấp độ</label>
+          <AppSelect
+            id="quizLevelFilter"
+            v-model="selectedQuizLevelFilter"
+            :options="quizLevelFilterOptions"
+            placeholder="Tất cả cấp độ"
+            style="min-width: 150px;"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Content Card wrapping grid + pagination -->
+    <div class="content-card">
+      <!-- Quizzes Grid -->
+      <div class="quizzes-grid">
+        <div
+          v-if="paginatedQuizzes.length === 0"
+          class="empty-grid"
+          style="grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 1rem; color: var(--text-muted); gap: 0.75rem;"
+        >
+          <AppIcon name="quiz" size="40" />
+          <p>Không tìm thấy đề thi nào.</p>
+        </div>
+        <div 
+          v-for="quiz in paginatedQuizzes" 
+          :key="quiz.id" 
+          class="quiz-card"
+          :class="{ active: selectedQuiz && selectedQuiz.id === quiz.id }"
+          @click="selectQuiz(quiz)"
+        >
+          <div class="quiz-header">
+            <div class="quiz-icon-badge">한</div>
+            <div class="quiz-title-meta">
+              <h3>{{ quiz.title }}</h3>
+              <span class="type-badge">{{ quiz.topikLevel || 'Luyện tập' }}</span>
+            </div>
+          </div>
+          <div class="quiz-body">
+            <div class="meta-row">
+              <AppIcon name="clock" size="16" class="icon" />
+              <span>Thời gian: {{ quiz.timeLimitMins }} phút</span>
+            </div>
+            <div class="meta-row">
+              <AppIcon name="calendar" size="16" class="icon" />
+              <span>Hạn nộp: {{ quiz.dueDate ? quiz.dueDate.substring(0, 10) : 'Không có' }}</span>
+            </div>
+            <div class="meta-row">
+              <AppIcon name="book" size="16" class="icon" />
+              <span>{{ quiz.questionCount || 0 }} câu hỏi</span>
+            </div>
+            <div class="meta-row">
+              <AppIcon name="award" size="16" class="icon" />
+              <span>Tổng điểm: {{ quiz.totalScore || 100 }} điểm</span>
+            </div>
+          </div>
+          <div class="quiz-footer">
+            <div class="quiz-action-group">
+              <button class="action-btn text-link" @click.stop="triggerEditQuiz(quiz)">Sửa</button>
+              <button class="action-btn text-link danger-action" @click.stop="triggerDeleteQuiz(quiz)">Xóa</button>
+            </div>
+            <button class="action-btn text-link" @click.stop="selectQuiz(quiz)">Quản lý câu hỏi &rarr;</button>
           </div>
         </div>
-        <div class="quiz-body">
-          <div class="meta-row">
-            <AppIcon name="clock" size="16" class="icon" />
-            <span>Thời gian: {{ quiz.timeLimitMins }} phút</span>
-          </div>
-          <div class="meta-row">
-            <AppIcon name="calendar" size="16" class="icon" />
-            <span>Hạn nộp: {{ quiz.dueDate ? quiz.dueDate.substring(0, 10) : 'Không có' }}</span>
-          </div>
-          <div class="meta-row">
-            <AppIcon name="book" size="16" class="icon" />
-            <span>{{ quiz.questionCount || 0 }} câu hỏi</span>
-          </div>
-          <div class="meta-row">
-            <AppIcon name="award" size="16" class="icon" />
-            <span>Tổng điểm: {{ quiz.totalScore || 100 }} điểm</span>
-          </div>
+      </div>
+
+      <!-- Pagination -->
+      <div v-if="totalQuizElements > 0" class="pagination-bar">
+        <div class="pagination-info">
+          Đang hiển thị <strong>{{ startQuizIndex }} - {{ endQuizIndex }}</strong> trong số <strong>{{ totalQuizElements }}</strong> đề thi
         </div>
-        <div class="quiz-footer">
-          <div class="quiz-action-group">
-            <button class="action-btn text-link" @click.stop="triggerEditQuiz(quiz)">Sửa</button>
-            <button class="action-btn text-link danger-action" @click.stop="triggerDeleteQuiz(quiz)">Xóa</button>
+        <div class="pagination-controls">
+          <div class="page-buttons">
+            <button class="page-nav-btn" :disabled="currentQuizPage === 1" @click="currentQuizPage = 1" title="Trang đầu">
+              <span style="display: inline-flex; align-items: center; margin-right: -4px;">
+                <AppIcon name="chevron-left" size="12" />
+                <AppIcon name="chevron-left" size="12" style="margin-left: -6px;" />
+              </span>
+            </button>
+            <button class="page-nav-btn" :disabled="currentQuizPage === 1" @click="currentQuizPage--" title="Trang trước">
+              <AppIcon name="chevron-left" size="12" />
+            </button>
+            <button
+              v-for="page in quizPageNumbers"
+              :key="page"
+              class="page-num-btn"
+              :class="{ active: currentQuizPage === page, dots: page === '...' }"
+              :disabled="page === '...'"
+              @click="typeof page === 'number' && (currentQuizPage = page)"
+            >{{ page }}</button>
+            <button class="page-nav-btn" :disabled="currentQuizPage === totalQuizPages" @click="currentQuizPage++" title="Trang sau">
+              <AppIcon name="chevron-right" size="12" />
+            </button>
+            <button class="page-nav-btn" :disabled="currentQuizPage === totalQuizPages" @click="currentQuizPage = totalQuizPages" title="Trang cuối">
+              <span style="display: inline-flex; align-items: center; margin-left: -4px;">
+                <AppIcon name="chevron-right" size="12" style="margin-right: -6px;" />
+                <AppIcon name="chevron-right" size="12" />
+              </span>
+            </button>
           </div>
-          <button class="action-btn text-link" @click.stop="selectQuiz(quiz)">Quản lý câu hỏi &rarr;</button>
         </div>
       </div>
     </div>
@@ -340,7 +412,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import AppIcon from '../icons/AppIcon.vue'
 import api from '../../services/axios'
 import { useQuizStore } from '../../stores/quiz'
@@ -348,13 +420,6 @@ import { useStudySetStore } from '../../stores/studySet'
 import { useTopikLevelStore } from '../../stores/topikLevel'
 import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
-
-const props = defineProps({
-  quizzes: {
-    type: Array,
-    required: true
-  }
-})
 
 const quizStore = useQuizStore()
 const studySetStore = useStudySetStore()
@@ -373,6 +438,69 @@ const editQuizLevelId = ref(null)
 
 const levelOptions = computed(() => {
   return topikLevels.value.map(lvl => ({ label: lvl.name, value: lvl.id }))
+})
+
+// Search, Filter & Pagination
+const quizSearchQuery = ref('')
+const selectedQuizLevelFilter = ref('')
+const currentQuizPage = ref(1)
+const quizzesPerPage = 10
+const totalQuizElements = computed(() => quizStore.totalQuizElements)
+const totalQuizPages = computed(() => quizStore.totalQuizPages)
+
+const quizLevelFilterOptions = computed(() => [
+  { value: '', label: 'Tất cả cấp độ' },
+  ...topikLevels.value.map(lvl => ({ value: lvl.name, label: lvl.name }))
+])
+
+const loadQuizzesFromServer = async () => {
+  try {
+    const params = {
+      page: currentQuizPage.value,
+      size: quizzesPerPage,
+      unpaged: false
+    }
+    if (quizSearchQuery.value.trim()) {
+      params.search = quizSearchQuery.value.trim()
+    }
+    if (selectedQuizLevelFilter.value) {
+      params.level = selectedQuizLevelFilter.value
+    }
+    await quizStore.fetchMyCreatedQuizzes(true, params)
+  } catch (err) {
+    console.error('Failed to load quizzes from server:', err)
+    toast.error('Không thể tải danh sách đề thi.')
+  }
+}
+
+const paginatedQuizzes = computed(() => quizStore.quizzes || [])
+
+const startQuizIndex = computed(() => totalQuizElements.value === 0 ? 0 : (currentQuizPage.value - 1) * quizzesPerPage + 1)
+const endQuizIndex = computed(() => Math.min(currentQuizPage.value * quizzesPerPage, totalQuizElements.value))
+
+const quizPageNumbers = computed(() => {
+  const pages = []
+  const total = totalQuizPages.value
+  const current = currentQuizPage.value
+  if (total <= 5) {
+    for (let i = 1; i <= total; i++) pages.push(i)
+  } else if (current <= 3) {
+    pages.push(1, 2, 3, 4, '...', total)
+  } else if (current >= total - 2) {
+    pages.push(1, '...', total - 3, total - 2, total - 1, total)
+  } else {
+    pages.push(1, '...', current - 1, current, current + 1, '...', total)
+  }
+  return pages
+})
+
+watch([quizSearchQuery, selectedQuizLevelFilter], () => {
+  currentQuizPage.value = 1
+  loadQuizzesFromServer()
+})
+
+watch(currentQuizPage, () => {
+  loadQuizzesFromServer()
 })
 
 const classOptions = computed(() => {
@@ -411,6 +539,7 @@ onMounted(async () => {
     await quizStore.fetchQuestionTypes()
     await quizStore.fetchQuestionSections()
     await studySetStore.fetchClasses()
+    await loadQuizzesFromServer()
     if (topikLevels.value.length > 0) {
       newQuizLevelId.value = topikLevels.value[0].id
       editQuizLevelId.value = topikLevels.value[0].id
@@ -811,8 +940,157 @@ const confirmDeleteQuiz = async () => {
 
 .quizzes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.25rem;
+}
+
+/* Filter Card */
+.filter-card {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 260px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.search-box input {
+  width: 100%;
+  padding: 0.45rem 0.75rem 0.45rem 2.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-body);
+  color: var(--text-title);
+  font-size: 0.85rem;
+}
+
+.search-box input:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+.filter-options {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Content Card */
+.content-card {
+  background-color: var(--bg-card);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Pagination */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0.5rem 0 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border-color);
+  min-height: 56px;
+}
+
+.pagination-info {
+  font-size: 0.9rem;
+  color: var(--text-body);
+  position: absolute;
+  left: 0;
+}
+
+.pagination-info strong {
+  color: var(--text-title);
+  font-weight: 700;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.page-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.page-nav-btn, .page-num-btn {
+  height: 36px;
+  min-width: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0 0.5rem;
+}
+
+.page-nav-btn:hover:not(:disabled), .page-num-btn:hover:not(:disabled):not(.dots) {
+  background-color: var(--bg-hover);
+}
+
+.page-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.page-num-btn.active {
+  background-color: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+
+.page-num-btn.dots {
+  border-color: transparent;
+  background-color: transparent;
+  cursor: default;
 }
 
 .quiz-card {

@@ -43,7 +43,7 @@
 }
 
 /* Dark Mode Tokens - Deep Roasted Cocoa Theme */
-.dark-theme {
+.dark-theme, .dark {
   --bg-app: #30241C;                      /* Deep cocoa dark background */
   --bg-card: #3E3026;                     /* Dark roasted card background */
   --bg-hover: #4E3E34;                    /* Bronze/brown hover */
@@ -73,6 +73,77 @@
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.6);
+}
+
+/* ========================================== */
+/* Student Specific Theme (Slate & Indigo)    */
+/* ========================================== */
+.student-theme {
+  --bg-app: #f8fafc;                      /* Slate 50 background */
+  --bg-body: #f8fafc;                     /* Slate 50 body background */
+  --bg-card: #ffffff;                     /* Crisp white card background */
+  --bg-hover: #f1f5f9;                    /* Slate 100 hover state */
+  --bg-badge: #e0e7ff;                    /* Indigo 100 badge background */
+  --border-color: #e2e8f0;                /* Slate 200 border line */
+  --border-color-hover: #cbd5e1;          /* Slate 300 highlight border */
+
+  --text-title: #0f172a;                  /* Slate 900 for dark prominent titles */
+  --text-body: #334155;                   /* Slate 700 for readable body text */
+  --text-muted: #64748b;                  /* Slate 500 for secondary/muted text */
+
+  --primary: #4f46e5;                     /* Highlight color: Indigo 600 */
+  --primary-hover: #4338ca;               /* Indigo 700 */
+  --primary-light: #eef2ff;               /* Indigo 50 */
+  --primary-glow: rgba(79, 70, 229, 0.15);/* Semitransparent indigo glow */
+
+  --success: #10b981;                     /* Emerald 500 */
+  --success-light: #ecfdf5;               /* Emerald 50 */
+  --success-border: #a7f3d0;              /* Emerald 200 */
+
+  --warning: #f59e0b;                     /* Amber 500 */
+  --warning-light: #fef3c7;               /* Amber 50 */
+
+  --danger: #f43f5e;                      /* Rose 500 */
+  --danger-light: #fff1f2;                /* Rose 50 */
+
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 10px 30px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 20px 45px rgba(15, 23, 42, 0.08);
+}
+
+/* Student Specific Dark Theme (Slate & Indigo Dark) */
+.dark-theme .student-theme,
+.dark .student-theme {
+  --bg-app: #0f172a;                      /* Slate 900 background */
+  --bg-body: #0f172a;
+  --bg-card: #1e293b;                     /* Slate 800 card background */
+  --bg-hover: #334155;                    /* Slate 700 hover state */
+  --bg-badge: rgba(79, 70, 229, 0.2);     /* Indigo semi-transparent badge */
+  --border-color: #334155;                /* Slate 700 border */
+  --border-color-hover: #475569;          /* Slate 600 border hover */
+
+  --text-title: #f8fafc;                  /* Slate 50 for clean headings */
+  --text-body: #cbd5e1;                   /* Slate 300 for body text */
+  --text-muted: #94a3b8;                  /* Slate 400 for secondary text */
+
+  --primary: #818cf8;                     /* Indigo 400 */
+  --primary-hover: #a5b4fc;               /* Indigo 300 */
+  --primary-light: rgba(79, 70, 229, 0.15);
+  --primary-glow: rgba(129, 140, 248, 0.25);
+
+  --success: #34d399;                     /* Emerald 400 */
+  --success-light: rgba(16, 185, 129, 0.1);
+  --success-border: rgba(16, 185, 129, 0.2);
+
+  --warning: #fbbf24;                     /* Amber 400 */
+  --warning-light: rgba(245, 158, 11, 0.1);
+
+  --danger: #fb7185;                      /* Rose 400 */
+  --danger-light: rgba(244, 63, 94, 0.1);
+
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 20px 45px rgba(0, 0, 0, 0.55);
 }
 
 *, *::before, *::after {

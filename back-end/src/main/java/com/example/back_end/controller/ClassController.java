@@ -84,6 +84,15 @@ public class ClassController {
                 .build();
     }
 
+    @DeleteMapping("/{classId}/students/{studentId}")
+    public ApiResponse<Void> removeStudent(@PathVariable Long classId, @PathVariable Long studentId) {
+        classService.removeStudent(classId, studentId);
+        return ApiResponse.<Void>builder()
+                .code(HttpStatus.OK.value())
+                .message("Xóa học viên khỏi lớp thành công.")
+                .build();
+    }
+
     @PutMapping("/{id}")
     public ApiResponse<ClassResponse> updateClass(@PathVariable Long id, @Valid @RequestBody ClassRequest request) {
         ClassResponse data = classService.updateClass(id, request);

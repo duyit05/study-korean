@@ -14,6 +14,8 @@ import com.example.back_end.mapper.StudySetMapper;
 import com.example.back_end.repository.CardRepository;
 import com.example.back_end.repository.StudySetRepository;
 import com.example.back_end.repository.TopikLevelRepository;
+import com.example.back_end.repository.CardProgressRepository;
+import com.example.back_end.entity.CardProgress;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ public class StudySetService {
     private final UserService userService;
     private final StudySetMapper studySetMapper;
     private final TopikLevelRepository topikLevelRepository;
+    private final CardProgressRepository cardProgressRepository;
 
     @Transactional(readOnly = true)
     public List<StudySetResponse> getAllStudySets() {
@@ -49,8 +52,44 @@ public class StudySetService {
     @Transactional(readOnly = true)
     public List<StudySetResponse.CardResponse> getCardsByStudySet(Long studySetId) {
         List<Card> cards = cardRepository.findByStudySetIdOrderByOrderAsc(studySetId);
+        Long studentId = null;
+        try {
+            User currentUser = userService.getCurrentUser();
+            if (currentUser != null) {
+                studentId = currentUser.getId();
+            }
+        } catch (Exception e) {
+            // anonymous
+        }
+
+        java.util.Map<Long, CardProgress> progressMap = new java.util.HashMap<>();
+        if (studentId != null) {
+            List<CardProgress> progresses = cardProgressRepository.findByStudentId(studentId);
+            for (CardProgress cp : progresses) {
+                if (cp.getCard() != null) {
+                    progressMap.put(cp.getCard().getId(), cp);
+                }
+            }
+        }
+
+        final java.util.Map<Long, CardProgress> finalProgressMap = progressMap;
         return cards.stream()
-                .map(studySetMapper::toCardResponse)
+                .map(c -> {
+                    CardProgress cp = finalProgressMap.get(c.getId());
+                    String status = "unlearned";
+                    if (cp != null) {
+                        if (cp.getState() == com.example.back_end.enums.CardState.MASTERED) {
+                            status = "learned";
+                        } else if (cp.getState() == com.example.back_end.enums.CardState.REVIEW || cp.getState() == com.example.back_end.enums.CardState.LEARNING) {
+                            status = "review";
+                        }
+                    }
+                    StudySetResponse.CardResponse res = studySetMapper.toCardResponse(c);
+                    res.setPronunciation(c.getRomanization());
+                    res.setExampleMeaning(c.getExampleMeaning());
+                    res.setStatus(status);
+                    return res;
+                })
                 .collect(Collectors.toList());
     }
 

@@ -26,5 +26,8 @@ public class StudySetResponse {
         private String korean;
         private String vietnamese;
         private String example;
+        private String pronunciation;
+        private String exampleMeaning;
+        private String status;
     }
 }

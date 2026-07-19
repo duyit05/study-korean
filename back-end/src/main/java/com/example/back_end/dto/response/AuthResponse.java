@@ -19,4 +19,7 @@ public class AuthResponse {
     private UserRole role;
     private Boolean ipWarning;
     private String warningMessage;
+    private Integer xp;
+    private Integer level;
+    private Integer streak;
 }

@@ -151,6 +151,7 @@ onMounted(async () => {
                   title: as.studySetTitle,
                   description: as.studySetDescription,
                   wordCount: as.wordCount,
+                  learnedCount: as.learnedCount || 0,
                   classNames: [className],
                   words: []
                 });
@@ -249,6 +250,7 @@ const handleLoginSuccess = async (userData) => {
                 title: as.studySetTitle,
                 description: as.studySetDescription,
                 wordCount: as.wordCount,
+                learnedCount: as.learnedCount || 0,
                 classNames: [className],
                 words: []
               });
@@ -298,18 +300,29 @@ const handleLogout = () => {
 }
 
 // Global update Handlers
-const handleUpdateVocabStatus = ({ setId, wordId, status }) => {
+const handleUpdateVocabStatus = async ({ setId, wordId, status }) => {
   const setIndex = studySets.value.findIndex(s => s.id === setId)
   if (setIndex !== -1) {
     const wordIndex = studySets.value[setIndex].words.findIndex(w => w.id === wordId)
     if (wordIndex !== -1) {
+      const oldStatus = studySets.value[setIndex].words[wordIndex].status
       studySets.value[setIndex].words[wordIndex].status = status
       safeStorage.setItem('sk_study_sets', JSON.stringify(studySets.value))
       
-      // Update XP for marking as learned
-      if (status === 'learned') {
-        user.value.xp += 10
-        safeStorage.setItem('sk_user', JSON.stringify(user.value))
+      try {
+        await studySetStore.updateCardProgress(wordId, status)
+        
+        // Update XP for marking as learned
+        if (status === 'learned' && oldStatus !== 'learned') {
+          user.value.xp += 10
+          user.value.level = `Sơ cấp ${Math.floor(user.value.xp / 1000) + 1}`
+          safeStorage.setItem('sk_user', JSON.stringify(user.value))
+        }
+      } catch (e) {
+        console.error("Failed to save card progress to server:", e)
+        // Revert local status if failed
+        studySets.value[setIndex].words[wordIndex].status = oldStatus
+        safeStorage.setItem('sk_study_sets', JSON.stringify(studySets.value))
       }
     }
   }
@@ -347,6 +360,7 @@ const handleSubmitQuiz = async ({ quizId, score, userAnswers, completedAt }) => 
   if (user.value) {
     const xpReward = Math.round(score * 10)
     user.value.xp += xpReward
+    user.value.level = `Sơ cấp ${Math.floor(user.value.xp / 1000) + 1}`
     safeStorage.setItem('sk_user', JSON.stringify(user.value))
   }
 }
