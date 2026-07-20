@@ -18,54 +18,36 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserService userService;
+        private final UserService userService;
 
-    @GetMapping("/students")
-    public ApiResponse<List<UserResponse>> getAllStudents() {
-        List<UserResponse> list = userService.getUsersByRole(UserRole.STUDENT).stream()
-                .map(u -> UserResponse.builder()
-                        .id(u.getId())
-                        .email(u.getEmail())
-                        .username(u.getUsername())
-                        .fullName(u.getFullName())
-                        .phone(u.getPhone())
-                        .avatarUrl(u.getAvatarUrl())
-                        .role(u.getRole())
-                        .build())
-                .collect(Collectors.toList());
+        @GetMapping("/students")
+        public ApiResponse<List<UserResponse>> getAllStudents() {
+                List<UserResponse> list = userService.getUsersByRole(UserRole.STUDENT);
 
-        return ApiResponse.<List<UserResponse>>builder()
-                .code(HttpStatus.OK.value())
-                .message("Lấy danh sách học viên thành công.")
-                .data(list)
-                .build();
-    }
+                return ApiResponse.<List<UserResponse>>builder()
+                                .code(HttpStatus.OK.value())
+                                .message("Lấy danh sách học viên thành công.")
+                                .data(list)
+                                .build();
+        }
 
-    @PutMapping("/profile")
-    public ApiResponse<UserResponse> updateProfile(@RequestBody UserProfileUpdateRequest request) {
-        User updated = userService.updateProfile(request.getFullName(), request.getEmail(), request.getAvatarUrl());
-        UserResponse response = UserResponse.builder()
-                .id(updated.getId())
-                .email(updated.getEmail())
-                .username(updated.getUsername())
-                .fullName(updated.getFullName())
-                .phone(updated.getPhone())
-                .avatarUrl(updated.getAvatarUrl())
-                .role(updated.getRole())
-                .build();
-        return ApiResponse.<UserResponse>builder()
-                .code(HttpStatus.OK.value())
-                .message("Cập nhật thông tin cá nhân thành công.")
-                .data(response)
-                .build();
-    }
+        @PutMapping("/profile")
+        public ApiResponse<UserResponse> updateProfile(@RequestBody UserProfileUpdateRequest request) {
+                UserResponse response = userService.updateProfile(request.getFullName(), request.getEmail(),
+                                request.getAvatarUrl());
+                return ApiResponse.<UserResponse>builder()
+                                .code(HttpStatus.OK.value())
+                                .message("Cập nhật thông tin cá nhân thành công.")
+                                .data(response)
+                                .build();
+        }
 
-    @PostMapping("/{userId}/unlock")
-    public ApiResponse<Void> unlockAccount(@PathVariable Long userId) {
-        userService.unlockAccount(userId);
-        return ApiResponse.<Void>builder()
-                .code(HttpStatus.OK.value())
-                .message("Mở khóa tài khoản thành công.")
-                .build();
-    }
+        @PostMapping("/{userId}/unlock")
+        public ApiResponse<Void> unlockAccount(@PathVariable Long userId) {
+                userService.unlockAccount(userId);
+                return ApiResponse.<Void>builder()
+                                .code(HttpStatus.OK.value())
+                                .message("Mở khóa tài khoản thành công.")
+                                .build();
+        }
 }

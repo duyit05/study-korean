@@ -55,7 +55,8 @@ public enum ErrorCode {
     TOPIK_GROUP_REQUIRED(1047, "Nhóm cấp độ không được để trống", HttpStatus.BAD_REQUEST),
     FULL_NAME_REQUIRED(1048, "Tên đầy đủ không được để trống", HttpStatus.BAD_REQUEST),
     SESSION_HIJACKED(1049, "Tài khoản đã đăng nhập trên thiết bị khác. Phiên hiện tại đã bị kết thúc.", HttpStatus.UNAUTHORIZED),
-    ACCOUNT_LOCKED_SHARING(1050, "Tài khoản bị tạm khóa do đăng nhập từ quá nhiều vị trí trong ngày. Vui lòng liên hệ giáo viên để mở khóa.", HttpStatus.FORBIDDEN);
+    ACCOUNT_LOCKED_SHARING(1050, "Tài khoản bị tạm khóa do đăng nhập từ quá nhiều vị trí trong ngày. Vui lòng liên hệ giáo viên để mở khóa.", HttpStatus.FORBIDDEN),
+    INVALID_SECTION(1051, "Phần thi không phù hợp với loại đề thi này.", HttpStatus.BAD_REQUEST);
 
     private final int code;
     private final String message;

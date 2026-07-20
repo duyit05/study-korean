@@ -75,6 +75,8 @@ public class StudySetMapper {
                 .korean(c.getFrontText())
                 .vietnamese(c.getBackText())
                 .example(c.getExampleSentence())
+                .pronunciation(c.getRomanization())
+                .exampleMeaning(c.getExampleMeaning())
                 .build();
     }
 }

@@ -12,6 +12,7 @@ public class QuizResponse {
     private Long id;
     private String title;
     private String quizType;
+    private String examType;
     private String topikLevel;
     private Long topikLevelId;
     private Integer timeLimitMins;
@@ -39,5 +40,7 @@ public class QuizResponse {
         private String explanation;
         private String correctAnswer;
         private List<String> wrongAnswers;
+        private String wordType;
+        private String pronunciation;
     }
 }

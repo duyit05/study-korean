@@ -43,6 +43,7 @@ public class QuizMapper {
                 .id(quiz.getId())
                 .title(quiz.getTitle())
                 .quizType(quiz.getQuizType() != null ? quiz.getQuizType().name() : null)
+                .examType(quiz.getExamType() != null ? quiz.getExamType().name() : null)
                 .topikLevel(quiz.getTopikLevel() != null ? quiz.getTopikLevel().getName() : null)
                 .topikLevelId(quiz.getTopikLevel() != null ? quiz.getTopikLevel().getId() : null)
                 .timeLimitMins(quiz.getTimeLimitMins())
@@ -70,6 +71,8 @@ public class QuizMapper {
                 .explanation(q.getExplanation())
                 .correctAnswer(q.getCorrectAnswer())
                 .wrongAnswers(q.getWrongAnswers())
+                .wordType(q.getWordType() != null ? q.getWordType().name() : null)
+                .pronunciation(q.getPronunciation())
                 .build();
     }
 }

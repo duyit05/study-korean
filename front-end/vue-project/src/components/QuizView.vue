@@ -16,13 +16,6 @@
           📖 Đọc & Từ Vựng ({{ readingQuizzesCount }})
         </button>
         <button 
-          class="tab-btn" 
-          :class="{ active: activeTab === 'listening' }"
-          @click="activeTab = 'listening'"
-        >
-          🎧 Kỹ Năng Nghe ({{ listeningQuizzesCount }})
-        </button>
-        <button 
           class="tab-btn completed-tab" 
           :class="{ active: activeTab === 'completed' }"
           @click="activeTab = 'completed'"
@@ -37,14 +30,6 @@
       <!-- 1. Reading & Vocab Tab -->
       <template v-if="activeTab === 'reading'">
         <!-- Create Shortcut Box inside Reading tab -->
-        <div class="quiz-card create-trigger-card reading-btn" @click="openCreator('reading')">
-          <div class="trigger-content">
-            <div class="trigger-plus-icon">📖</div>
-            <h4>Tạo Đề Đọc/Từ Vựng</h4>
-            <p>Tự thiết kế đề thi trắc nghiệm đọc hiểu, từ vựng và ngữ pháp tiếng Hàn.</p>
-          </div>
-        </div>
-
         <!-- Quizzes under Reading category -->
         <div 
           v-for="quiz in readingQuizzes" 
@@ -54,7 +39,7 @@
           <div class="quiz-badge-row">
             <span class="badge type-badge reading">📖 Đọc & Từ Vựng</span>
             <span class="badge time"><AppIcon name="clock" size="14" /> {{ quiz.timeLimit || 10 }} Phút</span>
-            <span v-if="quiz.score !== null && quiz.score !== undefined" class="badge score-badge practice-score">Điểm gần nhất: {{ quiz.score }} / 10</span>
+            <span v-if="quiz.score !== null && quiz.score !== undefined" class="badge score-badge practice-score">Điểm gần nhất: {{ quiz.score }} / {{ quiz.totalScore || 10 }}</span>
           </div>
           <h3>{{ quiz.title || 'Đề ôn tập đọc' }}</h3>
           <p class="due-date" v-if="quiz.dueDate && quiz.status !== 'completed'">Hạn nộp: {{ formatDate(quiz.dueDate) }}</p>
@@ -77,15 +62,6 @@
 
       <!-- 2. Listening Skills Tab -->
       <template v-if="activeTab === 'listening'">
-        <!-- Create Shortcut Box inside Listening tab -->
-        <div class="quiz-card create-trigger-card listening-btn" @click="openCreator('listening')">
-          <div class="trigger-content">
-            <div class="trigger-plus-icon">🎧</div>
-            <h4>Tạo Bài Thi Nghe</h4>
-            <p>Soạn bài thi nghe có chèn audio của riêng bạn hoặc phát giọng AI và chọn đáp án ABCD.</p>
-          </div>
-        </div>
-
         <!-- Quizzes under Listening category -->
         <div 
           v-for="quiz in listeningQuizzes" 
@@ -95,7 +71,7 @@
           <div class="quiz-badge-row">
             <span class="badge type-badge listening">🎧 Kỹ Năng Nghe</span>
             <span class="badge time"><AppIcon name="clock" size="14" /> {{ quiz.timeLimit || 10 }} Phút</span>
-            <span v-if="quiz.score !== null && quiz.score !== undefined" class="badge score-badge practice-score">Điểm gần nhất: {{ quiz.score }} / 10</span>
+            <span v-if="quiz.score !== null && quiz.score !== undefined" class="badge score-badge practice-score">Điểm gần nhất: {{ quiz.score }} / {{ quiz.totalScore || 10 }}</span>
           </div>
           <h3>{{ quiz.title || 'Đề ôn tập nghe' }}</h3>
           <p class="due-date" v-if="quiz.dueDate && quiz.status !== 'completed'">Hạn nộp: {{ formatDate(quiz.dueDate) }}</p>
@@ -127,7 +103,10 @@
             <span class="badge type-badge" :class="quiz.quizType === 'listening' ? 'listening' : 'reading'">
               {{ quiz.quizType === 'listening' ? '🎧 Bài Nghe' : '📖 Bài Đọc' }}
             </span>
-            <span class="badge score-badge">Điểm: {{ quiz.score }} / 10</span>
+            <span class="badge score-badge">Điểm: {{ quiz.score }} / {{ quiz.totalScore || 10 }}</span>
+            <span v-if="quiz.topikLevelResult" class="badge type-badge" style="background-color: var(--primary-light); color: var(--primary); font-weight: 700;">
+              🏆 {{ quiz.topikLevelResult }}
+            </span>
             <span class="badge date-completed" v-if="quiz.completedAt"><AppIcon name="check" size="14" /> {{ formatDateShort(quiz.completedAt) }}</span>
           </div>
           <h3>{{ quiz.title || 'Đề hoàn thành' }}</h3>
@@ -162,133 +141,247 @@
         </p>
       </div>
 
-      <div class="creator-form-card">
-        <div class="form-group">
-          <label for="new-quiz-title" class="label-bold">Tên đề thi tự luyện</label>
-          <input 
-            type="text" 
-            id="new-quiz-title" 
-            v-model="newQuizTitle" 
-            placeholder="Ví dụ: Đề thi thử nghe tiếng Hàn sơ cấp"
-            class="creator-input-field"
-          >
-        </div>
+      <div class="creator-body-grid">
+        <div class="creator-form-card">
+          <div class="form-group">
+            <label for="new-quiz-title" class="label-bold">Tên đề thi tự luyện</label>
+            <input 
+              type="text" 
+              id="new-quiz-title" 
+              v-model="newQuizTitle" 
+              placeholder="Ví dụ: Đề thi thử nghe tiếng Hàn sơ cấp"
+              class="creator-input-field"
+            >
+          </div>
 
-        <div class="questions-builder-list">
-          <div 
-            v-for="(q, qIdx) in newQuizQuestions" 
-            :key="qIdx" 
-            class="question-builder-item"
-          >
-            <div class="builder-item-header">
-              <h4>Câu hỏi {{ qIdx + 1 }}</h4>
-              <button 
-                v-if="newQuizQuestions.length > 1" 
-                class="remove-q-btn" 
-                @click="removeQuestionFromBuilder(qIdx)"
-              >
-                <AppIcon name="x" size="14" /> Xóa câu hỏi
-              </button>
-            </div>
-
-            <!-- Custom Audio selection inside Listening Quiz Creator -->
-            <template v-if="creatorQuizType === 'listening'">
-              <div class="form-group" style="margin-bottom: 1rem;">
-                <label class="label-accent">Nguồn file âm thanh (Audio Source)</label>
-                <div class="source-toggle-group">
-                  <label class="radio-label">
-                    <input type="radio" value="tts" v-model="q.audioSource">
-                    <span>AI phát âm mẫu (TTS ko-KR)</span>
-                  </label>
-                  <label class="radio-label">
-                    <input type="radio" value="file" v-model="q.audioSource">
-                    <span>Tải file MP3 / Dán liên kết</span>
-                  </label>
-                </div>
+          <div class="questions-builder-list">
+            <div 
+              v-for="(q, qIdx) in newQuizQuestions" 
+              :key="qIdx" 
+              class="question-builder-item"
+            >
+              <div class="builder-item-header">
+                <h4>Câu hỏi {{ qIdx + 1 }}</h4>
+                <button 
+                  v-if="newQuizQuestions.length > 1" 
+                  class="remove-q-btn" 
+                  @click="removeQuestionFromBuilder(qIdx)"
+                >
+                  <AppIcon name="x" size="14" /> Xóa câu hỏi
+                </button>
               </div>
 
-              <!-- Option 1: AI voice text -->
-              <div class="form-group animate-fade" v-if="q.audioSource === 'tts'" style="margin-bottom: 1rem;">
-                <label>Từ hoặc câu tiếng Hàn để AI phát âm</label>
+              <!-- Custom Audio selection inside Listening Quiz Creator -->
+              <template v-if="creatorQuizType === 'listening'">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                  <label class="label-accent">Nguồn file âm thanh (Audio Source)</label>
+                  <div class="source-toggle-group">
+                    <label class="radio-label">
+                      <input type="radio" value="tts" v-model="q.audioSource">
+                      <span>AI phát âm mẫu (TTS ko-KR)</span>
+                    </label>
+                    <label class="radio-label">
+                      <input type="radio" value="file" v-model="q.audioSource">
+                      <span>Tải file MP3 / Dán liên kết</span>
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Option 1: AI voice text -->
+                <div class="form-group animate-fade" v-if="q.audioSource === 'tts'" style="margin-bottom: 1rem;">
+                  <label>Từ hoặc câu tiếng Hàn để AI phát âm</label>
+                  <input 
+                    type="text" 
+                    v-model="q.koreanText" 
+                    placeholder="Ví dụ: 안녕하세요 hoặc 봄"
+                    class="creator-input-field"
+                  >
+                </div>
+
+                <!-- Option 2: MP3 file / Link url -->
+                <div class="form-group animate-fade" v-else style="margin-bottom: 1rem;">
+                  <label>Liên kết âm thanh (.mp3) hoặc chọn file từ máy tính</label>
+                  <input 
+                    type="text" 
+                    v-model="q.audioUrl" 
+                    placeholder="Dán link audio: https://example.com/audio.mp3"
+                    class="creator-input-field"
+                    style="margin-bottom: 0.5rem;"
+                  >
+                  <div class="file-uploader-box">
+                    <input 
+                      type="file" 
+                      accept="audio/*" 
+                      @change="handleAudioUpload($event, qIdx)"
+                      :id="'file-upload-' + qIdx"
+                      class="hidden-file-input"
+                    >
+                    <label :for="'file-upload-' + qIdx" class="file-upload-btn">
+                      📁 {{ q.audioUrl ? 'Chọn file khác...' : 'Tải file MP3 từ thiết bị...' }}
+                    </label>
+                    <span class="file-name-hint" v-if="q.audioUrl && q.audioUrl.toString().startsWith('data:')">
+                      ⚡ Đã đính kèm file âm thanh gốc (dạng offline)
+                    </span>
+                  </div>
+                </div>
+              </template>
+
+              <div class="form-group">
+                <label>Câu hỏi phụ / Gợi ý bằng tiếng Việt</label>
                 <input 
                   type="text" 
-                  v-model="q.koreanText" 
-                  placeholder="Ví dụ: 안녕하세요 hoặc 봄"
+                  v-model="q.question" 
+                  :placeholder="creatorQuizType === 'listening' ? 'Ví dụ: Lắng nghe đoạn audio hội thoại sau và chọn nghĩa đúng:' : 'Ví dụ: Từ nào sau đây có nghĩa là Mùa Đông?'"
                   class="creator-input-field"
                 >
               </div>
 
-              <!-- Option 2: MP3 file / Link url -->
-              <div class="form-group animate-fade" v-else style="margin-bottom: 1rem;">
-                <label>Liên kết âm thanh (.mp3) hoặc chọn file từ máy tính</label>
-                <input 
-                  type="text" 
-                  v-model="q.audioUrl" 
-                  placeholder="Dán link audio: https://example.com/audio.mp3"
-                  class="creator-input-field"
-                  style="margin-bottom: 0.5rem;"
-                >
-                <div class="file-uploader-box">
+              <!-- Additional POS (Loại từ) and Pronunciation (Phiên âm) Fields -->
+              <div class="form-row-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.75rem; margin-bottom: 0.75rem;">
+                <div class="form-group">
+                  <label>Loại từ (Từ loại)</label>
+                  <select v-model="q.wordType" class="creator-input-field" style="padding: 0.5rem 0.75rem;">
+                    <option value="Động từ">Động từ</option>
+                    <option value="Tính từ">Tính từ</option>
+                    <option value="Danh từ">Danh từ</option>
+                    <option value="Trạng từ">Trạng từ</option>
+                    <option value="Cụm từ / Ngữ pháp">Cụm từ / Ngữ pháp</option>
+                    <option value="Khác">Khác</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>Phiên âm (tùy chọn)</label>
                   <input 
-                    type="file" 
-                    accept="audio/*" 
-                    @change="handleAudioUpload($event, qIdx)"
-                    :id="'file-upload-' + qIdx"
-                    class="hidden-file-input"
+                    type="text" 
+                    v-model="q.pronunciation" 
+                    placeholder="Ví dụ: [ka-da]"
+                    class="creator-input-field"
                   >
-                  <label :for="'file-upload-' + qIdx" class="file-upload-btn">
-                    📁 {{ q.audioUrl ? 'Chọn file khác...' : 'Tải file MP3 từ thiết bị...' }}
-                  </label>
-                  <span class="file-name-hint" v-if="q.audioUrl && q.audioUrl.toString().startsWith('data:')">
-                    ⚡ Đã đính kèm file âm thanh gốc (dạng offline)
-                  </span>
                 </div>
               </div>
-            </template>
 
-            <div class="form-group">
-              <label>Câu hỏi phụ / Gợi ý bằng tiếng Việt</label>
-              <input 
-                type="text" 
-                v-model="q.question" 
-                :placeholder="creatorQuizType === 'listening' ? 'Ví dụ: Lắng nghe đoạn audio hội thoại sau và chọn nghĩa đúng:' : 'Ví dụ: Từ nào sau đây có nghĩa là Mùa Đông?'"
-                class="creator-input-field"
-              >
-            </div>
-
-            <div class="options-builder-grid">
-              <div class="option-builder-row" v-for="(opt, optIdx) in 4" :key="optIdx">
-                <div class="opt-label-wrapper">
+              <div class="options-builder-grid">
+                <div class="option-builder-row" v-for="(opt, optIdx) in 4" :key="optIdx">
+                  <div class="opt-label-wrapper">
+                    <input 
+                      type="radio" 
+                      :name="'correct-opt-' + qIdx" 
+                      :value="optIdx" 
+                      v-model="q.correctOptionIndex"
+                      :id="'radio-' + qIdx + '-' + optIdx"
+                    >
+                    <label :for="'radio-' + qIdx + '-' + optIdx">Đáp án {{ String.fromCharCode(65 + optIdx) }}</label>
+                  </div>
                   <input 
-                    type="radio" 
-                    :name="'correct-opt-' + qIdx" 
-                    :value="optIdx" 
-                    v-model="q.correctOptionIndex"
-                    :id="'radio-' + qIdx + '-' + optIdx"
+                    type="text" 
+                    v-model="q.options[optIdx]" 
+                    :placeholder="'Nhập câu trả lời ' + String.fromCharCode(65 + optIdx)"
+                    class="creator-input-field-opt"
                   >
-                  <label :for="'radio-' + qIdx + '-' + optIdx">Đáp án {{ String.fromCharCode(65 + optIdx) }}</label>
                 </div>
-                <input 
-                  type="text" 
-                  v-model="q.options[optIdx]" 
-                  :placeholder="'Nhập câu trả lời ' + String.fromCharCode(65 + optIdx)"
-                  class="creator-input-field-opt"
-                >
               </div>
+              
+              <p class="correct-hint">* Nhấp chọn nút tròn bên cạnh đáp án đúng của câu hỏi này.</p>
             </div>
-            
-            <p class="correct-hint">* Nhấp chọn nút tròn bên cạnh đáp án đúng của câu hỏi này.</p>
+          </div>
+
+          <div class="creator-actions">
+            <button class="add-q-btn" @click="addQuestionToBuilder">
+              + Thêm câu hỏi mới
+            </button>
+            <button class="import-q-btn" @click="openStudentImportModal">
+              📁 Import từ file / text
+            </button>
+            <button class="save-quiz-btn" @click="saveCustomQuiz">
+              Lưu đề thi
+            </button>
           </div>
         </div>
 
-        <div class="creator-actions">
-          <button class="add-q-btn" @click="addQuestionToBuilder">
-            + Thêm câu hỏi mới
-          </button>
-          
-          <button class="save-quiz-btn" @click="saveCustomQuiz">
-            Lưu đề thi
-          </button>
+        <!-- RIGHT PANEL: Từ vựng đã tạo (Matching Screenshot 2) -->
+        <div class="created-items-panel">
+          <div class="panel-header-row">
+            <h4>Từ vựng đã tạo</h4>
+            <span class="count-pill">{{ newQuizQuestions.length }} câu hỏi</span>
+          </div>
+
+          <div class="table-container-side">
+            <table class="created-items-table">
+              <thead>
+                <tr>
+                  <th>CÂU HỎI</th>
+                  <th>TỪ LOẠI</th>
+                  <th>NGHĨA ĐÚNG CỦA TỪ</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(q, idx) in newQuizQuestions" :key="idx">
+                  <td>
+                    <div class="q-cell">
+                      <span class="question-icon">❓</span>
+                      <div class="q-text-group">
+                        <strong class="q-title">{{ q.question || q.koreanText || ('Câu ' + (idx + 1)) }}</strong>
+                        <span v-if="q.pronunciation" class="q-pron">/{{ q.pronunciation }}/</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="type-pill">{{ q.wordType || 'Động từ' }}</span>
+                  </td>
+                  <td>
+                    <span class="correct-badge-pill">✓ {{ q.options[q.correctOptionIndex] || '(Chưa chọn)' }}</span>
+                  </td>
+                  <td class="action-cell">
+                    <button v-if="newQuizQuestions.length > 1" class="delete-mini-btn" @click="removeQuestionFromBuilder(idx)" title="Xóa câu này">&times;</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STUDENT IMPORT MODAL -->
+    <div v-if="showStudentImportModal" class="modal-overlay" @click.self="showStudentImportModal = false">
+      <div class="modal-content animate-scale" style="max-width: 650px;">
+        <div class="modal-header">
+          <h3>Import Từ Vựng / Câu Hỏi Hàng Loạt 📁</h3>
+          <button class="close-btn" @click="showStudentImportModal = false">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 1.25rem;">
+          <div class="import-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem;">
+            <button class="tab-btn" :class="{ active: studentImportTab === 'paste' }" @click="studentImportTab = 'paste'">Dán văn bản trực tiếp</button>
+            <button class="tab-btn" :class="{ active: studentImportTab === 'file' }" @click="studentImportTab = 'file'">Tải file .txt / .csv</button>
+          </div>
+
+          <div v-if="studentImportTab === 'paste'" class="paste-section">
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+              Nhập mỗi câu hỏi/từ vựng trên một dòng theo định dạng:<br>
+              <code>Từ tiếng Hàn | Từ loại | Phiên âm | Nghĩa tiếng Việt</code><br>
+              <em>(Hoặc đơn giản: <code>Từ tiếng Hàn - Nghĩa tiếng Việt</code>)</em>
+            </p>
+            <textarea 
+              v-model="studentImportText" 
+              placeholder="Ví dụ:&#10;가다 | Động từ | ka-da | Đi&#10;오다 | Động từ | o-da | Đến&#10;예쁘다 | Tính từ | ye-ppeu-da | Đẹp"
+              rows="8"
+              class="creator-input-field"
+              style="width: 100%; font-family: monospace; font-size: 0.9rem;"
+            ></textarea>
+          </div>
+
+          <div v-else class="file-section">
+            <input type="file" accept=".txt,.csv" id="studentImportFile" class="hidden-file-input" @change="handleStudentFileSelected">
+            <label for="studentImportFile" class="upload-drag-zone" style="display: flex; flex-direction: column; align-items: center; padding: 2rem; border: 2px dashed var(--border-color); border-radius: var(--radius-md); cursor: pointer;">
+              <AppIcon name="upload" size="32" />
+              <span style="margin-top: 0.5rem;">{{ studentImportFileName || 'Nhấp chọn file .txt hoặc .csv từ máy tính' }}</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-actions" style="padding: 1rem 1.25rem; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button type="button" class="cancel-btn" @click="showStudentImportModal = false">Hủy bỏ</button>
+          <button type="button" class="submit-btn" @click="confirmStudentImport">Import vào đề thi</button>
         </div>
       </div>
     </div>
@@ -428,20 +521,25 @@
         <AppIcon name="chevron-left" size="16" /> Quay lại danh sách bài tập
       </button>
 
-      <div class="result-score-banner">
-        <div class="score-radial">
-          <span class="score-num">{{ viewingResultQuiz.score || 0 }}</span>
-          <span class="total-num">/ 10</span>
-        </div>
-        <div class="score-text-details">
-          <h3>Kết quả: {{ viewingResultQuiz.title || 'Đề ôn tập' }}</h3>
-          <p>Nộp ngày: {{ formatDate(viewingResultQuiz.completedAt) }}</p>
-          <div class="points-earned">
-            <AppIcon name="award" class="gold-award" size="20" />
-            <span>Tích lũy: <strong>+{{ Math.round((viewingResultQuiz.score || 0) * 10) }} XP</strong></span>
-          </div>
-        </div>
-      </div>
+       <div class="result-score-banner">
+         <div class="score-radial">
+           <span class="score-num">{{ viewingResultQuiz.score || 0 }}</span>
+           <span class="total-num">/ {{ viewingResultQuiz.totalScore || 10 }}</span>
+         </div>
+         <div class="score-text-details">
+           <h3>Kết quả: {{ viewingResultQuiz.title || 'Đề ôn tập' }}</h3>
+           <p>Nộp ngày: {{ formatDate(viewingResultQuiz.completedAt) }}</p>
+           <div class="points-earned" style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem;">
+             <div style="display: flex; align-items: center; gap: 0.25rem;">
+               <AppIcon name="award" class="gold-award" size="20" />
+               <span>Tích lũy: <strong>+{{ Math.round((viewingResultQuiz.score || 0) * 10) }} XP</strong></span>
+             </div>
+             <div v-if="viewingResultQuiz.topikLevelResult" class="topik-result-badge" style="margin-top: 0.25rem; font-weight: 700; color: var(--primary); font-size: 0.85rem;">
+               🏆 Cấp độ đạt được: {{ viewingResultQuiz.topikLevelResult }}
+             </div>
+           </div>
+         </div>
+       </div>
 
       <h3 class="review-heading">Xem lại chi tiết câu hỏi</h3>
 
@@ -615,26 +713,21 @@ onMounted(() => {
   // Practice quizzes are initialized directly in memory. LocalStorage access is bypassed to prevent sandbox browser security blocks.
 })
 
-// Categories lists - heavily guarded
+// Categories lists - teacher assigned quizzes only for Bài tập page
 const readingQuizzes = computed(() => {
   const list = Array.isArray(props.quizzes) ? props.quizzes : []
-  const teacherPending = list.filter(q => q.status !== 'completed' && q.quizType !== 'listening')
-  const practiceAll = Array.isArray(practiceQuizzes.value) ? practiceQuizzes.value.filter(q => q.quizType === 'reading') : []
-  return [...teacherPending, ...practiceAll]
+  return list.filter(q => q.status !== 'completed' && q.quizType !== 'listening')
 })
 
 const listeningQuizzes = computed(() => {
   const list = Array.isArray(props.quizzes) ? props.quizzes : []
-  const teacherPending = list.filter(q => q.status !== 'completed' && q.quizType === 'listening')
-  const practiceAll = Array.isArray(practiceQuizzes.value) ? practiceQuizzes.value.filter(q => q.quizType === 'listening') : []
-  return [...teacherPending, ...practiceAll]
+  return list.filter(q => q.status !== 'completed' && q.quizType === 'listening')
 })
 
 const completedQuizzes = computed(() => {
   const list = Array.isArray(props.quizzes) ? props.quizzes : []
   const teacherCompleted = list.filter(q => q.status === 'completed')
-  const practiceCompleted = Array.isArray(practiceQuizzes.value) ? practiceQuizzes.value.filter(q => q.score !== null && q.score !== undefined) : []
-  return [...teacherCompleted, ...practiceCompleted].sort((a, b) => {
+  return [...teacherCompleted].sort((a, b) => {
     const dateA = a.completedAt ? new Date(a.completedAt).getTime() : 0
     const dateB = b.completedAt ? new Date(b.completedAt).getTime() : 0
     return dateB - dateA
@@ -967,6 +1060,109 @@ const isUserCorrect = (question) => {
 }
 
 // Practice Quiz Creator Handlers
+const showStudentImportModal = ref(false)
+const studentImportTab = ref('paste')
+const studentImportText = ref('')
+const studentImportFileName = ref('')
+
+const openStudentImportModal = () => {
+  studentImportText.value = ''
+  studentImportFileName.value = ''
+  studentImportTab.value = 'paste'
+  showStudentImportModal.value = true
+}
+
+const handleStudentFileSelected = (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  studentImportFileName.value = file.name
+  const reader = new FileReader()
+  reader.onload = (event) => {
+    studentImportText.value = event.target.result
+  }
+  reader.readAsText(file)
+}
+
+const confirmStudentImport = () => {
+  if (!studentImportText.value.trim()) {
+    toast.warning("Vui lòng dán văn bản hoặc chọn file để import.")
+    return
+  }
+  const parsed = parseTextToQuizQuestions(studentImportText.value)
+  if (parsed.length === 0) {
+    toast.error("Không thể phân tích dữ liệu từ vựng. Vui lòng kiểm tra định dạng dòng!")
+    return
+  }
+  
+  if (newQuizQuestions.value.length === 1 && !newQuizQuestions.value[0].question.trim() && !newQuizQuestions.value[0].koreanText.trim()) {
+    newQuizQuestions.value = parsed
+  } else {
+    newQuizQuestions.value.push(...parsed)
+  }
+  
+  toast.success(`Import thành công ${parsed.length} câu hỏi/từ vựng!`)
+  showStudentImportModal.value = false
+}
+
+const parseTextToQuizQuestions = (rawText) => {
+  if (!rawText) return []
+  const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0)
+  const items = []
+  
+  for (const line of lines) {
+    let parts = []
+    if (line.includes('|')) parts = line.split('|')
+    else if (line.includes('\t')) parts = line.split('\t')
+    else if (line.includes(';')) parts = line.split(';')
+    else if (line.includes(',')) parts = line.split(',')
+    else parts = line.split('-')
+    
+    parts = parts.map(p => p.trim())
+    if (parts.length < 2) continue
+    
+    const korText = parts[0]
+    let wordType = 'Động từ'
+    let pron = ''
+    let meaning = ''
+    
+    if (parts.length >= 4) {
+      wordType = parts[1] || 'Động từ'
+      pron = parts[2] || ''
+      meaning = parts[3]
+    } else if (parts.length === 3) {
+      if (['Động từ', 'Tính từ', 'Danh từ', 'Trạng từ', 'Cụm từ', 'Khác'].some(wt => parts[1].toLowerCase().includes(wt.toLowerCase()))) {
+        wordType = parts[1]
+        meaning = parts[2]
+      } else {
+        pron = parts[1]
+        meaning = parts[2]
+      }
+    } else {
+      meaning = parts[1]
+    }
+    
+    const opts = [
+      meaning,
+      meaning + ' (khác)',
+      'Không có nghĩa này',
+      'Từ trái nghĩa'
+    ]
+    
+    items.push({
+      type: creatorQuizType.value === 'listening' ? 'listening' : 'choice',
+      audioSource: 'tts',
+      koreanText: korText,
+      audioUrl: '',
+      question: `Từ "${korText}" có nghĩa là gì?`,
+      wordType: wordType,
+      pronunciation: pron,
+      options: opts,
+      correctOptionIndex: 0
+    })
+  }
+  return items
+}
+
 const openCreator = (type) => {
   isCreatingQuiz.value = true
   creatorQuizType.value = type
@@ -978,6 +1174,8 @@ const openCreator = (type) => {
       koreanText: '', 
       audioSource: 'tts', 
       audioUrl: '', 
+      wordType: 'Động từ',
+      pronunciation: '',
       options: ['', '', '', ''], 
       correctOptionIndex: 0 
     }
@@ -992,6 +1190,8 @@ const addQuestionToBuilder = () => {
     koreanText: '',
     audioSource: 'tts',
     audioUrl: '',
+    wordType: 'Động từ',
+    pronunciation: '',
     options: ['', '', '', ''],
     correctOptionIndex: 0
   })
@@ -1367,7 +1567,8 @@ const formatDateShort = (dateStr) => {
 
 /* QUIZ CREATOR FORM DESIGN */
 .quiz-creator-container {
-  max-width: 680px;
+  max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
 }
 
@@ -2112,5 +2313,245 @@ const formatDateShort = (dateStr) => {
   .points-earned {
     justify-content: center;
   }
+}
+
+/* 2-column Layout for Student Creator */
+.creator-body-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.75rem;
+  align-items: start;
+}
+
+@media (max-width: 1024px) {
+  .creator-body-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.created-items-panel {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  box-shadow: var(--shadow-sm);
+  width: 100%;
+}
+
+.panel-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.85rem;
+}
+
+.panel-header-row h4 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-title);
+  margin: 0;
+}
+
+.count-pill {
+  background-color: var(--primary-light, #eff6ff);
+  color: var(--primary);
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.table-container-side {
+  overflow-x: auto;
+}
+
+.created-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.created-items-table th {
+  text-align: left;
+  padding: 0.75rem 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  letter-spacing: 0.5px;
+}
+
+.created-items-table td {
+  padding: 0.9rem 0.6rem;
+  border-bottom: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.q-cell {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+}
+
+.question-icon {
+  color: var(--danger, #ef4444);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.q-text-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.q-title {
+  color: var(--text-title);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.q-pron {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+.type-pill {
+  display: inline-block;
+  background-color: var(--bg-body);
+  border: 1px solid var(--border-color);
+  color: var(--text-body);
+  font-size: 0.8rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.correct-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  border: 1px solid var(--success, #10b981);
+  color: var(--success, #10b981);
+  background-color: rgba(16, 185, 129, 0.08);
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.delete-mini-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  transition: color var(--transition-fast);
+}
+
+.delete-mini-btn:hover {
+  color: var(--danger);
+}
+
+.import-q-btn {
+  background-color: var(--bg-body);
+  border: 1px solid var(--border-color);
+  color: var(--text-title);
+  padding: 0.65rem 1.25rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.import-q-btn:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+/* Modal Floating Overlay CSS */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 1.5rem;
+}
+
+.modal-content {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  width: 100%;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-title);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  color: var(--danger);
+}
+
+.cancel-btn {
+  background-color: var(--bg-body);
+  border: 1px solid var(--border-color);
+  color: var(--text-body);
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cancel-btn:hover {
+  background-color: var(--bg-hover);
+}
+
+.submit-btn {
+  background-color: var(--primary);
+  border: none;
+  color: #ffffff;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.submit-btn:hover {
+  opacity: 0.9;
 }
 </style>

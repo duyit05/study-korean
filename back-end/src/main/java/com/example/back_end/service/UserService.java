@@ -2,6 +2,7 @@ package com.example.back_end.service;
 
 import com.example.back_end.dto.request.RegisterRequest;
 import com.example.back_end.dto.response.AuthResponse;
+import com.example.back_end.dto.response.UserResponse;
 import com.example.back_end.dto.request.LoginRequest;
 import com.example.back_end.entity.StudentProfile;
 import com.example.back_end.entity.TeacherProfile;
@@ -9,6 +10,7 @@ import com.example.back_end.entity.User;
 import com.example.back_end.enums.UserRole;
 import com.example.back_end.exception.AppException;
 import com.example.back_end.exception.ErrorCode;
+import com.example.back_end.mapper.UserMapper;
 import com.example.back_end.repository.StudentProfileRepository;
 import com.example.back_end.repository.TeacherProfileRepository;
 import com.example.back_end.repository.UserRepository;
@@ -38,6 +40,7 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final RedisTokenService redisTokenService;
+    private final UserMapper userMapper;
 
     @Transactional
     public User register(RegisterRequest request) {
@@ -149,8 +152,8 @@ public class UserService {
                 .role(user.getRole())
                 .ipWarning(ipWarning ? true : null)
                 .warningMessage(ipWarning
-                    ? "⚠️ Tài khoản của bạn đã đăng nhập từ nhiều nơi hôm nay. Nếu không phải bạn, vui lòng liên hệ giáo viên ngay."
-                    : null)
+                        ? "⚠️ Tài khoản của bạn đã đăng nhập từ nhiều nơi hôm nay. Nếu không phải bạn, vui lòng liên hệ giáo viên ngay."
+                        : null)
                 .xp(xp)
                 .level(level)
                 .streak(streak)
@@ -262,12 +265,12 @@ public class UserService {
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
     }
 
-    public List<User> getUsersByRole(UserRole role) {
-        return userRepository.findByRole(role);
+    public List<UserResponse> getUsersByRole(UserRole role) {
+        return userMapper.toUserResponseList(userRepository.findByRole(role));
     }
 
     @Transactional
-    public User updateProfile(String fullName, String email, String avatarUrl) {
+    public UserResponse updateProfile(String fullName, String email, String avatarUrl) {
         User user = getCurrentUser();
         if (fullName != null)
             user.setFullName(fullName);
@@ -275,7 +278,8 @@ public class UserService {
             user.setEmail(email);
         if (avatarUrl != null)
             user.setAvatarUrl(avatarUrl);
-        return userRepository.save(user);
+        User updated = userRepository.save(user);
+        return userMapper.toUserResponse(updated);
     }
 
     @Transactional

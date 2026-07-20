@@ -146,6 +146,7 @@
             <span class="index">#{{ index + 1 }}</span>
             <div class="word-details">
               <strong class="korean">{{ word.word || word.korean }}</strong>
+              <span v-if="word.pronunciation || word.romanization" class="pronounce">/ {{ word.pronunciation || word.romanization }} /</span>
               <span class="divider">&rarr;</span>
               <span class="meaning">{{ word.meaning || word.vietnamese }}</span>
             </div>
@@ -204,6 +205,10 @@
           <div class="form-group">
             <label for="cardMeaning">Nghĩa tiếng Việt</label>
             <input type="text" id="cardMeaning" v-model="newCardMeaning" placeholder="Ví dụ: Thời tiết" required>
+          </div>
+          <div class="form-group">
+            <label for="cardPronunciation">Phiên âm (tùy chọn)</label>
+            <input type="text" id="cardPronunciation" v-model="newCardPronunciation" placeholder="Ví dụ: nalssi / annyeonghaseyo">
           </div>
           <div class="form-group">
             <label for="cardExample">Ví dụ tiếng Hàn (tùy chọn)</label>
@@ -335,6 +340,7 @@
                   <tr style="background-color: var(--bg-body); border-bottom: 1px solid var(--border-color);">
                     <th style="padding: 0.5rem;">Từ tiếng Hàn</th>
                     <th style="padding: 0.5rem;">Nghĩa tiếng Việt</th>
+                    <th style="padding: 0.5rem;">Phiên âm (Tùy chọn)</th>
                     <th style="padding: 0.5rem;">Ví dụ (Tùy chọn)</th>
                   </tr>
                 </thead>
@@ -342,6 +348,7 @@
                   <tr v-for="(card, cIdx) in parsedCards" :key="cIdx" style="border-bottom: 1px solid var(--border-color);">
                     <td style="padding: 0.5rem; font-weight: 600;">{{ card.frontText }}</td>
                     <td style="padding: 0.5rem;">{{ card.backText }}</td>
+                    <td style="padding: 0.5rem; color: var(--text-muted); font-style: italic;">{{ card.pronunciation }}</td>
                     <td style="padding: 0.5rem; color: var(--text-muted);">{{ card.exampleSentence }}</td>
                   </tr>
                 </tbody>
@@ -442,10 +449,19 @@ const parseTextToCards = (text) => {
     for (const block of blocks) {
       const lines = block.split('\n').map(l => l.trim()).filter(l => l.length > 0)
       if (lines.length >= 2) {
+        let pronunciation = ''
+        let exampleSentence = ''
+        if (lines.length >= 4) {
+          pronunciation = lines[2]
+          exampleSentence = lines[3]
+        } else if (lines.length === 3) {
+          pronunciation = lines[2]
+        }
         results.push({
           frontText: lines[0],
           backText: lines[1],
-          exampleSentence: lines[2] || ''
+          pronunciation: pronunciation,
+          exampleSentence: exampleSentence
         })
       }
     }
@@ -468,10 +484,19 @@ const parseTextToCards = (text) => {
       
       const parts = line.split(separator).map(p => p.trim())
       if (parts.length >= 2 && parts[0] && parts[1]) {
+        let pronunciation = ''
+        let exampleSentence = ''
+        if (parts.length >= 4) {
+          pronunciation = parts[2]
+          exampleSentence = parts[3]
+        } else if (parts.length === 3) {
+          pronunciation = parts[2]
+        }
         results.push({
           frontText: parts[0],
           backText: parts[1],
-          exampleSentence: parts[2] || ''
+          pronunciation: pronunciation,
+          exampleSentence: exampleSentence
         })
       }
     }
@@ -609,6 +634,7 @@ const setToDelete = ref(null)
 // New Card Fields
 const newCardKorean = ref('')
 const newCardMeaning = ref('')
+const newCardPronunciation = ref('')
 const newCardExample = ref('')
 
 const handleCreateSet = async () => {
@@ -703,6 +729,7 @@ const confirmDeleteSet = async () => {
 const openAddCardForm = () => {
   newCardKorean.value = ''
   newCardMeaning.value = ''
+  newCardPronunciation.value = ''
   newCardExample.value = ''
   showAddCardModal.value = true
 }
@@ -727,6 +754,7 @@ const handleAddCard = async () => {
     const newWord = await studySetStore.addCard(selectedSet.value.id, {
       frontText: newCardKorean.value,
       backText: newCardMeaning.value,
+      pronunciation: newCardPronunciation.value || '',
       exampleSentence: newCardExample.value || ''
     })
 
@@ -1227,6 +1255,12 @@ const openEditCards = (set) => {
   color: var(--text-title);
   font-weight: 700;
   font-size: 0.95rem;
+}
+
+.pronounce {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-style: italic;
 }
 
 .divider {

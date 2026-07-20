@@ -58,7 +58,10 @@
             <div class="quiz-icon-badge">한</div>
             <div class="quiz-title-meta">
               <h3>{{ quiz.title }}</h3>
-              <span class="type-badge">{{ quiz.topikLevel || 'Luyện tập' }}</span>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+                <span class="type-badge">{{ quiz.examType === 'TOPIK_I' ? 'TOPIK I' : quiz.examType === 'TOPIK_II' ? 'TOPIK II' : 'Luyện tập' }}</span>
+                <span v-if="quiz.topikLevel" class="type-badge">{{ quiz.topikLevel }}</span>
+              </div>
             </div>
           </div>
           <div class="quiz-body">
@@ -132,7 +135,11 @@
       <div class="panel-header">
         <div class="header-title">
           <h3>Đề: {{ selectedQuiz.title }}</h3>
-          <p>{{ selectedQuiz.topikLevel || 'Luyện tập thường' }} | Thời gian: {{ selectedQuiz.timeLimitMins }} phút | Tổng điểm: {{ selectedQuiz.totalScore || 100 }} điểm</p>
+          <p>
+            Loại đề: <strong>{{ selectedQuiz.examType === 'TOPIK_I' ? 'TOPIK I' : selectedQuiz.examType === 'TOPIK_II' ? 'TOPIK II' : 'Tự do' }}</strong>
+            <span v-if="selectedQuiz.topikLevel"> | Cấp độ: {{ selectedQuiz.topikLevel }}</span>
+            | Thời gian: {{ selectedQuiz.timeLimitMins }} phút | Tổng điểm: {{ selectedQuiz.totalScore || 100 }} điểm
+          </p>
         </div>
         <button class="close-btn" @click="selectedQuiz = null">&times;</button>
       </div>
@@ -199,16 +206,28 @@
             <input type="text" id="quizTitle" v-model="newQuizTitle" placeholder="Ví dụ: Đề thi thử TOPIK I - Lần 90" required>
           </div>
           <div class="form-group">
+            <label for="quizExamType">Cấu trúc đề thi / Loại đề</label>
+            <AppSelect id="quizExamType" v-model="newQuizExamType" :options="examTypeOptions" />
+          </div>
+          <div class="form-group">
             <label for="quizLevel">Dạng đề thi (TOPIK)</label>
             <AppSelect id="quizLevel" v-model="newQuizLevelId" :options="levelOptions" />
           </div>
-          <div class="form-group">
-            <label for="quizTime">Thời gian làm bài (phút)</label>
-            <input type="number" id="quizTime" v-model="newQuizTime" placeholder="Ví dụ: 50" required min="1">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="quizTime">Thời gian (phút)</label>
+              <input type="number" id="quizTime" v-model="newQuizTime" placeholder="Ví dụ: 50" required min="1" :disabled="newQuizExamType !== 'PRACTICE'">
+            </div>
+            <div class="form-group">
+              <label for="quizScore">Tổng điểm bài thi</label>
+              <input type="number" id="quizScore" v-model="newQuizScore" placeholder="Ví dụ: 100" required min="1" :disabled="newQuizExamType !== 'PRACTICE'">
+            </div>
           </div>
-          <div class="form-group">
-            <label for="quizScore">Tổng điểm bài thi</label>
-            <input type="number" id="quizScore" v-model="newQuizScore" placeholder="Ví dụ: 100" required min="1">
+          <div v-if="newQuizExamType === 'TOPIK_I'" class="info-tip">
+            <span>💡 Đề thi chuẩn TOPIK I gồm 70 câu hỏi (30 Nghe, 40 Đọc), không có phần Viết. Tối đa 200 điểm, làm trong 100 phút.</span>
+          </div>
+          <div v-if="newQuizExamType === 'TOPIK_II'" class="info-tip">
+            <span>💡 Đề thi chuẩn TOPIK II gồm 104 câu hỏi (50 Nghe, 4 Viết, 50 Đọc). Tối đa 300 điểm, làm trong 180 phút.</span>
           </div>
           <div class="form-group">
             <label for="quizDueDate">Hạn nộp bài</label>
@@ -337,16 +356,28 @@
             <input type="text" id="editQuizTitle" v-model="editQuizTitle" required>
           </div>
           <div class="form-group">
+            <label for="editQuizExamType">Cấu trúc đề thi / Loại đề</label>
+            <AppSelect id="editQuizExamType" v-model="editQuizExamType" :options="examTypeOptions" />
+          </div>
+          <div class="form-group">
             <label for="editQuizLevel">Cấp độ (TOPIK)</label>
             <AppSelect id="editQuizLevel" v-model="editQuizLevelId" :options="levelOptions" />
           </div>
-          <div class="form-group">
-            <label for="editQuizTime">Thời gian làm bài (phút)</label>
-            <input type="number" id="editQuizTime" v-model.number="editQuizTime" required min="5">
+          <div class="form-row-2">
+            <div class="form-group">
+              <label for="editQuizTime">Thời gian (phút)</label>
+              <input type="number" id="editQuizTime" v-model.number="editQuizTime" required min="5" :disabled="editQuizExamType !== 'PRACTICE'">
+            </div>
+            <div class="form-group">
+              <label for="editQuizScore">Tổng điểm bài thi</label>
+              <input type="number" id="editQuizScore" v-model="editQuizScore"  required min="1" :disabled="editQuizExamType !== 'PRACTICE'">
+            </div>
           </div>
-          <div class="form-group">
-            <label for="editQuizScore">Tổng điểm bài thi</label>
-            <input type="number" id="editQuizScore" v-model="editQuizScore"  required min="1">
+          <div v-if="editQuizExamType === 'TOPIK_I'" class="info-tip">
+            <span>💡 Đề thi chuẩn TOPIK I gồm 70 câu hỏi (30 Nghe, 40 Đọc), không có phần Viết. Tối đa 200 điểm, làm trong 100 phút.</span>
+          </div>
+          <div v-if="editQuizExamType === 'TOPIK_II'" class="info-tip">
+            <span>💡 Đề thi chuẩn TOPIK II gồm 104 câu hỏi (50 Nghe, 4 Viết, 50 Đọc). Tối đa 300 điểm, làm trong 180 phút.</span>
           </div>
           <div class="form-group">
             <label for="editQuizDueDate">Hạn nộp bài</label>
@@ -435,6 +466,14 @@ const showAddQuestionModal = ref(false)
 const topikLevels = computed(() => (topikLevelStore.levels || []).filter(l => l.groupType === 'QUIZ'))
 const newQuizLevelId = ref(null)
 const editQuizLevelId = ref(null)
+const newQuizExamType = ref('PRACTICE')
+const editQuizExamType = ref('PRACTICE')
+
+const examTypeOptions = [
+  { value: 'TOPIK_I', label: 'Chuẩn TOPIK I (100 phút, 200 điểm)' },
+  { value: 'TOPIK_II', label: 'Chuẩn TOPIK II (180 phút, 300 điểm)' },
+  { value: 'PRACTICE', label: 'Đề thi luyện tập' }
+]
 
 const levelOptions = computed(() => {
   return topikLevels.value.map(lvl => ({ label: lvl.name, value: lvl.id }))
@@ -515,7 +554,11 @@ const sectionLabels = {
 }
 
 const qSectionOptions = computed(() => {
-  return (quizStore.questionSections || []).map(sec => ({
+  let sections = quizStore.questionSections || []
+  if (selectedQuiz.value && selectedQuiz.value.examType === 'TOPIK_I') {
+    sections = sections.filter(sec => sec !== 'WRITING')
+  }
+  return sections.map(sec => ({
     label: sectionLabels[sec] || sec,
     value: sec
   }))
@@ -556,6 +599,26 @@ const newQuizScore = ref(100)
 const newQuizDueDate = ref('')
 const newQuizClassId = ref('')
 
+watch(newQuizExamType, (val) => {
+  if (val === 'TOPIK_I') {
+    newQuizTime.value = 100
+    newQuizScore.value = 200
+  } else if (val === 'TOPIK_II') {
+    newQuizTime.value = 180
+    newQuizScore.value = 300
+  }
+})
+
+watch(editQuizExamType, (val) => {
+  if (val === 'TOPIK_I') {
+    editQuizTime.value = 100
+    editQuizScore.value = 200
+  } else if (val === 'TOPIK_II') {
+    editQuizTime.value = 180
+    editQuizScore.value = 300
+  }
+})
+
 // New Question Fields
 const newQSection = ref('LISTENING')
 const newQPoints = ref(2)
@@ -579,6 +642,7 @@ const getSectionLabel = (sec) => {
 const openCreateQuizModal = () => {
   newQuizTitle.value = ''
   newQuizLevelId.value = topikLevels.value[0]?.id || null
+  newQuizExamType.value = 'PRACTICE'
   newQuizTime.value = 100
   newQuizDueDate.value = ''
   newQuizClassId.value = ''
@@ -592,6 +656,7 @@ const handleCreateQuiz = async () => {
   try {
     await quizStore.createQuiz({
       title: newQuizTitle.value,
+      examType: newQuizExamType.value,
       topikLevelId: newQuizLevelId.value,
       timeLimitMins: parseInt(newQuizTime.value),
       dueDate: newQuizDueDate.value + 'T23:59:59',
@@ -823,6 +888,7 @@ const quizToDelete = ref(null)
 const triggerEditQuiz = (quiz) => {
   quizToEdit.value = quiz
   editQuizTitle.value = quiz.title
+  editQuizExamType.value = quiz.examType || 'PRACTICE'
   
   const matched = topikLevels.value.find(l => l.name === quiz.topikLevel || l.code === quiz.topikLevel)
   editQuizLevelId.value = matched ? matched.id : (topikLevels.value[0]?.id || null)
@@ -840,6 +906,7 @@ const handleUpdateQuiz = async () => {
   try {
     await quizStore.updateQuiz(quizToEdit.value.id, {
       title: editQuizTitle.value,
+      examType: editQuizExamType.value,
       topikLevelId: editQuizLevelId.value,
       timeLimitMins: parseInt(editQuizTime.value),
       dueDate: editQuizDueDate.value + 'T23:59:59',
@@ -855,6 +922,7 @@ const handleUpdateQuiz = async () => {
     // Update active selection details if selectedQuiz matches
     if (selectedQuiz.value && selectedQuiz.value.id === quizToEdit.value.id) {
       selectedQuiz.value.title = editQuizTitle.value
+      selectedQuiz.value.examType = editQuizExamType.value
       selectedQuiz.value.topikLevel = levelName
       selectedQuiz.value.timeLimitMins = editQuizTime.value
       selectedQuiz.value.totalScore = parseInt(editQuizScore.value)
@@ -1791,5 +1859,16 @@ input:focus, select:focus, textarea:focus {
 .audio-player-preview {
   width: 100%;
   border-radius: var(--radius-sm);
+}
+
+.info-tip {
+  font-size: 0.8rem;
+  color: var(--primary);
+  background-color: var(--bg-body);
+  border: 1px solid var(--border-color);
+  padding: 0.65rem 0.85rem;
+  border-radius: var(--radius-md);
+  margin-top: -0.5rem;
+  margin-bottom: 1rem;
 }
 </style>

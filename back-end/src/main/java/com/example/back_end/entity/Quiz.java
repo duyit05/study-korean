@@ -1,5 +1,6 @@
 package com.example.back_end.entity;
 
+import com.example.back_end.enums.ExamType;
 import com.example.back_end.enums.QuizType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -36,6 +37,10 @@ public class Quiz {
     @Enumerated(EnumType.STRING)
     @Column(name = "quiz_type", length = 20)
     private QuizType quizType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "exam_type", length = 20)
+    private ExamType examType;
 
     @Column(name = "time_limit_mins")
     private Integer timeLimitMins;

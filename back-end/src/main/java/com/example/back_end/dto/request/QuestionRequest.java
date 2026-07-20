@@ -30,4 +30,8 @@ public class QuestionRequest {
     private String correctAnswer;
 
     private List<String> wrongAnswers;
+
+    private String wordType;
+
+    private String pronunciation;
 }

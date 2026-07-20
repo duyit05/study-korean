@@ -126,7 +126,7 @@
           >
             <div class="row-korean">
               <span class="hangul">{{ item.word }}</span>
-              <span class="pronounce">/{{ item.pronunciation }}/</span>
+              <span class="pronounce" v-if="item.pronunciation">/{{ item.pronunciation }}/</span>
             </div>
             
             <div class="row-vietnamese">
@@ -203,7 +203,7 @@
             <div class="card-side card-back">
               <div class="card-indicator">Ý nghĩa & Cách phát âm</div>
               <div class="meaning-text">{{ currentCard.meaning }}</div>
-              <div class="pronounce-text">/ {{ currentCard.pronunciation }} /</div>
+              <div class="pronounce-text" v-if="currentCard.pronunciation">/ {{ currentCard.pronunciation }} /</div>
               
               <div class="card-example-box" v-if="currentCard.example" @click.stop>
                 <span class="label">Câu ví dụ:</span>
@@ -303,7 +303,7 @@ const selectSet = async (set, mode) => {
         id: card.id,
         word: card.korean || card.word,
         meaning: card.vietnamese || card.meaning,
-        pronunciation: card.pronunciation || '',
+        pronunciation: card.pronunciation || card.romanization || '',
         example: card.example || '',
         exampleMeaning: card.exampleMeaning || '',
         status: card.status || 'unlearned'
@@ -317,7 +317,7 @@ const selectSet = async (set, mode) => {
       id: card.id,
       word: card.korean || card.word,
       meaning: card.vietnamese || card.meaning,
-      pronunciation: card.pronunciation || '',
+      pronunciation: card.pronunciation || card.romanization || '',
       example: card.example || '',
       exampleMeaning: card.exampleMeaning || '',
       status: card.status || 'unlearned'

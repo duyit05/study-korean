@@ -15,4 +15,6 @@ public class CardRequest {
     private String backText;
 
     private String exampleSentence;
+
+    private String pronunciation;
 }

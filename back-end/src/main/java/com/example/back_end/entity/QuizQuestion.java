@@ -62,4 +62,11 @@ public class QuizQuestion {
 
     @Column(columnDefinition = "TEXT")
     private String explanation;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "word_type", length = 30)
+    private com.example.back_end.enums.WordType wordType;
+
+    @Column(name = "pronunciation", length = 250)
+    private String pronunciation;
 }

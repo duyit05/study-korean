@@ -37,6 +37,15 @@
         </router-link>
 
         <router-link 
+          to="/student/practice" 
+          class="nav-tab-btn" 
+          active-class="active"
+        >
+          <AppIcon name="award" size="18" />
+          <span>Ôn tập</span>
+        </router-link>
+
+        <router-link 
           to="/student/schedule" 
           class="nav-tab-btn" 
           active-class="active"

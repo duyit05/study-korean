@@ -1,5 +1,6 @@
 package com.example.back_end.dto.request;
 
+import com.example.back_end.enums.ExamType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -13,6 +14,9 @@ import java.time.LocalDateTime;
 public class QuizRequest {
     @NotBlank(message = "QUIZ_TITLE_REQUIRED")
     private String title;
+
+    @NotNull(message = "EXAM_TYPE_REQUIRED")
+    private ExamType examType;
 
     @NotNull(message = "TOPIK_LEVEL_REQUIRED")
     private Long topikLevelId;

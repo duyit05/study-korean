@@ -10,6 +10,7 @@ import LoginView from '../components/LoginView.vue';
 import DashboardView from '../components/DashboardView.vue';
 import VocabularyView from '../components/VocabularyView.vue';
 import QuizView from '../components/QuizView.vue';
+import StudentPracticeView from '../components/StudentPracticeView.vue';
 import ScheduleView from '../components/ScheduleView.vue';
 import ProfileView from '../components/ProfileView.vue';
 
@@ -47,6 +48,7 @@ const routes = [
       { path: 'dashboard', name: 'StudentDashboard', component: DashboardView },
       { path: 'vocabulary', name: 'StudentVocabulary', component: VocabularyView },
       { path: 'quizzes', name: 'StudentQuizzes', component: QuizView },
+      { path: 'practice', name: 'StudentPractice', component: StudentPracticeView },
       { path: 'schedule', name: 'StudentSchedule', component: ScheduleView },
       { path: 'profile', name: 'StudentProfile', component: ProfileView }
     ]

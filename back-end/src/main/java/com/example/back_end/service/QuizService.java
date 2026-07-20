@@ -8,6 +8,7 @@ import com.example.back_end.entity.Class;
 import com.example.back_end.entity.Quiz;
 import com.example.back_end.entity.QuizQuestion;
 import com.example.back_end.entity.User;
+import com.example.back_end.enums.ExamType;
 import com.example.back_end.enums.QuizType;
 import com.example.back_end.exception.AppException;
 import com.example.back_end.exception.ErrorCode;
@@ -68,6 +69,7 @@ public class QuizService {
                 .title(request.getTitle())
                 .topikLevel(level)
                 .quizType(QuizType.MIXED)
+                .examType(request.getExamType())
                 .timeLimitMins(request.getTimeLimitMins())
                 .totalScore(request.getTotalScore())
                 .dueDate(request.getDueDate())
@@ -84,8 +86,15 @@ public class QuizService {
         Quiz quiz = quizRepository.findById(quizId)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 
+        if (quiz.getExamType() == ExamType.TOPIK_I &&
+                "WRITING".equalsIgnoreCase(request.getSection())) {
+            throw new AppException(ErrorCode.INVALID_SECTION);
+        }
+
         List<QuizQuestion> existingQuestions = quizQuestionRepository.findByQuizId(quizId);
         int nextOrder = existingQuestions.size() + 1;
+
+        com.example.back_end.enums.WordType wt = parseWordType(request.getWordType());
 
         QuizQuestion question = QuizQuestion.builder()
                 .quiz(quiz)
@@ -97,6 +106,8 @@ public class QuizService {
                 .audioSource(request.getAudioUrl() != null && !request.getAudioUrl().isEmpty() ? "UPLOAD" : "TTS")
                 .correctAnswer(request.getCorrectAnswer())
                 .wrongAnswers(request.getWrongAnswers())
+                .wordType(wt)
+                .pronunciation(request.getPronunciation())
                 .order(nextOrder)
                 .build();
 
@@ -126,7 +137,8 @@ public class QuizService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<QuizResponse> getMyCreatedQuizzesPaginated(int pageNo, int pageSize, String search, String level) {
+    public PageResponse<QuizResponse> getMyCreatedQuizzesPaginated(int pageNo, int pageSize, String search,
+            String level) {
         User creator = userService.getCurrentUser();
         // Convert 1-based pageNo (FE) sang 0-based (Spring)
         int page = Math.max(0, pageNo - 1);
@@ -175,6 +187,7 @@ public class QuizService {
 
         quiz.setTitle(request.getTitle());
         quiz.setTopikLevel(level);
+        quiz.setExamType(request.getExamType());
         quiz.setTimeLimitMins(request.getTimeLimitMins());
         quiz.setTotalScore(request.getTotalScore());
         quiz.setDueDate(request.getDueDate());
@@ -194,6 +207,12 @@ public class QuizService {
             throw new AppException(ErrorCode.RESOURCE_NOT_FOUND);
         }
 
+        Quiz quiz = question.getQuiz();
+        if (quiz.getExamType() == com.example.back_end.enums.ExamType.TOPIK_I &&
+                "WRITING".equalsIgnoreCase(request.getSection())) {
+            throw new AppException(ErrorCode.INVALID_SECTION);
+        }
+
         question.setQuestionText(request.getQuestionText());
         question.setQuestionType(request.getQuestionType() != null ? request.getQuestionType() : "MULTIPLE_CHOICE");
         question.setPoints(request.getPoints());
@@ -202,9 +221,26 @@ public class QuizService {
         question.setAudioSource(request.getAudioUrl() != null && !request.getAudioUrl().isEmpty() ? "UPLOAD" : "TTS");
         question.setCorrectAnswer(request.getCorrectAnswer());
         question.setWrongAnswers(request.getWrongAnswers());
+        question.setWordType(parseWordType(request.getWordType()));
+        question.setPronunciation(request.getPronunciation());
 
         QuizQuestion savedQuestion = quizQuestionRepository.save(question);
         return quizMapper.toQuestionResponse(savedQuestion);
+    }
+
+    private com.example.back_end.enums.WordType parseWordType(String typeStr) {
+        if (typeStr == null || typeStr.isBlank()) return com.example.back_end.enums.WordType.OTHER;
+        String normalized = typeStr.trim().toUpperCase();
+        if (normalized.contains("ĐỘNG") || normalized.equals("VERB")) return com.example.back_end.enums.WordType.VERB;
+        if (normalized.contains("TÍNH") || normalized.equals("ADJECTIVE")) return com.example.back_end.enums.WordType.ADJECTIVE;
+        if (normalized.contains("DANH") || normalized.equals("NOUN")) return com.example.back_end.enums.WordType.NOUN;
+        if (normalized.contains("TRẠNG") || normalized.equals("ADVERB")) return com.example.back_end.enums.WordType.ADVERB;
+        if (normalized.contains("CỤM") || normalized.contains("NGỮ PHÁP") || normalized.equals("PHRASE")) return com.example.back_end.enums.WordType.PHRASE;
+        try {
+            return com.example.back_end.enums.WordType.valueOf(normalized);
+        } catch (Exception e) {
+            return com.example.back_end.enums.WordType.OTHER;
+        }
     }
 
     @Transactional
