@@ -33,7 +33,7 @@ cloudflare:
     endpoint: ${R2_ENDPOINT}
     access-key: ${R2_ACCESS_KEY}
     secret-key: ${R2_SECRET_KEY}
-    bucket: ${R2_BUCKET}
+    bucket: ${R2_BUCKET:korean-learning-files}
     region: ${R2_REGION:auto}
 
 cors:
