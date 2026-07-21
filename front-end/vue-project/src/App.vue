@@ -424,16 +424,27 @@ const handleSaveProfile = async ({ name, email, avatar }) => {
   </Transition>
 
   <!-- Global Duck Loading Overlay -->
-  <div v-if="globalLoading" class="global-duck-loading">
-    <div class="duck-wrapper">
-      <img src="./assets/duck-loading.png" alt="Duck Loading" class="duck-img">
-      <div class="shadow"></div>
-      <p class="loading-text">Đang xử lý, vui lòng đợi...</p>
+  <Transition name="duck-fade">
+    <div v-if="globalLoading" class="global-duck-loading">
+      <div class="duck-wrapper">
+        <img src="./assets/duck-loading.png" alt="Duck Loading" class="duck-img">
+        <div class="shadow"></div>
+        <p class="loading-text">Đang xử lý, vui lòng đợi...</p>
+      </div>
     </div>
-  </div>
+  </Transition>
 </template>
 
 <style>
+/* Duck Fade Transition */
+.duck-fade-enter-active,
+.duck-fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+.duck-fade-enter-from,
+.duck-fade-leave-to {
+  opacity: 0;
+}
 /* Global system transitions and fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
 

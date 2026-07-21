@@ -2,7 +2,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/study_korean}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -17,8 +17,8 @@ spring:
 jwt:
   expiry-time: ${JWT_EXPIRY_TIME:1}
   expiry-day: ${JWT_EXPIRY_DAY:14}
-  secret-key: ${JWT_SECRET_KEY}
-  secret-refresh-key: ${JWT_SECRET_REFRESH_KEY}
+  secret-key: ${JWT_SECRET_KEY:c2VjcmV0LWtleS1mb3ItZGV2ZWxvcG1lbnQtZW52aXJvbm1lbnQtc3R1ZHkta29yZWFuLWFwcC1zZWN1cmUta2V5LTEyMzQ1Njc4OTA=}
+  secret-refresh-key: ${JWT_SECRET_REFRESH_KEY:c2VjcmV0LXJlZnJlc2gta2V5LWZvci1kZXZlbG9wbWVudC1lbnZpcm9ubWVudC1zdHVkeS1rb3JlYW4tYWBwLXNlY3VyZS1rZXktMTIzNDU2Nzg5MA==}
 
 minio:
   url: ${MINIO_URL:http://localhost:9000}
@@ -27,9 +27,9 @@ minio:
 
 cloudflare:
   r2:
-    endpoint: ${R2_ENDPOINT}
-    access-key: ${R2_ACCESS_KEY}
-    secret-key: ${R2_SECRET_KEY}
+    endpoint: ${R2_ENDPOINT:https://dummy.r2.cloudflarestorage.com}
+    access-key: ${R2_ACCESS_KEY:dummy_access_key}
+    secret-key: ${R2_SECRET_KEY:dummy_secret_key}
     bucket: ${R2_BUCKET:korean-learning-files}
     region: ${R2_REGION:auto}
 

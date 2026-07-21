@@ -3,22 +3,36 @@ import { ref } from 'vue';
 
 export const globalLoading = ref(false);
 let activeRequestsCount = 0;
-let loadingTimer = null;
+let showTimer = null;
+let hideTimer = null;
 
 function updateLoadingState() {
   if (activeRequestsCount > 0) {
-    if (!globalLoading.value && !loadingTimer) {
-      loadingTimer = setTimeout(() => {
+    // Nếu có timer ẩn đang chờ thì hủy ngay (giữ cho loading không bị tắt giữa các API)
+    if (hideTimer) {
+      clearTimeout(hideTimer);
+      hideTimer = null;
+    }
+    // Nếu chưa hiện và chưa tạo timer hiện -> hẹn giờ 200ms hiện loading
+    if (!globalLoading.value && !showTimer) {
+      showTimer = setTimeout(() => {
         globalLoading.value = true;
-        loadingTimer = null;
-      }, 250);
+        showTimer = null;
+      }, 200);
     }
   } else {
-    if (loadingTimer) {
-      clearTimeout(loadingTimer);
-      loadingTimer = null;
+    // Khi tất cả API đã hoàn tất
+    if (showTimer) {
+      clearTimeout(showTimer);
+      showTimer = null;
     }
-    globalLoading.value = false;
+    // Hoãn việc tắt loading 300ms để nếu có API nối tiếp thì không bị nháy con vịt
+    if (globalLoading.value && !hideTimer) {
+      hideTimer = setTimeout(() => {
+        globalLoading.value = false;
+        hideTimer = null;
+      }, 300);
+    }
   }
 }
 
