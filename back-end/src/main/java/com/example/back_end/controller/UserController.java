@@ -8,6 +8,7 @@ import com.example.back_end.enums.UserRole;
 import com.example.back_end.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,6 +22,7 @@ public class UserController {
         private final UserService userService;
 
         @GetMapping("/students")
+        @PreAuthorize("hasRole('TEACHER')")
         public ApiResponse<List<UserResponse>> getAllStudents() {
                 List<UserResponse> list = userService.getUsersByRole(UserRole.STUDENT);
 
@@ -32,6 +34,7 @@ public class UserController {
         }
 
         @PutMapping("/profile")
+        @PreAuthorize("isAuthenticated()")
         public ApiResponse<UserResponse> updateProfile(@RequestBody UserProfileUpdateRequest request) {
                 UserResponse response = userService.updateProfile(request.getFullName(), request.getEmail(),
                                 request.getAvatarUrl());
@@ -43,6 +46,7 @@ public class UserController {
         }
 
         @PostMapping("/{userId}/unlock")
+        @PreAuthorize("hasRole('TEACHER')")
         public ApiResponse<Void> unlockAccount(@PathVariable Long userId) {
                 userService.unlockAccount(userId);
                 return ApiResponse.<Void>builder()

@@ -1,42 +1,14 @@
 spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
   servlet:
     context-path: /api
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
-  datasource:
-    url: jdbc:postgresql://localhost:5432/study_korean
-    username: postgres
-    password: 123123za
-    driver-class-name: org.postgresql.Driver
+
   data:
     redis:
-      host: localhost
-      port: 6379
-
-  jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-    properties:
-      hibernate:
-        default_batch_fetch_size: 100
-jwt:
-  expiry-time: 1
-  expiry-day: 14
-  secret-key: eG9mdHo5ZGh6M3c1NmVpNXZ2eHBmMG84YnA0NTE0N2NrODJ3d3RnZGt3OXU3MjdodHJxaTJydXpmZ212eTRwY2lwZXRjNHViaXVraW9ndHN1NTB0d2NjdGpyMmoyZzJvMWN0OG51bzk3ZnhyZnE1Zjc1Z2RzdGMwaXdiN2QwZ3Y
-  secret-refresh-key: NXYwYnFvZmE5ZGVhb2tiY2c1anY2cW55YmMwNmw4M2Vicnh5OXg2NmN4bzZxOHl5cDZ3Y3g4bjBoN2pxbjN3ZHltdm05b3k3eGxzcjRhMmcydW5kMmt1dWlyaWljdnY1cGE3ancweXBxeTZ1OTZ0cHVoOTZ3OW04YmF4dmw0NjU
-
-minio:
-  url: http://localhost:9000
-  access-key: minioadmin
-  secret-key: minioadmin
-
-cloudflare:
-  r2:
-    endpoint: ${R2_ENDPOINT:https://30257ab4161ad0e2e9c5e1e9a45b045c.r2.cloudflarestorage.com}
-    access-key: ${R2_ACCESS_KEY:a2812b8432b413e67d27bbd34065984f}
-    secret-key: ${R2_SECRET_KEY:05f425b1a0c6d54ef2bc6307926d967513538a8c47c61735d71ccca12eb66171}
-    bucket: ${R2_BUCKET:korean-learning-files}
-    region: auto
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}

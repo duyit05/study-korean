@@ -111,6 +111,15 @@
 			<artifactId>s3</artifactId>
 			<version>2.28.11</version>
 		</dependency>
+
+		<!-- Rate Limiting -->
+		<!-- Source: https://mvnrepository.com/artifact/com.bucket4j/bucket4j-core -->
+		<dependency>
+			<groupId>com.bucket4j</groupId>
+			<artifactId>bucket4j-core</artifactId>
+			<version>8.10.1</version>
+			<scope>compile</scope>
+		</dependency>
 	</dependencies>
 
 	<build>

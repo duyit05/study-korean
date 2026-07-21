@@ -10,6 +10,7 @@ import com.example.back_end.service.StudentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -24,6 +25,7 @@ public class StudentController {
         private final StudentService studentService;
 
         @GetMapping
+        @PreAuthorize("hasRole('TEACHER')")
         public ApiResponse<?> getAllStudents(
                         @RequestParam(defaultValue = "1") int page,
                         @RequestParam(defaultValue = "10") int size,
@@ -49,6 +51,7 @@ public class StudentController {
         }
 
         @PostMapping
+        @PreAuthorize("hasRole('TEACHER')")
         public ApiResponse<StudentResponse> createStudent(@Valid @RequestBody StudentCreateRequest request) {
                 StudentResponse data = studentService.createStudent(request);
                 return ApiResponse.<StudentResponse>builder()
@@ -59,6 +62,7 @@ public class StudentController {
         }
 
         @PutMapping("/{id}")
+        @PreAuthorize("hasRole('TEACHER')")
         public ApiResponse<StudentResponse> updateStudent(@PathVariable Long id,
                         @Valid @RequestBody StudentUpdateRequest request) {
                 StudentResponse data = studentService.updateStudent(id, request);
@@ -70,6 +74,7 @@ public class StudentController {
         }
 
         @DeleteMapping("/{id}")
+        @PreAuthorize("hasRole('TEACHER')")
         public ApiResponse<Void> deleteStudent(@PathVariable Long id) {
                 studentService.deleteStudent(id);
                 return ApiResponse.<Void>builder()
@@ -79,6 +84,7 @@ public class StudentController {
         }
 
         @GetMapping("/{id}/progress")
+        @PreAuthorize("isAuthenticated()")
         public ApiResponse<StudentProgressResponse> getStudentProgress(
                         @PathVariable Long id) {
                 StudentProgressResponse data = studentService.getStudentProgress(id);

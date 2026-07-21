@@ -8,6 +8,7 @@ import com.example.back_end.service.SessionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -22,6 +23,7 @@ public class SessionController {
     private final SessionService sessionService;
 
     @GetMapping("/statuses")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<SessionStatus[]> getSessionStatuses() {
         return ApiResponse.<SessionStatus[]>builder()
                 .code(HttpStatus.OK.value())
@@ -31,6 +33,7 @@ public class SessionController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<SessionResponse> createSession(@Valid @RequestBody SessionRequest request) {
         SessionResponse response = sessionService.createSession(request);
         return ApiResponse.<SessionResponse>builder()
@@ -41,6 +44,7 @@ public class SessionController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<SessionResponse> getSessionById(@PathVariable Long id) {
         SessionResponse response = sessionService.getSessionById(id);
         return ApiResponse.<SessionResponse>builder()
@@ -51,6 +55,7 @@ public class SessionController {
     }
 
     @GetMapping("/class/{classId}")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<SessionResponse>> getSessionsByClass(@PathVariable Long classId) {
         List<SessionResponse> response = sessionService.getSessionsByClass(classId);
         return ApiResponse.<List<SessionResponse>>builder()
@@ -61,8 +66,9 @@ public class SessionController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<SessionResponse> updateSession(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @Valid @RequestBody SessionRequest request) {
         SessionResponse response = sessionService.updateSession(id, request);
         return ApiResponse.<SessionResponse>builder()
@@ -73,6 +79,7 @@ public class SessionController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<Void> deleteSession(@PathVariable Long id) {
         sessionService.deleteSession(id);
         return ApiResponse.<Void>builder()

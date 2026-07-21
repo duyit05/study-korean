@@ -6,6 +6,7 @@ import com.example.back_end.service.ClassMaterialService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,6 +22,7 @@ public class ClassMaterialController {
     private final ClassMaterialService classMaterialService;
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<ClassMaterialResponse>> getMaterials(@PathVariable Long classId) {
         List<ClassMaterialResponse> list = classMaterialService.getMaterialsByClass(classId);
         return ApiResponse.<List<ClassMaterialResponse>>builder()
@@ -31,6 +33,7 @@ public class ClassMaterialController {
     }
 
     @PostMapping("/upload")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<ClassMaterialResponse> uploadMaterial(
             @PathVariable Long classId,
             @RequestParam("file") MultipartFile file) throws IOException {
@@ -43,6 +46,7 @@ public class ClassMaterialController {
     }
 
     @DeleteMapping("/{materialId}")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<Void> deleteMaterial(
             @PathVariable Long classId,
             @PathVariable Long materialId) {

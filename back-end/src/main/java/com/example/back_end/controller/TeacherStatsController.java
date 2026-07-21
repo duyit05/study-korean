@@ -5,6 +5,7 @@ import com.example.back_end.dto.response.TeacherStatsResponse;
 import com.example.back_end.service.TeacherStatsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -17,6 +18,7 @@ public class TeacherStatsController {
     private final TeacherStatsService teacherStatsService;
 
     @GetMapping
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<TeacherStatsResponse> getTeacherStats() {
         TeacherStatsResponse data = teacherStatsService.getTeacherStats();
         return ApiResponse.<TeacherStatsResponse>builder()

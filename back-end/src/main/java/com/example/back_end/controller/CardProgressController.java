@@ -6,6 +6,7 @@ import com.example.back_end.service.CardProgressService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -19,6 +20,7 @@ public class CardProgressController {
     private final CardProgressService cardProgressService;
 
     @PostMapping("/{cardId}/progress")
+    @PreAuthorize("hasRole('STUDENT')")
     public ApiResponse<Void> updateProgress(
             @PathVariable Long cardId,
             @Valid @RequestBody CardProgressRequest request) {

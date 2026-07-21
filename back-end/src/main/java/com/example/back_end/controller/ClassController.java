@@ -9,6 +9,7 @@ import com.example.back_end.service.ClassService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -23,6 +24,7 @@ public class ClassController {
     private final ClassService classService;
 
     @GetMapping("/material-types")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<MaterialType[]> getMaterialTypes() {
         return ApiResponse.<MaterialType[]>builder()
                 .code(HttpStatus.OK.value())
@@ -32,6 +34,7 @@ public class ClassController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<ClassResponse> createClass(@Valid @RequestBody ClassRequest request) {
         ClassResponse data = classService.createClass(request);
         return ApiResponse.<ClassResponse>builder()
@@ -42,6 +45,7 @@ public class ClassController {
     }
 
     @GetMapping("/teacher")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<?> getTeacherClasses(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "6") int size,
@@ -65,6 +69,7 @@ public class ClassController {
     }
 
     @GetMapping("/student")
+    @PreAuthorize("hasRole('STUDENT')")
     public ApiResponse<List<ClassResponse>> getStudentClasses() {
         List<ClassResponse> list = classService.getStudentClasses();
         return ApiResponse.<List<ClassResponse>>builder()
@@ -75,6 +80,7 @@ public class ClassController {
     }
 
     @PostMapping("/{classId}/students/{studentId}")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<ClassResponse> enrollStudent(@PathVariable Long classId, @PathVariable Long studentId) {
         ClassResponse data = classService.enrollStudent(classId, studentId);
         return ApiResponse.<ClassResponse>builder()
@@ -85,6 +91,7 @@ public class ClassController {
     }
 
     @DeleteMapping("/{classId}/students/{studentId}")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<Void> removeStudent(@PathVariable Long classId, @PathVariable Long studentId) {
         classService.removeStudent(classId, studentId);
         return ApiResponse.<Void>builder()
@@ -94,6 +101,7 @@ public class ClassController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<ClassResponse> updateClass(@PathVariable Long id, @Valid @RequestBody ClassRequest request) {
         ClassResponse data = classService.updateClass(id, request);
         return ApiResponse.<ClassResponse>builder()
@@ -104,6 +112,7 @@ public class ClassController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<Void> deleteClass(@PathVariable Long id) {
         classService.deleteClass(id);
         return ApiResponse.<Void>builder()

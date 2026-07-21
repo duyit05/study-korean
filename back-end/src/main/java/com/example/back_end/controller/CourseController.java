@@ -7,6 +7,7 @@ import com.example.back_end.service.CourseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -21,6 +22,7 @@ public class CourseController {
     private final CourseService courseService;
 
     @PostMapping
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<CourseResponse> createCourse(@Valid @RequestBody CourseRequest request) {
         CourseResponse response = courseService.createCourse(request);
         return ApiResponse.<CourseResponse>builder()
@@ -31,6 +33,7 @@ public class CourseController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<List<CourseResponse>> getAllCourses() {
         List<CourseResponse> response = courseService.getAllCourses();
         return ApiResponse.<List<CourseResponse>>builder()
@@ -41,6 +44,7 @@ public class CourseController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<CourseResponse> getCourseById(@PathVariable Long id) {
         CourseResponse response = courseService.getCourseById(id);
         return ApiResponse.<CourseResponse>builder()
@@ -51,6 +55,7 @@ public class CourseController {
     }
 
     @GetMapping("/teacher/{teacherId}")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<List<CourseResponse>> getCoursesByTeacher(@PathVariable Long teacherId) {
         List<CourseResponse> response = courseService.getCoursesByTeacher(teacherId);
         return ApiResponse.<List<CourseResponse>>builder()
@@ -61,8 +66,9 @@ public class CourseController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<CourseResponse> updateCourse(
-            @PathVariable Long id, 
+            @PathVariable Long id,
             @Valid @RequestBody CourseRequest request) {
         CourseResponse response = courseService.updateCourse(id, request);
         return ApiResponse.<CourseResponse>builder()
@@ -73,6 +79,7 @@ public class CourseController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<Void> deleteCourse(@PathVariable Long id) {
         courseService.deleteCourse(id);
         return ApiResponse.<Void>builder()

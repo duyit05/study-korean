@@ -8,6 +8,7 @@ import com.example.back_end.enums.TopikGroup;
 import com.example.back_end.service.TopikLevelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -20,6 +21,7 @@ public class TopikLevelController {
     private final TopikLevelService topikLevelService;
 
     @GetMapping("/groups")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<TopikGroup[]> getTopikGroups() {
         return ApiResponse.<TopikGroup[]>builder()
                 .code(HttpStatus.OK.value())
@@ -29,14 +31,14 @@ public class TopikLevelController {
     }
 
     @GetMapping
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<?> getLevels(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String group,
             @RequestParam(required = false) String[] sort,
-            @RequestParam(defaultValue = "true") boolean unpaged
-    ) {
+            @RequestParam(defaultValue = "true") boolean unpaged) {
         if (unpaged) {
             List<TopikLevel> list = topikLevelService.getAllLevels();
             return ApiResponse.<List<TopikLevel>>builder()
@@ -54,6 +56,7 @@ public class TopikLevelController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<TopikLevel> getLevelById(@PathVariable Long id) {
         TopikLevel level = topikLevelService.getLevelById(id);
         return ApiResponse.<TopikLevel>builder()
@@ -64,6 +67,7 @@ public class TopikLevelController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<TopikLevel> createLevel(@RequestBody TopikLevelRequest request) {
         TopikLevel level = topikLevelService.createLevel(request);
         return ApiResponse.<TopikLevel>builder()
@@ -74,6 +78,7 @@ public class TopikLevelController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<TopikLevel> updateLevel(@PathVariable Long id, @RequestBody TopikLevelRequest request) {
         TopikLevel level = topikLevelService.updateLevel(id, request);
         return ApiResponse.<TopikLevel>builder()
@@ -84,6 +89,7 @@ public class TopikLevelController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<Void> deleteLevel(@PathVariable Long id) {
         topikLevelService.deleteLevel(id);
         return ApiResponse.<Void>builder()

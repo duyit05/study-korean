@@ -8,6 +8,7 @@ import com.example.back_end.service.QuizAttemptService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -22,8 +23,9 @@ public class QuizAttemptController {
     private final QuizAttemptService quizAttemptService;
 
     @PostMapping("/{quizId}/submit")
+    @PreAuthorize("hasRole('STUDENT')")
     public ApiResponse<QuizAttemptResponse> submitAttempt(
-            @PathVariable Long quizId, 
+            @PathVariable Long quizId,
             @Valid @RequestBody QuizSubmitRequest request) {
         QuizAttemptResponse response = quizAttemptService.submitAttempt(quizId, request);
         return ApiResponse.<QuizAttemptResponse>builder()
@@ -34,8 +36,9 @@ public class QuizAttemptController {
     }
 
     @PostMapping("/grade/{attemptId}")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<QuizAttemptResponse> gradeAttempt(
-            @PathVariable Long attemptId, 
+            @PathVariable Long attemptId,
             @Valid @RequestBody GradeAttemptRequest request) {
         QuizAttemptResponse response = quizAttemptService.gradeAttempt(attemptId, request);
         return ApiResponse.<QuizAttemptResponse>builder()
@@ -46,6 +49,7 @@ public class QuizAttemptController {
     }
 
     @GetMapping("/pending")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<List<QuizAttemptResponse>> getPendingAttempts() {
         List<QuizAttemptResponse> response = quizAttemptService.getPendingAttempts();
         return ApiResponse.<List<QuizAttemptResponse>>builder()
@@ -56,6 +60,7 @@ public class QuizAttemptController {
     }
 
     @GetMapping("/my-attempts")
+    @PreAuthorize("hasRole('STUDENT')")
     public ApiResponse<List<QuizAttemptResponse>> getMyAttempts() {
         List<QuizAttemptResponse> response = quizAttemptService.getMyAttempts();
         return ApiResponse.<List<QuizAttemptResponse>>builder()
@@ -66,6 +71,7 @@ public class QuizAttemptController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<QuizAttemptResponse> getAttemptDetails(@PathVariable Long id) {
         QuizAttemptResponse response = quizAttemptService.getAttemptDetails(id);
         return ApiResponse.<QuizAttemptResponse>builder()

@@ -6,6 +6,7 @@ import com.example.back_end.dto.response.ClassResponse;
 import com.example.back_end.service.AssignedStudySetService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -18,7 +19,9 @@ public class AssignedStudySetController {
     private final AssignedStudySetService assignedStudySetService;
 
     @PostMapping
-    public ApiResponse<ClassResponse.AssignedStudySetDto> assignStudySet(@Valid @RequestBody AssignStudySetRequest request) {
+    @PreAuthorize("hasRole('TEACHER')")
+    public ApiResponse<ClassResponse.AssignedStudySetDto> assignStudySet(
+            @Valid @RequestBody AssignStudySetRequest request) {
         ClassResponse.AssignedStudySetDto data = assignedStudySetService.assignStudySet(request);
         return ApiResponse.<ClassResponse.AssignedStudySetDto>builder()
                 .code(HttpStatus.OK.value())
@@ -28,6 +31,7 @@ public class AssignedStudySetController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<Void> unassignStudySet(@PathVariable Long id) {
         assignedStudySetService.unassignStudySet(id);
         return ApiResponse.<Void>builder()

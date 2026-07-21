@@ -1,0 +1,43 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/study_korean}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        default_batch_fetch_size: 100
+
+jwt:
+  expiry-time: ${JWT_EXPIRY_TIME:1}
+  expiry-day: ${JWT_EXPIRY_DAY:14}
+  secret-key: ${JWT_SECRET_KEY}
+  secret-refresh-key: ${JWT_SECRET_REFRESH_KEY}
+
+minio:
+  url: ${MINIO_URL:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+
+cloudflare:
+  r2:
+    endpoint: ${R2_ENDPOINT}
+    access-key: ${R2_ACCESS_KEY}
+    secret-key: ${R2_SECRET_KEY}
+    bucket: ${R2_BUCKET:korean-learning-files}
+    region: ${R2_REGION:auto}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true

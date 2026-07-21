@@ -1,6 +1,8 @@
 package com.example.back_end.configuration;
 
+import com.example.back_end.filter.RateLimitFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -17,7 +19,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -28,6 +30,11 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final CustomAccessDeniedHandler customAccessDeniedHandler;
+    private final RateLimitFilter rateLimitFilter;
+
+    /** Đọc từ biến môi trường CORS_ALLOWED_ORIGINS (mặc định localhost Vue dev) */
+    @Value("${cors.allowed-origins:http://localhost:5173}")
+    private String allowedOrigins;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -45,8 +52,11 @@ public class SecurityConfig {
                 .accessDeniedHandler(customAccessDeniedHandler)
             )
             .authorizeHttpRequests(auth -> auth
+                // Auth endpoints: public
                 .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/files/download/**").permitAll()
+                // File download: phải đăng nhập (kiểm tra ownership ở service layer)
+                .requestMatchers("/api/files/download/**").authenticated()
+                // Swagger: chỉ mở khi SWAGGER_ENABLED=true (springdoc tự xử lý)
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .anyRequest().authenticated()
             );
@@ -59,10 +69,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Collections.singletonList("*"));
+        // Chỉ cho phép đúng domain frontend, đọc từ env CORS_ALLOWED_ORIGINS
+        List<String> origins = Arrays.asList(allowedOrigins.split(","));
+        configuration.setAllowedOriginPatterns(origins);
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Cache-Control"));
-        configuration.setExposedHeaders(Collections.singletonList("Authorization"));
+        configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -70,3 +82,4 @@ public class SecurityConfig {
         return source;
     }
 }
+
