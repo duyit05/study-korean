@@ -23,62 +23,107 @@ public class RedisTokenService {
     // ─── Refresh Token ────────────────────────────────────────────
 
     public void saveRefreshToken(String username, String token, long expirySec) {
-        String key = REFRESH_TOKEN_PREFIX + username;
-        redisTemplate.opsForValue().set(key, token, expirySec, TimeUnit.SECONDS);
+        try {
+            String key = REFRESH_TOKEN_PREFIX + username;
+            redisTemplate.opsForValue().set(key, token, expirySec, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("Redis connection failed on saveRefreshToken: {}", e.getMessage());
+        }
     }
 
     public String getRefreshToken(String username) {
-        String key = REFRESH_TOKEN_PREFIX + username;
-        return redisTemplate.opsForValue().get(key);
+        try {
+            String key = REFRESH_TOKEN_PREFIX + username;
+            return redisTemplate.opsForValue().get(key);
+        } catch (Exception e) {
+            log.warn("Redis connection failed on getRefreshToken: {}", e.getMessage());
+            return null;
+        }
     }
 
     public void deleteRefreshToken(String username) {
-        String key = REFRESH_TOKEN_PREFIX + username;
-        redisTemplate.delete(key);
+        try {
+            String key = REFRESH_TOKEN_PREFIX + username;
+            redisTemplate.delete(key);
+        } catch (Exception e) {
+            log.warn("Redis connection failed on deleteRefreshToken: {}", e.getMessage());
+        }
     }
 
     // ─── Access Token Blacklist ───────────────────────────────────
 
     public void blacklistAccessToken(String token, long remainingMs) {
-        String key = BLACKLIST_PREFIX + token;
-        if (remainingMs > 0) {
-            redisTemplate.opsForValue().set(key, "revoked", remainingMs, TimeUnit.MILLISECONDS);
+        try {
+            String key = BLACKLIST_PREFIX + token;
+            if (remainingMs > 0) {
+                redisTemplate.opsForValue().set(key, "revoked", remainingMs, TimeUnit.MILLISECONDS);
+            }
+        } catch (Exception e) {
+            log.warn("Redis connection failed on blacklistAccessToken: {}", e.getMessage());
         }
     }
 
     public boolean isAccessTokenBlacklisted(String token) {
-        String key = BLACKLIST_PREFIX + token;
-        Boolean exists = redisTemplate.hasKey(key);
-        return exists != null && exists;
+        try {
+            String key = BLACKLIST_PREFIX + token;
+            Boolean exists = redisTemplate.hasKey(key);
+            return exists != null && exists;
+        } catch (Exception e) {
+            log.warn("Redis connection failed on isAccessTokenBlacklisted: {}", e.getMessage());
+            return false;
+        }
     }
 
     // ─── Lớp 1: Active Session (Single Session) ──────────────────
 
     public void saveActiveSession(String username, String sessionId, long expirySec) {
-        redisTemplate.opsForValue().set(
-                ACTIVE_SESSION_PREFIX + username, sessionId, expirySec, TimeUnit.SECONDS);
+        try {
+            redisTemplate.opsForValue().set(
+                    ACTIVE_SESSION_PREFIX + username, sessionId, expirySec, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.warn("Redis connection failed on saveActiveSession: {}", e.getMessage());
+        }
     }
 
     public String getActiveSession(String username) {
-        return redisTemplate.opsForValue().get(ACTIVE_SESSION_PREFIX + username);
+        try {
+            return redisTemplate.opsForValue().get(ACTIVE_SESSION_PREFIX + username);
+        } catch (Exception e) {
+            log.warn("Redis connection failed on getActiveSession: {}", e.getMessage());
+            return null;
+        }
     }
 
     public void deleteActiveSession(String username) {
-        redisTemplate.delete(ACTIVE_SESSION_PREFIX + username);
+        try {
+            redisTemplate.delete(ACTIVE_SESSION_PREFIX + username);
+        } catch (Exception e) {
+            log.warn("Redis connection failed on deleteActiveSession: {}", e.getMessage());
+        }
     }
 
     // ─── Lớp 2: IP Logging ───────────────────────────────────────
 
-    /**
-     * Thêm IP vào Set của ngày hôm nay, trả về số distinct IP trong ngày.
-     * Set tự xóa sau 24h (TTL).
-     */
-    public long trackLoginIp(String username, String ip) {
-        String key = LOGIN_IPS_PREFIX + username + ":" + LocalDate.now();
-        redisTemplate.opsForSet().add(key, ip);
-        redisTemplate.expire(key, 24, TimeUnit.HOURS);
-        Long count = redisTemplate.opsForSet().size(key);
-        return count != null ? count : 1L;
+    public void recordLoginIp(String username, String ip) {
+        try {
+            String today = LocalDate.now().toString();
+            String key = LOGIN_IPS_PREFIX + username + ":" + today;
+            redisTemplate.opsForSet().add(key, ip);
+            redisTemplate.expire(key, 2, TimeUnit.DAYS);
+        } catch (Exception e) {
+            log.warn("Redis connection failed on recordLoginIp: {}", e.getMessage());
+        }
+    }
+
+    public int getDistinctIpCountToday(String username) {
+        try {
+            String today = LocalDate.now().toString();
+            String key = LOGIN_IPS_PREFIX + username + ":" + today;
+            Long size = redisTemplate.opsForSet().size(key);
+            return size != null ? size.intValue() : 0;
+        } catch (Exception e) {
+            log.warn("Redis connection failed on getDistinctIpCountToday: {}", e.getMessage());
+            return 0;
+        }
     }
 }
-
