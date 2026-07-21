@@ -289,8 +289,8 @@ const handleLoginSuccess = async (userData) => {
   }
 }
 
-const handleLogout = () => {
-  authStore.logout()
+const handleLogout = async () => {
+  await authStore.logout()
   studySetStore.classes = []
   studySetStore.studySets = []
   quizStore.quizzes = []

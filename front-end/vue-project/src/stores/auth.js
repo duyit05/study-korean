@@ -87,20 +87,24 @@ export const useAuthStore = defineStore('auth', () => {
   };
 
   const logout = async () => {
+    const refreshToken = user.value?.refreshToken;
+    
+    // Clear state & storage immediately so router guards see loggedIn = false right away
+    user.value = null;
+    errorMessage.value = '';
     try {
-      if (user.value && user.value.refreshToken) {
-        await api.post('/auth/logout', { refreshToken: user.value.refreshToken });
-      }
+      localStorage.removeItem('sk_user');
+      sessionStorage.removeItem('sk_user');
     } catch (e) {
-      console.warn("Backend logout failed:", e);
-    } finally {
-      user.value = null;
-      errorMessage.value = '';
+      console.warn("Storage access failed:", e);
+    }
+
+    // Call backend API in background to invalidate token
+    if (refreshToken) {
       try {
-        localStorage.removeItem('sk_user');
-        sessionStorage.removeItem('sk_user');
+        await api.post('/auth/logout', { refreshToken });
       } catch (e) {
-        console.warn("Storage access failed:", e);
+        console.warn("Backend logout failed:", e);
       }
     }
   };

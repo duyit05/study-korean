@@ -183,9 +183,9 @@ const navigateTo = (path) => {
   showNotificationDropdown.value = false
 }
 
-const handleLogout = () => {
+const handleLogout = async () => {
   if (confirm("Bạn có chắc chắn muốn đăng xuất?")) {
-    authStore.logout()
+    await authStore.logout()
     router.push('/login')
   }
 }

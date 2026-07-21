@@ -130,9 +130,9 @@ const updateThemeClass = () => {
   }
 }
 
-const handleLogout = () => {
+const handleLogout = async () => {
   if (confirm("Bạn có chắc chắn muốn đăng xuất khỏi trang giáo viên?")) {
-    authStore.logout()
+    await authStore.logout()
     router.push('/login')
   }
 }
