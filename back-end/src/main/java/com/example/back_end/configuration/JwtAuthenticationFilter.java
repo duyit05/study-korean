@@ -54,12 +54,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         throw new DisabledException("User is blocked");
                     }
 
-                    // Validate sessionId — Lớp 1: Single Session
+                    // Validate sessionId — Lớp 1: Single Session (chỉ chặn nếu có session khác đang active)
                     String sessionId = tokenProvider.getSessionIdFromJWT(jwt);
                     String activeSession = redisTokenService.getActiveSession(user.getUsername());
-                    if (sessionId == null || !sessionId.equals(activeSession)) {
+
+                    if (activeSession != null && (sessionId == null || !sessionId.equals(activeSession))) {
                         throw new InsufficientAuthenticationException(
                                 ErrorCode.SESSION_HIJACKED.getMessage());
+                    } else if (activeSession == null && sessionId != null) {
+                        // Nếu Redis chưa có session (do hết hạn/mới flush), tự động sync lại session này làm active
+                        redisTokenService.saveActiveSession(
+                                user.getUsername(), sessionId,
+                                tokenProvider.getRefreshTokenExpirationInSec());
                     }
 
                     SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
