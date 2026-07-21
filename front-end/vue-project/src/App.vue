@@ -396,17 +396,20 @@ const handleSaveProfile = async ({ name, email, avatar }) => {
 </script>
 
 <template>
-  <router-view 
-    :classes="classes"
-    :study-sets="studySets"
-    :quizzes="quizzes"
-    :schedule="schedule"
-    @update-vocab-status="handleUpdateVocabStatus"
-    @submit-quiz="handleSubmitQuiz"
-    @save-profile="handleSaveProfile"
-    @mark-read="handleMarkNotificationRead"
-    @login-success="handleLoginSuccess"
-  />
+  <router-view v-slot="{ Component }">
+    <component
+      :is="Component"
+      :classes="classes"
+      :study-sets="studySets"
+      :quizzes="quizzes"
+      :schedule="schedule"
+      @update-vocab-status="handleUpdateVocabStatus"
+      @submit-quiz="handleSubmitQuiz"
+      @save-profile="handleSaveProfile"
+      @mark-read="handleMarkNotificationRead"
+      @login-success="handleLoginSuccess"
+    />
+  </router-view>
 
   <!-- Security Banner (IP Warning / Session Kicked) -->
   <Transition name="banner-slide">

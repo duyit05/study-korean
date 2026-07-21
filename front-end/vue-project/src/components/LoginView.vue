@@ -193,11 +193,13 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AppIcon from './icons/AppIcon.vue'
 import { useAuthStore } from '../stores/auth'
 
 const emit = defineEmits(['login-success'])
 
+const router = useRouter()
 const authStore = useAuthStore()
 
 const isRegisterMode = ref(false)
@@ -256,6 +258,7 @@ const handleLogin = async () => {
   try {
     const userData = await authStore.login(username.value, password.value, rememberMe.value)
     emit('login-success', userData)
+    router.push(userData.role === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard')
   } catch (error) {
     // handled by store
   }
