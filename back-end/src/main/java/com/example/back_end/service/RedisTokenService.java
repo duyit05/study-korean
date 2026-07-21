@@ -126,4 +126,9 @@ public class RedisTokenService {
             return 0;
         }
     }
+
+    public long trackLoginIp(String username, String ip) {
+        recordLoginIp(username, ip);
+        return getDistinctIpCountToday(username);
+    }
 }
