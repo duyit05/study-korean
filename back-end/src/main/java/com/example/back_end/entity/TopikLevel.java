@@ -21,6 +21,4 @@ public class TopikLevel {
     @Column(nullable = false, unique = true, length = 50)
     private String code;
 
-    @Column(name = "group_type", length = 20)
-    private String groupType; // "VOCAB", "QUIZ", or "ALL"
 }

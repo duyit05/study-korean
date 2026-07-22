@@ -4,7 +4,6 @@ import com.example.back_end.dto.request.TopikLevelRequest;
 import com.example.back_end.dto.response.ApiResponse;
 import com.example.back_end.dto.response.PageResponse;
 import com.example.back_end.entity.TopikLevel;
-import com.example.back_end.enums.TopikGroup;
 import com.example.back_end.service.TopikLevelService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,23 +19,12 @@ public class TopikLevelController {
 
     private final TopikLevelService topikLevelService;
 
-    @GetMapping("/groups")
-    @PreAuthorize("isAuthenticated()")
-    public ApiResponse<TopikGroup[]> getTopikGroups() {
-        return ApiResponse.<TopikGroup[]>builder()
-                .code(HttpStatus.OK.value())
-                .message("Lấy danh sách nhóm cấp độ TOPIK thành công.")
-                .data(TopikGroup.values())
-                .build();
-    }
-
     @GetMapping
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<?> getLevels(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String search,
-            @RequestParam(required = false) String group,
             @RequestParam(required = false) String[] sort,
             @RequestParam(defaultValue = "true") boolean unpaged) {
         if (unpaged) {
@@ -47,7 +35,7 @@ public class TopikLevelController {
                     .data(list)
                     .build();
         }
-        PageResponse<TopikLevel> data = topikLevelService.getPaginatedLevels(page, size, search, group, sort);
+        PageResponse<TopikLevel> data = topikLevelService.getPaginatedLevels(page, size, search, sort);
         return ApiResponse.<PageResponse<TopikLevel>>builder()
                 .code(HttpStatus.OK.value())
                 .message("Lấy danh sách cấp độ thành công.")

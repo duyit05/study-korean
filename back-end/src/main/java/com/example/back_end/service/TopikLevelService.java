@@ -31,15 +31,14 @@ public class TopikLevelService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<TopikLevel> getPaginatedLevels(int pageNo, int pageSize, String search, String groupType, String... sorts) {
+    public PageResponse<TopikLevel> getPaginatedLevels(int pageNo, int pageSize, String search, String... sorts) {
         int page = Math.max(0, pageNo - 1);
         Sort sort = SortUtils.parseSort(sorts);
         Pageable pageable = PageRequest.of(page, pageSize, sort);
 
         String safeSearch = (search != null && !search.trim().isEmpty()) ? "%" + search.trim().toLowerCase() + "%" : null;
-        String safeGroupType = (groupType != null && !groupType.isEmpty() && !groupType.equals("ALL_GROUPS")) ? groupType : null;
 
-        Page<TopikLevel> pageResult = topikLevelRepository.searchLevels(safeSearch, safeGroupType, pageable);
+        Page<TopikLevel> pageResult = topikLevelRepository.searchLevels(safeSearch, pageable);
 
         return PageResponse.<TopikLevel>builder()
                 .pageNo(page + 1)
@@ -61,7 +60,6 @@ public class TopikLevelService {
         TopikLevel level = TopikLevel.builder()
                 .name(request.getName())
                 .code(request.getCode())
-                .groupType(request.getGroupType())
                 .build();
         return topikLevelRepository.save(level);
     }
@@ -73,7 +71,6 @@ public class TopikLevelService {
         
         level.setName(request.getName());
         level.setCode(request.getCode());
-        level.setGroupType(request.getGroupType());
         return topikLevelRepository.save(level);
     }
 

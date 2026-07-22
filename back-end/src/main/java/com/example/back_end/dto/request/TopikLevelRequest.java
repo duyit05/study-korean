@@ -14,6 +14,4 @@ public class TopikLevelRequest {
     @NotBlank(message = "TOPIK_CODE_REQUIRED")
     private String code;
 
-    @NotBlank(message = "TOPIK_GROUP_REQUIRED")
-    private String groupType;
 }

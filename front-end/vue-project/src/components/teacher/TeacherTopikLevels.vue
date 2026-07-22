@@ -21,10 +21,6 @@
           placeholder="Tìm kiếm cấp độ (theo tên hoặc mã)..."
         >
       </div>
-      <div class="filter-options">
-        <label for="groupFilter">Lọc theo loại:</label>
-        <AppSelect id="groupFilter" v-model="selectedGroupFilter" :options="groupFilterOptions" style="min-width: 220px;" />
-      </div>
     </div>
 
     <!-- Levels Table -->
@@ -45,7 +41,6 @@
             <th>ID</th>
             <th>Tên cấp độ</th>
             <th>Mã định danh (Code)</th>
-            <th>Nhóm áp dụng</th>
             <th class="text-right">Hành động</th>
           </tr>
         </thead>
@@ -59,11 +54,6 @@
               </div>
             </td>
             <td><code>{{ level.code }}</code></td>
-            <td>
-              <span class="group-badge" :class="level.groupType.toLowerCase()">
-                {{ level.groupType }}
-              </span>
-            </td>
             <td class="text-right Actions">
               <button class="action-btnedit" @click="openEditModal(level)" title="Sửa">
                 <AppIcon name="edit" size="16" />
@@ -166,10 +156,6 @@
               required
             >
           </div>
-          <div class="form-group">
-            <label for="levelGroup">Nhóm áp dụng</label>
-            <AppSelect id="levelGroup" v-model="form.groupType" :options="groupTypeOptions" />
-          </div>
           <div class="modal-actions">
             <button type="button" class="cancel-btn" @click="showModal = false">Hủy bỏ</button>
             <button type="submit" class="submit-btn" :disabled="submitting">
@@ -218,28 +204,7 @@ import 'vue3-toastify/dist/index.css'
 
 const topikLevelStore = useTopikLevelStore()
 
-const groupLabels = {
-  'VOCAB': 'Kho từ vựng (VOCAB)',
-  'QUIZ': 'Đề thi & Bài tập (QUIZ)'
-}
-
-const groupFilterOptions = computed(() => {
-  const list = (topikLevelStore.groups || []).map(group => ({
-    label: groupLabels[group] || group,
-    value: group
-  }))
-  return [{ label: 'Tất cả các nhóm', value: 'ALL_GROUPS' }, ...list]
-})
-
-const groupTypeOptions = computed(() => {
-  return (topikLevelStore.groups || []).map(group => ({
-    label: groupLabels[group] || group,
-    value: group
-  }))
-})
-
 const searchQuery = ref('')
-const selectedGroupFilter = ref('ALL_GROUPS')
 
 const showModal = ref(false)
 const isEditMode = ref(false)
@@ -248,8 +213,7 @@ const submitting = ref(false)
 
 const form = ref({
   name: '',
-  code: '',
-  groupType: 'VOCAB'
+  code: ''
 })
 
 const showDeleteConfirm = ref(false)
@@ -266,7 +230,6 @@ const loadLevels = async () => {
       page: currentPage.value,
       size: itemsPerPage.value,
       search: searchQuery.value.trim() || null,
-      group: selectedGroupFilter.value === 'ALL_GROUPS' ? null : selectedGroupFilter.value,
       unpaged: false
     })
     totalPages.value = pageData.totalPage || 1
@@ -279,7 +242,6 @@ const loadLevels = async () => {
 onMounted(async () => {
   try {
     await loadLevels()
-    await topikLevelStore.fetchTopikGroups()
   } catch (err) {
     console.error(err)
   }
@@ -297,11 +259,6 @@ watch(searchQuery, () => {
   debounceTimeout = setTimeout(() => {
     loadLevels()
   }, 300)
-})
-
-watch(selectedGroupFilter, () => {
-  currentPage.value = 1
-  loadLevels()
 })
 
 const triggerSearch = () => {
@@ -362,8 +319,7 @@ const openCreateModal = () => {
   selectedLevelId.value = null
   form.value = {
     name: '',
-    code: '',
-    groupType: 'VOCAB'
+    code: ''
   }
   showModal.value = true
 }
@@ -373,8 +329,7 @@ const openEditModal = (level) => {
   selectedLevelId.value = level.id
   form.value = {
     name: level.name,
-    code: level.code,
-    groupType: level.groupType
+    code: level.code
   }
   showModal.value = true
 }
@@ -709,7 +664,6 @@ code {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  height: 400px;
 }
 
 .form-group {

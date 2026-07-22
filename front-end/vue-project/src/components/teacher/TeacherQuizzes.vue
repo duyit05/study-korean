@@ -463,7 +463,7 @@ const showCreateModal = ref(false)
 const showAddQuestionModal = ref(false)
 
 // TOPIK levels loaded from Pinia Store
-const topikLevels = computed(() => (topikLevelStore.levels || []).filter(l => l.groupType === 'QUIZ'))
+const topikLevels = computed(() => topikLevelStore.levels || [])
 const newQuizLevelId = ref(null)
 const editQuizLevelId = ref(null)
 const newQuizExamType = ref('PRACTICE')

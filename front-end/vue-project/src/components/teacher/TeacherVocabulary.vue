@@ -543,7 +543,7 @@ const handleImportCards = async () => {
 }
 
 // TOPIK Levels loaded from Pinia Store
-const topikLevels = computed(() => (topikLevelStore.levels || []).filter(l => l.groupType === 'VOCAB'))
+const topikLevels = computed(() => topikLevelStore.levels || [])
 const levelOptions = computed(() => {
   return topikLevels.value.map(lvl => ({ label: lvl.name, value: lvl.id }))
 })
