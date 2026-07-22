@@ -907,4 +907,57 @@ code {
   background-color: transparent;
   cursor: default;
 }
+
+@media (max-width: 768px) {
+  .teacher-topik-levels {
+    padding: 1rem;
+  }
+
+  .header-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .header-section .primary-btn {
+    align-self: flex-start;
+  }
+
+  .filter-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .search-box {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .filter-options {
+    width: 100%;
+  }
+
+  .filter-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .table-responsive, .table-wrapper {
+    overflow-x: auto;
+  }
+
+  .modal-content {
+    width: 95%;
+    padding: 1.25rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .form-row-2 {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
 </style>
+

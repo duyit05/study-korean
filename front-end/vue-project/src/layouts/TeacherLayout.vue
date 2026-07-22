@@ -1,9 +1,21 @@
 <template>
   <div class="teacher-layout">
+    <!-- Overlay when sidebar is open on mobile -->
+    <div 
+      v-if="isSidebarOpen" 
+      class="sidebar-overlay" 
+      @click="isSidebarOpen = false"
+    ></div>
+
     <!-- Sidebar Navigation -->
-    <aside class="sidebar">
+    <aside class="sidebar" :class="{ 'open': isSidebarOpen }">
       <div class="sidebar-brand">
-        <div class="logo-box">한</div>
+        <div class="brand-header-mobile">
+          <div class="logo-box">한</div>
+          <button class="close-sidebar-btn" @click="isSidebarOpen = false" title="Đóng menu">
+            &times;
+          </button>
+        </div>
         <h2>Study Korea</h2>
         <span class="admin-badge">TEACHER PORTAL</span>
       </div>
@@ -73,8 +85,17 @@
     <!-- Main Content Area -->
     <div class="main-container">
       <header class="top-header">
-        <div class="view-title">
-          <h3>Hệ thống quản lý học tập</h3>
+        <div class="header-left-mobile" style="display: flex; align-items: center; gap: 0.75rem;">
+          <button class="menu-toggle-btn" @click="isSidebarOpen = !isSidebarOpen" title="Mở menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" x2="20" y1="12" y2="12"></line>
+              <line x1="4" x2="20" y1="6" y2="6"></line>
+              <line x1="4" x2="20" y1="18" y2="18"></line>
+            </svg>
+          </button>
+          <div class="view-title">
+            <h3>Hệ thống quản lý</h3>
+          </div>
         </div>
         <div class="header-actions">
           <button class="theme-btn" @click="toggleTheme" title="Chuyển chế độ Sáng/Tối">
@@ -113,6 +134,11 @@ const authStore = useAuthStore()
 const user = computed(() => authStore.user)
 
 const isDark = ref(false)
+const isSidebarOpen = ref(false)
+
+router.afterEach(() => {
+  isSidebarOpen.value = false
+})
 
 const toggleTheme = () => {
   isDark.value = !isDark.value
@@ -170,6 +196,91 @@ onMounted(() => {
   height: 100vh;
   box-shadow: var(--shadow-sm);
   z-index: 10;
+  transition: transform var(--transition-normal, 0.3s) ease;
+}
+
+.brand-header-mobile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.sidebar-overlay {
+  display: none;
+}
+
+.close-sidebar-btn {
+  display: none;
+}
+
+.menu-toggle-btn {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+    backdrop-filter: blur(2px);
+  }
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: 100vh;
+    z-index: 100;
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .close-sidebar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.8rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0.25rem;
+  }
+
+  .close-sidebar-btn:hover {
+    color: var(--danger);
+  }
+
+  .menu-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    color: var(--text-title);
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm, 6px);
+    cursor: pointer;
+    transition: all var(--transition-fast, 0.2s);
+  }
+
+  .menu-toggle-btn:hover {
+    background-color: var(--bg-body);
+    border-color: var(--primary);
+    color: var(--primary);
+  }
 }
 
 .sidebar-brand {

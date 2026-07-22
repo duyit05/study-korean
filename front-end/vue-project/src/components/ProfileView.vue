@@ -155,6 +155,64 @@
             </div>
           </div>
         </div>
+
+        <!-- Change Password Section -->
+        <div class="profile-card change-password-box">
+          <h3 class="card-title">Đổi mật khẩu</h3>
+          <form @submit.prevent="handlePasswordChange" class="profile-form">
+            <div class="form-group">
+              <label for="old-password">Mật khẩu hiện tại</label>
+              <div class="password-input-wrapper">
+                <input 
+                  :type="showOldPassword ? 'text' : 'password'" 
+                  id="old-password" 
+                  v-model="passwordState.oldPassword" 
+                  required
+                  placeholder="Nhập mật khẩu hiện tại"
+                >
+                <button type="button" class="eye-btn" @click="showOldPassword = !showOldPassword" tabindex="-1">
+                  <AppIcon :name="showOldPassword ? 'eye-off' : 'eye'" size="16" />
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="new-password">Mật khẩu mới</label>
+              <div class="password-input-wrapper">
+                <input 
+                  :type="showNewPassword ? 'text' : 'password'" 
+                  id="new-password" 
+                  v-model="passwordState.newPassword" 
+                  required
+                  placeholder="Tối thiểu 6 ký tự"
+                >
+                <button type="button" class="eye-btn" @click="showNewPassword = !showNewPassword" tabindex="-1">
+                  <AppIcon :name="showNewPassword ? 'eye-off' : 'eye'" size="16" />
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="confirm-password">Xác nhận mật khẩu mới</label>
+              <div class="password-input-wrapper">
+                <input 
+                  :type="showConfirmPassword ? 'text' : 'password'" 
+                  id="confirm-password" 
+                  v-model="passwordState.confirmPassword" 
+                  required
+                  placeholder="Nhập lại mật khẩu mới"
+                >
+                <button type="button" class="eye-btn" @click="showConfirmPassword = !showConfirmPassword" tabindex="-1">
+                  <AppIcon :name="showConfirmPassword ? 'eye-off' : 'eye'" size="16" />
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="save-btn" :disabled="isPasswordLoading">
+              {{ isPasswordLoading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu' }}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   </div>
@@ -198,6 +256,42 @@ const prefs = ref({
   autoPronounce: true,
   emailNotif: true
 })
+
+// Change password states
+const passwordState = ref({
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+const isPasswordLoading = ref(false)
+const showOldPassword = ref(false)
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
+
+const handlePasswordChange = async () => {
+  if (passwordState.value.newPassword.length < 6) {
+    toast.error("Mật khẩu mới phải từ 6 ký tự trở lên")
+    return
+  }
+  if (passwordState.value.newPassword !== passwordState.value.confirmPassword) {
+    toast.error("Xác nhận mật khẩu mới không khớp")
+    return
+  }
+
+  isPasswordLoading.value = true
+  try {
+    await authStore.changePassword(passwordState.value.oldPassword, passwordState.value.newPassword)
+    toast.success("Đổi mật khẩu thành công!")
+    passwordState.value.oldPassword = ''
+    passwordState.value.newPassword = ''
+    passwordState.value.confirmPassword = ''
+  } catch (error) {
+    console.error("Password change failed:", error)
+    toast.error(error.message || "Đổi mật khẩu thất bại. Vui lòng kiểm tra lại.")
+  } finally {
+    isPasswordLoading.value = false
+  }
+}
 
 // Watch for prop changes to update local model
 watch(() => props.user, (newUser) => {
@@ -658,4 +752,43 @@ input:checked + .slider:before {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 480px) {
+  .hw-summary-panel {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-input-wrapper input {
+  padding-right: 2.5rem !important;
+}
+
+.eye-btn {
+  position: absolute;
+  right: 0;
+  background: none;
+  border: none;
+  padding: 0 0.75rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  transition: color 0.2s;
+}
+
+.eye-btn:hover {
+  color: var(--primary);
+}
+
 </style>
+

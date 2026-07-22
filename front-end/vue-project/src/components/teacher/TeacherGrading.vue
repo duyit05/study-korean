@@ -600,4 +600,47 @@ const submitGrades = async () => {
 .submit-btn:hover {
   background-color: var(--primary-hover);
 }
+
+@media (max-width: 768px) {
+  .teacher-grading {
+    padding: 1rem;
+  }
+
+  .header-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .submissions-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .panel-header-sticky {
+    position: static;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    padding: 1rem;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+  }
+
+  .total-score-box {
+    align-items: flex-start;
+  }
+
+  .submit-grading-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .submit-grading-footer button {
+    width: 100%;
+  }
+}
 </style>
+

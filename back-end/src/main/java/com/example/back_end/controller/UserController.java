@@ -1,8 +1,10 @@
 package com.example.back_end.controller;
 
 import com.example.back_end.dto.request.UserProfileUpdateRequest;
+import com.example.back_end.dto.request.ChangePasswordRequest;
 import com.example.back_end.dto.response.ApiResponse;
 import com.example.back_end.dto.response.UserResponse;
+import jakarta.validation.Valid;
 import com.example.back_end.entity.User;
 import com.example.back_end.enums.UserRole;
 import com.example.back_end.service.UserService;
@@ -52,6 +54,16 @@ public class UserController {
                 return ApiResponse.<Void>builder()
                                 .code(HttpStatus.OK.value())
                                 .message("Mở khóa tài khoản thành công.")
+                                .build();
+        }
+
+        @PutMapping("/change-password")
+        @PreAuthorize("isAuthenticated()")
+        public ApiResponse<Void> changePassword(@RequestBody @Valid ChangePasswordRequest request) {
+                userService.changePassword(request.getOldPassword(), request.getNewPassword());
+                return ApiResponse.<Void>builder()
+                                .code(HttpStatus.OK.value())
+                                .message("Thay đổi mật khẩu thành công.")
                                 .build();
         }
 }

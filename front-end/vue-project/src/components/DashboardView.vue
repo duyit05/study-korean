@@ -763,9 +763,43 @@ const formatDateShort = (dateStr) => {
   .welcome-banner {
     flex-direction: column;
     align-items: flex-start;
+    gap: 1rem;
+    padding: 1.5rem;
   }
   .streak-badge {
     align-self: flex-start;
   }
 }
+
+@media (max-width: 600px) {
+  .stats-row {
+    grid-template-columns: 1fr;
+  }
+  .class-item-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  .class-item-card .primary-btn {
+    align-self: flex-start;
+  }
+  .shortcut-action-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  .shortcut-action-card .primary-btn {
+    align-self: flex-start;
+  }
+  .progress-legend {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .notif-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+}
 </style>
+

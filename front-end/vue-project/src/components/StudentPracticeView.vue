@@ -1598,4 +1598,33 @@ const formatDate = (d) => {
   cursor: pointer;
   margin-bottom: 1rem;
 }
+
+@media (max-width: 768px) {
+  .header-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+  .header-left {
+    width: 100%;
+  }
+  .practice-status-tabs {
+    align-self: flex-start;
+  }
+  .quizzes-grid {
+    grid-template-columns: 1fr;
+  }
+  .result-score-banner {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+  .quiz-nav-footer {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .quiz-nav-footer button {
+    width: 100%;
+  }
+}
 </style>

@@ -2554,4 +2554,32 @@ const formatDateShort = (dateStr) => {
 .submit-btn:hover {
   opacity: 0.9;
 }
+
+@media (max-width: 768px) {
+  .quiz-header-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .quiz-header-section .primary-btn {
+    align-self: flex-start;
+  }
+
+  .active-quiz-container {
+    padding: 1.25rem;
+    border-radius: var(--radius-md);
+  }
+
+  .modal-content {
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .creator-body-grid {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
+

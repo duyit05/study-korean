@@ -1871,4 +1871,100 @@ input:focus, select:focus, textarea:focus {
   margin-top: -0.5rem;
   margin-bottom: 1rem;
 }
+
+@media (max-width: 768px) {
+  .teacher-quizzes {
+    padding: 1rem;
+  }
+
+  .header-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .header-section .primary-btn {
+    align-self: flex-start;
+  }
+
+  .filter-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .search-box {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .filter-options {
+    width: 100%;
+  }
+
+  .filter-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .pagination-bar {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+    padding-top: 1rem;
+    min-height: auto;
+  }
+
+  .pagination-info {
+    position: static;
+    text-align: center;
+  }
+
+  .quiz-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .quiz-action-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .answers-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .active-controls {
+    flex-direction: column;
+  }
+
+  .record-btn.start {
+    max-width: 100%;
+  }
+
+  .quiz-detail-panel {
+    padding: 1rem;
+    overflow-x: auto;
+  }
+
+  .panel-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .modal-content {
+    width: 95%;
+    padding: 1.25rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .form-row-2, .form-row-3 {
+    grid-template-columns: 1fr !important;
+    gap: 1rem;
+  }
+}
 </style>
+

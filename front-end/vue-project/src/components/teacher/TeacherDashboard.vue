@@ -621,4 +621,65 @@ const lineChartOptions = {
   padding: 0 1.5rem;
   margin-top: 1rem;
 }
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .teacher-dashboard {
+    padding: 1rem;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .welcome-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.5rem;
+  }
+
+  .banner-content h2 {
+    font-size: 1.35rem;
+  }
+
+  .banner-badge {
+    display: none;
+  }
+
+  .chart-wrapper {
+    height: 200px;
+    padding: 0 0.5rem;
+  }
+
+  .panel-header {
+    padding: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .feed-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.75rem;
+  }
+
+  .feed-item:last-child {
+    border-bottom: none;
+  }
+
+  .feed-item .action-btn {
+    align-self: flex-start;
+  }
+}
+
 </style>

@@ -1029,13 +1029,41 @@ const updateWordStatus = (wordId, status) => {
   .vocab-header-section {
     flex-direction: column;
     align-items: flex-start;
+    gap: 1rem;
   }
   .selected-header-left {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.75rem;
   }
+  .set-actions {
+    grid-template-columns: 1fr;
+  }
 }
+
+@media (max-width: 480px) {
+  .word-text {
+    font-size: 2.25rem !important;
+  }
+  .meaning-text {
+    font-size: 1.35rem !important;
+  }
+  .flashcard {
+    height: 280px !important;
+  }
+  .card-navigation {
+    flex-direction: column;
+    gap: 0.75rem;
+    align-items: stretch;
+  }
+  .memorize-toolbar {
+    justify-content: center;
+  }
+  .nav-btn {
+    justify-content: center;
+  }
+}
+
 
 .selected-header-left {
   display: flex;

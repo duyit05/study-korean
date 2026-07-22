@@ -20,10 +20,6 @@ jwt:
   secret-key: ${JWT_SECRET_KEY:c2VjcmV0LWtleS1mb3ItZGV2ZWxvcG1lbnQtZW52aXJvbm1lbnQtc3R1ZHkta29yZWFuLWFwcC1zZWN1cmUta2V5LTEyMzQ1Njc4OTA=}
   secret-refresh-key: ${JWT_SECRET_REFRESH_KEY:c2VjcmV0LXJlZnJlc2gta2V5LWZvci1kZXZlbG9wbWVudC1lbnZpcm9ubWVudC1zdHVkeS1rb3JlYW4tYWBwLXNlY3VyZS1rZXktMTIzNDU2Nzg5MA==}
 
-minio:
-  url: ${MINIO_URL:http://localhost:9000}
-  access-key: ${MINIO_ACCESS_KEY:minioadmin}
-  secret-key: ${MINIO_SECRET_KEY:minioadmin}
 
 cloudflare:
   r2:

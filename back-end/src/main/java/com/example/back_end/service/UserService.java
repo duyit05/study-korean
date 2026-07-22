@@ -290,4 +290,14 @@ public class UserService {
         userRepository.save(user);
         log.info("Account unlocked by admin: userId={}, username={}", userId, user.getUsername());
     }
+
+    @Transactional
+    public void changePassword(String oldPassword, String newPassword) {
+        User user = getCurrentUser();
+        if (!passwordEncoder.matches(oldPassword, user.getPasswordHash())) {
+            throw new AppException(ErrorCode.INVALID_PASSWORD);
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
 }

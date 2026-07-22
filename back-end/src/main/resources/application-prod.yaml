@@ -31,10 +31,6 @@ jwt:
   secret-key: ${JWT_SECRET_KEY}
   secret-refresh-key: ${JWT_SECRET_REFRESH_KEY}
 
-minio:
-  url: ${MINIO_URL:http://localhost:9000}
-  access-key: ${MINIO_ACCESS_KEY:minioadmin}
-  secret-key: ${MINIO_SECRET_KEY:minioadmin}
 
 cloudflare:
   r2:

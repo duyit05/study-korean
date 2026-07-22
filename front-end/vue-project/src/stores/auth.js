@@ -138,6 +138,21 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
+  const changePassword = async (oldPassword, newPassword) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      const response = await api.put('/users/change-password', { oldPassword, newPassword });
+      return response;
+    } catch (error) {
+      console.error("Change password action error:", error);
+      errorMessage.value = error.message || 'Đổi mật khẩu không thành công. Vui lòng kiểm tra lại.';
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     user,
     loading,
@@ -146,5 +161,7 @@ export const useAuthStore = defineStore('auth', () => {
     register,
     logout,
     uploadAvatar,
+    changePassword,
   };
 });
+

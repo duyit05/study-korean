@@ -2615,4 +2615,83 @@ const formatSessionDateTime = (dateStr) => {
   color: var(--text-muted);
   font-size: 0.95rem;
 }
+
+@media (max-width: 768px) {
+  .teacher-classes {
+    padding: 1rem;
+  }
+
+  .header-section {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .header-section .primary-btn {
+    align-self: flex-start;
+  }
+
+  .filter-card {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .search-box {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .filter-options {
+    width: 100%;
+  }
+
+  .filter-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .pagination-bar {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+    padding-top: 1rem;
+    min-height: auto;
+  }
+
+  .pagination-info {
+    position: static;
+    text-align: center;
+  }
+
+  .class-detail-panel {
+    padding: 1rem;
+    overflow-x: auto;
+  }
+
+  .panel-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .panel-tabs {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 0.25rem;
+  }
+
+  .modal-content {
+    width: 95%;
+    padding: 1.25rem;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .form-row-2 {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
 </style>
+

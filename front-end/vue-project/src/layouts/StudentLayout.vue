@@ -132,6 +132,30 @@
         @save-profile="$emit('save-profile', $event)"
       />
     </main>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="bottom-nav">
+      <router-link to="/student/dashboard" class="bottom-nav-item" active-class="active">
+        <AppIcon name="dashboard" size="18" />
+        <span>Tổng quan</span>
+      </router-link>
+      <router-link to="/student/vocabulary" class="bottom-nav-item" active-class="active">
+        <AppIcon name="book" size="18" />
+        <span>Từ vựng</span>
+      </router-link>
+      <router-link to="/student/quizzes" class="bottom-nav-item" active-class="active">
+        <AppIcon name="quiz" size="18" />
+        <span>Bài tập</span>
+      </router-link>
+      <router-link to="/student/practice" class="bottom-nav-item" active-class="active">
+        <AppIcon name="award" size="18" />
+        <span>Ôn tập</span>
+      </router-link>
+      <router-link to="/student/schedule" class="bottom-nav-item" active-class="active">
+        <AppIcon name="schedule" size="18" />
+        <span>Lịch trình</span>
+      </router-link>
+    </nav>
   </div>
 </template>
 
@@ -492,9 +516,77 @@ onMounted(() => {
   transition: background-color var(--transition-normal);
 }
 
+.bottom-nav {
+  display: none;
+}
+
 @media (max-width: 768px) {
+  .app-header {
+    padding: 0 1rem;
+    height: 60px;
+  }
+  
+  .header-logo h1 {
+    font-size: 1.1rem;
+  }
+  
+  .nav-links {
+    display: none;
+  }
+  
+  .user-details {
+    display: none;
+  }
+  
+  .header-actions {
+    gap: 0.75rem;
+  }
+  
+  .user-profile-menu {
+    border-left: none;
+    padding-left: 0;
+  }
+
   .app-main-content {
-    padding: 1rem;
+    padding: 1rem 1rem 5rem 1rem;
+  }
+
+  .bottom-nav {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background-color: var(--bg-card);
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+  }
+
+  .bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.7rem;
+    font-weight: 600;
+    flex: 1;
+    height: 100%;
+    transition: all var(--transition-fast);
+  }
+
+  .bottom-nav-item:hover {
+    color: var(--text-title);
+  }
+
+  .bottom-nav-item.active {
+    color: var(--primary);
   }
 }
 </style>

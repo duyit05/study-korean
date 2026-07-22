@@ -1,3 +1,4 @@
 .agents/
 back-end.rar
 .vscode/
+.env*
