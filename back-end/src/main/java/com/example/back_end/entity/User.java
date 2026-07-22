@@ -1,6 +1,7 @@
 package com.example.back_end.entity;
 
 import com.example.back_end.enums.UserRole;
+import com.example.back_end.enums.AuthProvider;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -46,6 +47,18 @@ public class User {
     @Column(name = "is_active")
     @Builder.Default
     private Boolean isActive = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "auth_provider", length = 20)
+    @Builder.Default
+    private AuthProvider authProvider = AuthProvider.SYSTEM;
+
+    @PostLoad
+    private void postLoad() {
+        if (this.authProvider == null) {
+            this.authProvider = AuthProvider.SYSTEM;
+        }
+    }
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

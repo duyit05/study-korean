@@ -1,6 +1,7 @@
 package com.example.back_end.controller;
 
 import com.example.back_end.dto.request.RegisterRequest;
+import com.example.back_end.dto.request.GoogleLoginRequest;
 import com.example.back_end.dto.request.RefreshRequest;
 import com.example.back_end.dto.response.ApiResponse;
 import com.example.back_end.dto.response.AuthResponse;
@@ -48,6 +49,20 @@ public class AuthenticationController {
         return ApiResponse.<AuthResponse>builder()
                 .code(HttpStatus.OK.value())
                 .message("Đăng nhập thành công.")
+                .data(authResponse)
+                .build();
+    }
+
+    @PostMapping("/google")
+    public ApiResponse<AuthResponse> googleLogin(
+            @Valid @RequestBody GoogleLoginRequest request,
+            HttpServletRequest httpRequest) {
+        String clientIp = getClientIp(httpRequest);
+        AuthResponse authResponse = userService.loginWithGoogle(request.getIdToken(), clientIp);
+
+        return ApiResponse.<AuthResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Đăng nhập bằng Google thành công.")
                 .data(authResponse)
                 .build();
     }

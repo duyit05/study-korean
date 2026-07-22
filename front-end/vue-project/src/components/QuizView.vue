@@ -387,132 +387,193 @@
     </div>
 
     <!-- ACTIVE QUIZ SCREEN -->
-    <div v-else-if="activeQuiz" class="active-quiz-container animate-scale">
-      <div class="quiz-run-header">
-        <div class="quiz-title-info">
-          <h3>{{ activeQuiz.title || 'Đang làm bài' }}</h3>
-          <span class="question-tracker">Câu hỏi {{ currentQuestionIndex + 1 }} / {{ activeQuiz.questions ? activeQuiz.questions.length : 0 }}</span>
-        </div>
-        
-        <div class="timer-box" :class="{ warning: timerMinutes < 2 }">
-          <AppIcon name="clock" size="18" />
-          <span>{{ padZero(timerMinutes) }}:{{ padZero(timerSeconds) }}</span>
-        </div>
-      </div>
+    <div v-else-if="activeQuiz" class="quiz-container-layout animate-scale">
+      <!-- CỘT TRÁI: DÒNG CÂU HỎI & PHÂN TRANG -->
+      <div class="quiz-stream">
+        <header class="card-panel-quiz stream-header">
+          <div class="quiz-title">
+            <h1>{{ activeQuiz.title || 'Bài Thi Đánh Giá Kiến Thức' }}</h1>
+            <p>Mã đề: #{{ activeQuiz.id || 'PRACTICE' }} | Quy định: {{ rowsPerPage }} câu/trang. Tổng số: {{ totalQuestionsCount }} câu</p>
+          </div>
+        </header>
 
-      <!-- Question Progress Bar -->
-      <div class="run-progress-bar">
-        <div class="fill" :style="{ width: (((currentQuestionIndex + 1) / (activeQuiz.questions ? activeQuiz.questions.length : 1)) * 100) + '%' }"></div>
-      </div>
-
-      <!-- Question Box -->
-      <div class="question-view-card">
-        <p class="question-text">{{ currentQuestionIndex + 1 }}. {{ currentQuestion.question || '' }}</p>
-
-        <!-- Standard Option Choice Question -->
-        <div v-if="currentQuestion.type === 'choice' || currentQuestion.type === 'match'" class="options-grid">
-          <button 
-            v-for="opt in (currentQuestion.options || [])" 
-            :key="opt"
-            class="option-row"
-            :class="{ selected: userAnswers[currentQuestion.id] === opt }"
-            @click="selectOption(opt)"
+        <!-- Vùng chứa danh sách câu hỏi của trang hiện tại -->
+        <div class="questions-list-container" style="display: flex; flex-direction: column; gap: 1.5rem;">
+          <div 
+            v-for="(q, localIndex) in paginatedQuestions" 
+            :key="q.id" 
+            class="card-panel-quiz question-card"
+            :id="'question-block-' + ((currentPage - 1) * rowsPerPage + localIndex)"
           >
-            <div class="radio-indicator">
-              <span v-if="userAnswers[currentQuestion.id] === opt" class="dot"></span>
+            <div class="question-meta">
+              <div class="question-tag">Câu hỏi {{ String((currentPage - 1) * rowsPerPage + localIndex + 1).padStart(2, '0') }}</div>
+              <button 
+                class="btn-bookmark" 
+                :class="{ bookmarked: reviewStatus[q.id] }"
+                @click="toggleReview(q.id)"
+              >
+                <span>⭐</span> {{ reviewStatus[q.id] ? 'Đang đánh dấu' : 'Đánh dấu xem lại' }}
+              </button>
             </div>
-            <span class="option-text">{{ opt }}</span>
+
+            <h2 class="question-text">
+              {{ q.question || '' }}
+            </h2>
+
+            <!-- Standard Option Choice Question -->
+            <div v-if="q.type === 'choice' || q.type === 'match'" class="options-list">
+              <label 
+                v-for="(opt, optIdx) in (q.options || [])" 
+                :key="opt"
+                class="option-item"
+                :class="{ selected: userAnswers[q.id] === opt }"
+                @click="selectOption(q.id, opt)"
+              >
+                <div class="option-alpha">{{ getAlpha(optIdx) }}</div>
+                <div class="option-label">{{ opt }}</div>
+              </label>
+            </div>
+
+            <!-- Listening (Audio Player + Option Choice) Question -->
+            <div v-else-if="q.type === 'listening'" class="listening-block">
+              <div class="audio-player-card" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background-color: var(--bg-badge); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                <!-- Custom MP3 / URL playback -->
+                <button 
+                  v-if="q.audioUrl"
+                  class="audio-play-btn" 
+                  @click="playCustomAudio(q.audioUrl)"
+                  style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background-color: var(--bg-card); cursor: pointer; font-weight: 600; color: var(--primary);"
+                  title="Phát file âm thanh đính kèm"
+                >
+                  <AppIcon name="play" size="20" />
+                  <span>Phát Audio Đính Kèm 🎧</span>
+                </button>
+                
+                <!-- Fallback to TTS -->
+                <button 
+                  v-else
+                  class="audio-play-btn" 
+                  @click="playSpeech(q.koreanText)"
+                  style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background-color: var(--bg-card); cursor: pointer; font-weight: 600; color: var(--primary);"
+                  title="Phát giọng đọc mẫu bằng AI"
+                >
+                  <AppIcon name="play" size="20" />
+                  <span>Phát Giọng AI (TTS) 🔊</span>
+                </button>
+                
+                <div class="audio-visualizer" :class="{ playing: isSpeaking && (playingKoreanText === q.koreanText || playingKoreanText === q.audioUrl) }">
+                  <span class="bar bar-1"></span>
+                  <span class="bar bar-2"></span>
+                  <span class="bar bar-3"></span>
+                  <span class="bar bar-4"></span>
+                  <span class="bar bar-5"></span>
+                </div>
+              </div>
+
+              <div class="options-list" style="margin-top: 1.5rem;">
+                <label 
+                  v-for="(opt, optIdx) in (q.options || [])" 
+                  :key="opt"
+                  class="option-item"
+                  :class="{ selected: userAnswers[q.id] === opt }"
+                  @click="selectOption(q.id, opt)"
+                >
+                  <div class="option-alpha">{{ getAlpha(optIdx) }}</div>
+                  <div class="option-label">{{ opt }}</div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Text Fill Question -->
+            <div v-else-if="q.type === 'fill'" class="fill-input-box">
+              <input 
+                type="text" 
+                v-model="userAnswers[q.id]" 
+                placeholder="Nhập câu trả lời của bạn..."
+                class="fill-text-field"
+                style="width: 100%; padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 1rem; background-color: var(--bg-card); color: var(--text-body);"
+              >
+              <p class="input-hint" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">* Điền từ hoặc cụm từ tiếng Hàn chính xác.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Thanh điều hướng phân trang dữ liệu -->
+        <div class="card-panel-quiz pagination-container">
+          <div class="pagination-info" id="pagination-info">Trang {{ currentPage }} / {{ totalPages }}</div>
+          <div class="pagination-buttons">
+            <button class="btn-page btn-page-nav" id="btn-page-prev" :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+              Trang trước
+            </button>
+            <button 
+              v-for="p in totalPages" 
+              :key="p"
+              class="btn-page btn-page-num" 
+              :class="{ active: currentPage === p }" 
+              @click="goToPage(p)"
+            >
+              {{ p }}
+            </button>
+            <button class="btn-page btn-page-nav" id="btn-page-next" :disabled="currentPage === totalPages" @click="goToPage(currentPage + 1)">
+              Trang sau
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- CỘT PHẢI: BẢNG TIẾN ĐỘ & TRẠNG THÁI TOÀN ĐỀ -->
+      <aside class="card-panel-quiz sidebar-content">
+        <div class="timer-widget">
+          <div class="timer-left">⏱️ Thời gian còn lại</div>
+          <div id="countdown-timer">{{ padZero(timerMinutes) }}:{{ padZero(timerSeconds) }}</div>
+        </div>
+
+        <div class="progress-wrapper">
+          <div class="progress-text">
+            <span>Tiến độ hoàn thành</span>
+            <span>{{ answeredQuestionsCount }} / {{ totalQuestionsCount }} Câu</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-bar" :style="{ width: progressPercentage + '%' }"></div>
+          </div>
+        </div>
+
+        <div class="sidebar-title">Bảng điều hướng nhanh ({{ totalQuestionsCount }} câu)</div>
+
+        <div class="matrix-grid">
+          <button 
+            v-for="(q, index) in (activeQuiz.questions || [])" 
+            :key="q.id" 
+            class="matrix-item"
+            :class="{ 
+              done: userAnswers[q.id] !== null && userAnswers[q.id] !== undefined && userAnswers[q.id] !== '',
+              review: reviewStatus[q.id]
+            }"
+            @click="jumpToQuestion(index)"
+          >
+            {{ index + 1 }}
           </button>
         </div>
 
-        <!-- Listening (Audio Player + Option Choice) Question -->
-        <div v-else-if="currentQuestion.type === 'listening'" class="listening-block">
-          <div class="audio-player-card">
-            <!-- Custom MP3 / URL playback -->
-            <button 
-              v-if="currentQuestion.audioUrl"
-              class="audio-play-btn" 
-              @click="playCustomAudio(currentQuestion.audioUrl)"
-              title="Phát file âm thanh đính kèm"
-            >
-              <AppIcon name="play" size="20" />
-              <span>Phát Audio Đính Kèm 🎧</span>
-            </button>
-            
-            <!-- Fallback to TTS -->
-            <button 
-              v-else
-              class="audio-play-btn" 
-              @click="playSpeech(currentQuestion.koreanText)"
-              title="Phát giọng đọc mẫu bằng AI"
-            >
-              <AppIcon name="play" size="20" />
-              <span>Phát Giọng AI (TTS) 🔊</span>
-            </button>
-            
-            <div class="audio-visualizer" :class="{ playing: isSpeaking && (playingKoreanText === currentQuestion.koreanText || playingKoreanText === currentQuestion.audioUrl) }">
-              <span class="bar bar-1"></span>
-              <span class="bar bar-2"></span>
-              <span class="bar bar-3"></span>
-              <span class="bar bar-4"></span>
-              <span class="bar bar-5"></span>
-            </div>
+        <div class="legend-list">
+          <div class="legend-item">
+            <div class="legend-color c-done"></div>
+            <span>Đã chọn đáp án</span>
           </div>
-
-          <div class="options-grid">
-            <button 
-              v-for="opt in (currentQuestion.options || [])" 
-              :key="opt"
-              class="option-row"
-              :class="{ selected: userAnswers[currentQuestion.id] === opt }"
-              @click="selectOption(opt)"
-            >
-              <div class="radio-indicator">
-                <span v-if="userAnswers[currentQuestion.id] === opt" class="dot"></span>
-              </div>
-              <span class="option-text">{{ opt }}</span>
-            </button>
+          <div class="legend-item">
+            <div class="legend-color c-review"></div>
+            <span>Đánh dấu xem lại sau</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-color c-empty"></div>
+            <span>Chưa làm</span>
           </div>
         </div>
 
-        <!-- Text Fill Question -->
-        <div v-else-if="currentQuestion.type === 'fill'" class="fill-input-box">
-          <input 
-            type="text" 
-            v-model="userAnswers[currentQuestion.id]" 
-            placeholder="Nhập câu trả lời của bạn..."
-            class="fill-text-field"
-          >
-          <p class="input-hint">* Điền từ hoặc cụm từ tiếng Hàn chính xác.</p>
-        </div>
-      </div>
-
-      <!-- Footer Buttons -->
-      <div class="quiz-run-footer">
-        <button 
-          class="nav-btn-run text" 
-          :disabled="currentQuestionIndex === 0"
-          @click="prevQuestion"
-        >
-          Quay lại
-        </button>
-
-        <button 
-          v-if="currentQuestionIndex < (activeQuiz.questions ? activeQuiz.questions.length - 1 : 0)"
-          class="nav-btn-run primary" 
-          @click="nextQuestion"
-        >
-          Câu tiếp theo
-        </button>
-
-        <button 
-          v-else
-          class="nav-btn-run submit" 
-          @click="submitQuiz"
-        >
-          Nộp Bài
-        </button>
-      </div>
+        <button class="btn-submit" @click="submitQuiz">Nộp bài thi</button>
+      </aside>
     </div>
 
     <!-- DETAILED QUIZ RESULTS REVIEW VIEW -->
@@ -679,6 +740,18 @@ const practiceQuizzes = ref([
     ]
   }
 ])
+
+onMounted(() => {
+  const saved = localStorage.getItem('sk_practice_quizzes')
+  if (saved) {
+    try {
+      practiceQuizzes.value = JSON.parse(saved)
+    } catch (e) {
+      console.warn("Could not parse saved practice quizzes")
+    }
+  }
+})
+
 const isCreatingQuiz = ref(false)
 const creatorQuizType = ref('reading') // reading or listening
 const newQuizTitle = ref('')
@@ -693,6 +766,71 @@ const userAnswers = ref({})
 const timerMinutes = ref(0)
 const timerSeconds = ref(0)
 let timerInterval = null
+
+// New states for layout-quiz.html styling compatibility
+const currentPage = ref(1)
+const rowsPerPage = ref(10)
+const reviewStatus = ref({})
+
+const getAlpha = (idx) => {
+  return ['A', 'B', 'C', 'D'][idx] || ''
+}
+
+const totalPages = computed(() => {
+  if (!activeQuiz.value || !activeQuiz.value.questions) return 1
+  return Math.ceil(activeQuiz.value.questions.length / rowsPerPage.value)
+})
+
+const paginatedQuestions = computed(() => {
+  if (!activeQuiz.value || !activeQuiz.value.questions) return []
+  const start = (currentPage.value - 1) * rowsPerPage.value
+  return activeQuiz.value.questions.slice(start, start + rowsPerPage.value)
+})
+
+const totalQuestionsCount = computed(() => {
+  return activeQuiz.value?.questions?.length || 0
+})
+
+const answeredQuestionsCount = computed(() => {
+  if (!activeQuiz.value || !activeQuiz.value.questions) return 0
+  return activeQuiz.value.questions.filter(q => {
+    const ans = userAnswers.value[q.id]
+    return ans !== null && ans !== undefined && ans !== ''
+  }).length
+})
+
+const progressPercentage = computed(() => {
+  const total = totalQuestionsCount.value
+  if (total === 0) return 0
+  return (answeredQuestionsCount.value / total) * 100
+})
+
+const goToPage = (p) => {
+  if (p < 1 || p > totalPages.value) return
+  currentPage.value = p
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+const toggleReview = (qId) => {
+  reviewStatus.value[qId] = !reviewStatus.value[qId]
+}
+
+const selectOption = (qId, opt) => {
+  userAnswers.value[qId] = opt
+}
+
+const jumpToQuestion = (index) => {
+  const targetPage = Math.floor(index / rowsPerPage.value) + 1
+  if (currentPage.value !== targetPage) {
+    currentPage.value = targetPage
+  }
+  setTimeout(() => {
+    const el = document.getElementById(`question-block-${index}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, 50)
+}
 
 // Audio playing TTS state
 const isSpeaking = ref(false)
@@ -898,6 +1036,8 @@ const startQuiz = async (quiz) => {
   activeQuiz.value = mappedQuiz
   currentQuestionIndex.value = 0
   userAnswers.value = {}
+  currentPage.value = 1
+  reviewStatus.value = {}
   stopAudio()
 
   // Set default values for all inputs safely
@@ -926,12 +1066,6 @@ const startQuiz = async (quiz) => {
   }, 1000)
 }
 
-// Option selection
-const selectOption = (opt) => {
-  if (activeQuiz.value && currentQuestion.value && currentQuestion.value.id) {
-    userAnswers.value[currentQuestion.value.id] = opt
-  }
-}
 
 const prevQuestion = () => {
   if (currentQuestionIndex.value > 0) {
@@ -1248,20 +1382,20 @@ const saveCustomQuiz = () => {
 
   // Format question array
   const formattedQuestions = newQuizQuestions.value.map((q, idx) => {
-    const opts = q.options.map((opt, optIdx) => `${String.fromCharCode(65 + optIdx)}. ${opt.trim()}`)
+    const opts = q.options.map((opt, optIdx) => `${String.fromCharCode(65 + optIdx)}. ${(opt || '').trim()}`)
     const correctVal = opts[q.correctOptionIndex]
     
     return {
       id: `pq-${idx}-${Date.now()}`,
       type: q.type,
-      question: q.question.trim(),
-      koreanText: q.audioSource === 'tts' ? q.koreanText.trim() : null,
-      audioUrl: q.audioSource === 'file' ? q.audioUrl.trim() : null,
+      question: (q.question || '').trim(),
+      koreanText: q.audioSource === 'tts' ? (q.koreanText || '').trim() : null,
+      audioUrl: q.audioSource === 'file' ? (q.audioUrl || '').trim() : null,
       options: opts,
       correctAnswer: correctVal,
       explanation: q.type === 'listening'
         ? (q.audioSource === 'tts' 
-            ? `Đáp án đúng là: ${correctVal}. Từ tiếng Hàn được phát âm: '${q.koreanText.trim()}'.`
+            ? `Đáp án đúng là: ${correctVal}. Từ tiếng Hàn được phát âm: '${(q.koreanText || '').trim()}'.`
             : `Đáp án đúng là: ${correctVal}. Đoạn hội thoại nghe được từ file audio.`)
         : `Đáp án đúng là: ${correctVal}.`
     }
@@ -1280,6 +1414,7 @@ const saveCustomQuiz = () => {
   }
 
   practiceQuizzes.value.push(newQuiz)
+  localStorage.setItem('sk_practice_quizzes', JSON.stringify(practiceQuizzes.value))
 
   isCreatingQuiz.value = false
   activeTab.value = creatorQuizType.value
@@ -1288,6 +1423,7 @@ const saveCustomQuiz = () => {
 const deletePracticeQuiz = (quizId) => {
   if (confirm("Bạn có chắc chắn muốn xóa bài thi tự luyện này không?")) {
     practiceQuizzes.value = practiceQuizzes.value.filter(q => q.id !== quizId)
+    localStorage.setItem('sk_practice_quizzes', JSON.stringify(practiceQuizzes.value))
   }
 }
 
@@ -2579,6 +2715,433 @@ const formatDateShort = (dateStr) => {
 
   .creator-body-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   QUIZ ACTIVE RUN LAYOUT (layout-quiz.html)
+   ========================================================================== */
+.quiz-container-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 2rem;
+  width: 100%;
+  align-items: start;
+}
+
+.card-panel-quiz {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+}
+
+.quiz-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.stream-header {
+  padding: 2rem 2.5rem;
+}
+
+.quiz-title h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-title);
+  margin-bottom: 0.25rem;
+}
+
+.quiz-title p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.question-card {
+  padding: 2.5rem;
+  transition: all 0.2s ease;
+  scroll-margin-top: 2rem;
+}
+
+.question-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.question-tag {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.btn-bookmark {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.btn-bookmark:hover {
+  background: var(--bg-badge);
+  color: #f59e0b;
+}
+
+.btn-bookmark.bookmarked {
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+.question-text {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-title);
+  line-height: 1.5;
+  margin-bottom: 2rem;
+}
+
+.options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: var(--bg-card);
+}
+
+.option-item input[type="radio"] {
+  display: none;
+}
+
+.option-alpha {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: var(--bg-badge);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-right: 1rem;
+  transition: all 0.2s ease;
+}
+
+.option-label {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-body);
+}
+
+.option-item:hover {
+  border-color: var(--primary);
+  background: var(--bg-badge);
+  transform: translateX(4px);
+}
+
+.option-item.selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.option-item.selected .option-alpha {
+  background: var(--primary);
+  color: white;
+}
+
+.option-item.selected .option-label {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+/* Thanh phân trang ở cuối luồng câu hỏi */
+.pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 2rem;
+    margin-top: 0.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+}
+
+.pagination-info {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.pagination-buttons {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+/* Style chung cho nút trang */
+.btn-page {
+    height: 42px;
+    padding: 0 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: var(--text-body);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    box-shadow: 0 2px 4px rgba(15, 23, 42, 0.02);
+    user-select: none;
+}
+
+.btn-page-nav {
+    padding: 0 1.1rem;
+}
+
+/* Nút trang dạng số vuông bo nhẹ */
+.btn-page-num {
+    width: 42px;
+    padding: 0;
+}
+
+/* Hiệu ứng Hover */
+.btn-page:hover:not(:disabled) {
+    border-color: var(--primary);
+    color: var(--primary);
+    background: var(--primary-light);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.15);
+}
+
+/* Trang đang được chọn (Active) */
+.btn-page.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+/* Trạng thái bị vô hiệu hóa (Disabled) */
+.btn-page:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    background: #f1f5f9;
+    border-color: var(--border-color);
+    color: var(--text-muted);
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* BẢNG TRẠNG THÁI CÂU HỎI */
+.sidebar-content {
+  padding: 1.75rem;
+  position: sticky;
+  top: 2rem;
+}
+
+.timer-widget {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  padding: 0.85rem 1.25rem;
+  border-radius: var(--radius-md);
+  color: #ef4444;
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.timer-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #b91c1c;
+}
+
+.progress-wrapper {
+  margin-bottom: 1.5rem;
+}
+
+.progress-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+  color: var(--text-muted);
+}
+
+.progress-track {
+  height: 6px;
+  background: var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: #10b981;
+  width: 0%;
+  border-radius: 10px;
+  transition: width 0.3s ease;
+}
+
+.sidebar-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-title);
+  margin-bottom: 1rem;
+}
+
+.matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+
+.matrix-item {
+  aspect-ratio: 1;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  color: var(--text-body);
+}
+
+.matrix-item:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.matrix-item.done {
+  background: #e6f4ea !important;
+  border-color: #10b981 !important;
+  color: #065f46 !important;
+}
+
+.matrix-item.review {
+  background: #fffbeb !important;
+  border-color: #f59e0b !important;
+  color: #92400e !important;
+  position: relative;
+}
+
+.matrix-item.review::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 5px;
+  height: 5px;
+  background: #f59e0b;
+  border-radius: 50%;
+}
+
+.legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding-top: 1.25rem;
+  border-top: 1px dashed var(--border-color);
+  margin-bottom: 1.5rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.legend-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+}
+
+.legend-color.c-done {
+  border-color: #10b981;
+  background: #e6f4ea;
+}
+
+.legend-color.c-review {
+  border-color: #f59e0b;
+  background: #fffbeb;
+}
+
+.legend-color.c-empty {
+  background: var(--bg-card);
+}
+
+.btn-submit {
+  width: 100%;
+  background: #10b981;
+  color: white;
+  padding: 0.9rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+  transition: all 0.2s ease;
+}
+
+.btn-submit:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 992px) {
+  .quiz-container-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar-content {
+    position: static;
   }
 }
 </style>

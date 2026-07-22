@@ -153,6 +153,46 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
+  const loginWithGoogle = async (idToken) => {
+    loading.value = true;
+    errorMessage.value = '';
+    
+    try {
+      const response = await api.post('/auth/google', { idToken });
+      
+      if (response && response.data) {
+        const authData = response.data;
+        const userData = {
+          name: authData.fullName || authData.email.split('@')[0],
+          email: authData.email,
+          token: authData.token,
+          refreshToken: authData.refreshToken,
+          avatar: authData.avatarUrl || "",
+          level: authData.role === 'TEACHER' ? 'Giáo viên' : (authData.level ? `Sơ cấp ${authData.level}` : 'Sơ cấp 1A (Beginner)'),
+          streak: authData.streak !== null && authData.streak !== undefined ? authData.streak : 0,
+          xp: authData.xp !== null && authData.xp !== undefined ? authData.xp : 0,
+          isGuest: false,
+          role: authData.role,
+          ipWarning: authData.ipWarning || false,
+          warningMessage: authData.warningMessage || null,
+        };
+
+        user.value = userData;
+        sessionStorage.setItem('sk_user', JSON.stringify(userData));
+        localStorage.removeItem('sk_user');
+        return userData;
+      } else {
+        throw new Error("Không nhận được dữ liệu phản hồi hợp lệ.");
+      }
+    } catch (error) {
+      console.error("Google login action error:", error);
+      errorMessage.value = error.message || 'Đăng nhập Google thất bại.';
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   return {
     user,
     loading,
@@ -162,6 +202,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     uploadAvatar,
     changePassword,
+    loginWithGoogle,
   };
 });
 

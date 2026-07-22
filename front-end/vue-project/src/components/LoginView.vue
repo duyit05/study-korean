@@ -47,7 +47,7 @@
         </div>
 
         <!-- LOGIN FORM -->
-        <form v-if="!isRegisterMode" @submit.prevent="handleLogin" class="login-form">
+        <form v-show="!isRegisterMode" @submit.prevent="handleLogin" class="login-form">
           <div class="form-group">
             <label for="username">Tài khoản</label>
             <div class="input-wrapper">
@@ -99,6 +99,14 @@
             <span v-else class="loader"></span>
           </button>
 
+          <div class="divider-or">
+            <span>Hoặc</span>
+          </div>
+
+          <div class="social-login">
+            <div id="google-signin-btn"></div>
+          </div>
+
           <div class="toggle-mode">
             Chưa có tài khoản?
             <a href="#" @click.prevent="toggleMode">Đăng ký ngay</a>
@@ -106,7 +114,7 @@
         </form>
 
         <!-- REGISTER FORM -->
-        <form v-else @submit.prevent="handleRegister" class="login-form">
+        <form v-show="isRegisterMode" @submit.prevent="handleRegister" class="login-form">
           <div class="form-row">
             <div class="form-group">
               <label for="reg-fullName">Họ và tên</label>
@@ -219,7 +227,51 @@ onMounted(() => {
     username.value = savedUsername
     rememberMe.value = true
   }
+  initGoogleSignIn()
 })
+
+const initGoogleSignIn = () => {
+  if (window.google) {
+    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id-here.apps.googleusercontent.com'
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: handleGoogleCredentialResponse,
+      auto_select: false,
+      cancel_on_tap_outside: true
+    })
+
+    const btnContainer = document.getElementById('google-signin-btn')
+    if (btnContainer) {
+      window.google.accounts.id.renderButton(btnContainer, {
+        theme: 'outline',
+        size: 'large',
+        width: 320,
+        text: 'signin_with',
+        shape: 'rectangular'
+      })
+    }
+  } else {
+    setTimeout(initGoogleSignIn, 500)
+  }
+}
+
+const handleGoogleCredentialResponse = async (response) => {
+  const idToken = response.credential
+  authStore.errorMessage = ''
+  try {
+    const userData = await authStore.loginWithGoogle(idToken)
+    emit('login-success', userData)
+    if (userData.role === 'TEACHER') {
+      router.push({ name: 'TeacherDashboard' })
+    } else {
+      router.push({ name: 'StudentDashboard' })
+    }
+  } catch (error) {
+    console.error("Google Login failed", error)
+    authStore.errorMessage = error.message || 'Đăng nhập Google thất bại.'
+  }
+}
+
 
 const regFullName = ref('')
 const regUsername = ref('')
@@ -723,6 +775,38 @@ h1 {
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Social Login ─── */
+.divider-or {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin: 1.25rem 0;
+}
+
+.divider-or::before,
+.divider-or::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.divider-or:not(:empty)::before {
+  margin-right: .75em;
+}
+
+.divider-or:not(:empty)::after {
+  margin-left: .75em;
+}
+
+.social-login {
+  margin-bottom: 1.25rem;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
 
 /* ─── Responsive ─── */
 @media (max-width: 900px) {

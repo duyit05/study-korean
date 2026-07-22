@@ -56,7 +56,8 @@ public enum ErrorCode {
     FULL_NAME_REQUIRED(1048, "Tên đầy đủ không được để trống", HttpStatus.BAD_REQUEST),
     SESSION_HIJACKED(1049, "Tài khoản đã đăng nhập trên thiết bị khác. Phiên hiện tại đã bị kết thúc.", HttpStatus.UNAUTHORIZED),
     ACCOUNT_LOCKED_SHARING(1050, "Tài khoản bị tạm khóa do đăng nhập từ quá nhiều vị trí trong ngày. Vui lòng liên hệ giáo viên để mở khóa.", HttpStatus.FORBIDDEN),
-    INVALID_SECTION(1051, "Phần thi không phù hợp với loại đề thi này.", HttpStatus.BAD_REQUEST);
+    INVALID_SECTION(1051, "Phần thi không phù hợp với loại đề thi này.", HttpStatus.BAD_REQUEST),
+    GOOGLE_ACCOUNT_REQUIRED(1052, "Tài khoản này được đăng ký qua Google. Vui lòng đăng nhập bằng Google.", HttpStatus.BAD_REQUEST);
 
     private final int code;
     private final String message;

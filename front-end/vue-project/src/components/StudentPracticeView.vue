@@ -763,6 +763,32 @@ const addQuestionToBuilder = () => {
 
 const removeQuestionFromBuilder = (idx) => {
   newQuizQuestions.value.splice(idx, 1)
+  
+  if (editingQuizId.value) {
+    const formattedQuestions = newQuizQuestions.value.map((q, qIdx) => {
+      const opts = q.options.map((opt, optIdx) => `${String.fromCharCode(65 + optIdx)}. ${(opt || '').trim()}`)
+      const correctVal = opts[q.correctOptionIndex]
+      
+      return {
+        id: q.id || `pq-${qIdx}-${Date.now()}`,
+        type: q.type,
+        question: (q.question || '').trim(),
+        wordType: q.wordType || 'Động từ',
+        pronunciation: q.pronunciation ? (q.pronunciation || '').trim() : '',
+        koreanText: q.audioSource === 'tts' ? (q.koreanText ? (q.koreanText || '').trim() : null) : null,
+        audioUrl: q.audioSource === 'file' ? (q.audioUrl ? (q.audioUrl || '').trim() : null) : null,
+        options: opts,
+        correctAnswer: correctVal
+      }
+    })
+
+    const quizIdx = practiceQuizzes.value.findIndex(pq => pq.id === editingQuizId.value)
+    if (quizIdx !== -1) {
+      practiceQuizzes.value[quizIdx].questions = formattedQuestions
+      practiceQuizzes.value[quizIdx].totalScore = formattedQuestions.length * 10
+      localStorage.setItem('sk_practice_quizzes', JSON.stringify(practiceQuizzes.value))
+    }
+  }
 }
 
 const saveCustomQuiz = () => {
@@ -772,17 +798,17 @@ const saveCustomQuiz = () => {
   }
 
   const formattedQuestions = newQuizQuestions.value.map((q, idx) => {
-    const opts = q.options.map((opt, optIdx) => `${String.fromCharCode(65 + optIdx)}. ${opt.trim()}`)
+    const opts = q.options.map((opt, optIdx) => `${String.fromCharCode(65 + optIdx)}. ${(opt || '').trim()}`)
     const correctVal = opts[q.correctOptionIndex]
     
     return {
-      id: `pq-${idx}-${Date.now()}`,
+      id: q.id || `pq-${idx}-${Date.now()}`,
       type: q.type,
-      question: q.question.trim(),
+      question: (q.question || '').trim(),
       wordType: q.wordType || 'Động từ',
-      pronunciation: q.pronunciation ? q.pronunciation.trim() : '',
-      koreanText: q.audioSource === 'tts' ? (q.koreanText ? q.koreanText.trim() : null) : null,
-      audioUrl: q.audioSource === 'file' ? (q.audioUrl ? q.audioUrl.trim() : null) : null,
+      pronunciation: q.pronunciation ? (q.pronunciation || '').trim() : '',
+      koreanText: q.audioSource === 'tts' ? (q.koreanText ? (q.koreanText || '').trim() : null) : null,
+      audioUrl: q.audioSource === 'file' ? (q.audioUrl ? (q.audioUrl || '').trim() : null) : null,
       options: opts,
       correctAnswer: correctVal
     }
