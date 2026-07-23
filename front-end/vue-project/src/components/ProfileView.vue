@@ -39,6 +39,8 @@
               id="prof-email" 
               v-model="editableUser.email" 
               required
+              disabled
+              class="disabled-input"
             >
           </div>
 

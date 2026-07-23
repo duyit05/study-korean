@@ -23,7 +23,7 @@ public class FileController {
     private final R2PresignService presignService;
 
     @PostMapping("/upload")
-    @PreAuthorize("hasRole('TEACHER')")
+    @PreAuthorize("hasAnyRole('TEACHER','STUDENT')")
     public ResponseEntity<?> upload(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "prefix", defaultValue = "audio") String prefix) throws IOException {

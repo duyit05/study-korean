@@ -216,3 +216,9 @@ body {
 .animate-scale {
   animation: scaleUp var(--transition-normal) forwards;
 }
+
+/* Force results review screen to be wider */
+.results-review-container {
+  max-width: 1600px !important;
+  width: 95% !important;
+}

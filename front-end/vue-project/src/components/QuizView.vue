@@ -398,7 +398,7 @@
         </header>
 
         <!-- Vùng chứa danh sách câu hỏi của trang hiện tại -->
-        <div class="questions-list-container" style="display: flex; flex-direction: column; gap: 1.5rem;">
+        <div class="questions-list-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
           <div 
             v-for="(q, localIndex) in paginatedQuestions" 
             :key="q.id" 
@@ -578,86 +578,189 @@
 
     <!-- DETAILED QUIZ RESULTS REVIEW VIEW -->
     <div v-else-if="viewingResultQuiz" class="results-review-container animate-scale">
-      <button class="back-link-btn" @click="viewingResultQuiz = null">
-        <AppIcon name="chevron-left" size="16" /> Quay lại danh sách bài tập
-      </button>
-
-       <div class="result-score-banner">
-         <div class="score-radial">
-           <span class="score-num">{{ viewingResultQuiz.score || 0 }}</span>
-           <span class="total-num">/ {{ viewingResultQuiz.totalScore || 10 }}</span>
-         </div>
-         <div class="score-text-details">
-           <h3>Kết quả: {{ viewingResultQuiz.title || 'Đề ôn tập' }}</h3>
-           <p>Nộp ngày: {{ formatDate(viewingResultQuiz.completedAt) }}</p>
-           <div class="points-earned" style="display: flex; flex-direction: column; align-items: flex-start; gap: 0.25rem;">
-             <div style="display: flex; align-items: center; gap: 0.25rem;">
-               <AppIcon name="award" class="gold-award" size="20" />
-               <span>Tích lũy: <strong>+{{ Math.round((viewingResultQuiz.score || 0) * 10) }} XP</strong></span>
-             </div>
-             <div v-if="viewingResultQuiz.topikLevelResult" class="topik-result-badge" style="margin-top: 0.25rem; font-weight: 700; color: var(--primary); font-size: 0.85rem;">
-               🏆 Cấp độ đạt được: {{ viewingResultQuiz.topikLevelResult }}
-             </div>
-           </div>
-         </div>
-       </div>
-
-      <h3 class="review-heading">Xem lại chi tiết câu hỏi</h3>
-
-      <div class="questions-review-list">
-        <div 
-          v-for="(q, idx) in (viewingResultQuiz.questions || [])" 
-          :key="q.id" 
-          class="review-question-card"
-          :class="isUserCorrect(q) ? 'correct' : 'incorrect'"
-        >
-          <div class="review-q-header">
-            <span class="q-index">Câu {{ idx + 1 }}</span>
-            <span class="correct-badge" :class="isUserCorrect(q) ? 'correct' : 'incorrect'">
-              <AppIcon :name="isUserCorrect(q) ? 'check' : 'x'" size="14" />
-              {{ isUserCorrect(q) ? 'Đúng' : 'Sai' }}
-            </span>
-          </div>
-
-          <p class="q-text">{{ q.question || '' }}</p>
-
-          <!-- Replay buttons in Review for Listening -->
-          <div class="review-listening-replay" v-if="q.type === 'listening'">
-            <button v-if="q.audioUrl" class="replay-btn" @click="playCustomAudio(q.audioUrl)">
-              <AppIcon name="play" size="14" /> Phát lại Audio 🎧
-            </button>
-            <button v-else class="replay-btn" @click="playSpeech(q.koreanText)">
-              <AppIcon name="play" size="14" /> Phát lại giọng đọc AI: <strong>{{ q.koreanText }}</strong>
-            </button>
-          </div>
-
-          <div class="review-answers-grid">
-            <div class="ans-row">
-              <span class="label">Câu trả lời của bạn:</span>
-              <span class="ans-val student-ans" :class="{ err: !isUserCorrect(q) }">
-                {{ viewingResultQuiz.userAnswers ? (viewingResultQuiz.userAnswers[q.id] || '(Không trả lời)') : '(Không trả lời)' }}
-              </span>
-            </div>
-            
-            <div class="ans-row" v-if="!isUserCorrect(q)">
-              <span class="label">Đáp án đúng:</span>
-              <span class="ans-val correct-ans">{{ q.correctAnswer || '' }}</span>
-            </div>
-          </div>
-
-          <!-- Explanation box -->
-          <div class="explanation-box" v-if="q.explanation">
-            <span class="label"><AppIcon name="alert" size="14" /> Hướng dẫn giải:</span>
-            <p>{{ q.explanation }}</p>
-          </div>
+      <!-- Page header -->
+      <div class="review-page-header">
+        <div>
+          <button class="back-link-btn" @click="viewingResultQuiz = null">
+            <AppIcon name="chevron-left" size="16" /> Quay lại danh sách bài tập
+          </button>
+          <h1 class="review-page-title">Phân Tích Chi Tiết 📝</h1>
+          <p class="review-page-subtitle">{{ viewingResultQuiz.title || 'Đề ôn tập' }}</p>
         </div>
+        <button class="retry-btn" @click="retryQuiz(viewingResultQuiz)">
+          <AppIcon name="play" size="16" /> Làm lại bài thi
+        </button>
+      </div>
+
+      <div class="review-layout">
+        <!-- SIDEBAR -->
+        <aside class="review-sidebar">
+          <div class="review-sidebar-sticky">
+            <!-- Score summary -->
+            <div class="review-stat-card score-summary-card">
+              <div class="score-summary-top">
+                <span class="score-summary-num">{{ viewingResultQuiz.score || 0 }}</span>
+                <span class="score-summary-total">/ {{ viewingResultQuiz.totalScore || 10 }}</span>
+              </div>
+              <p class="score-summary-date"><AppIcon name="clock" size="12" /> {{ formatDate(viewingResultQuiz.completedAt) }}</p>
+              <div class="score-summary-tags">
+                <span class="score-tag xp-tag"><AppIcon name="award" size="12" /> +{{ Math.round((viewingResultQuiz.score || 0) * 10) }} XP</span>
+                <span class="score-tag topik-tag" v-if="viewingResultQuiz.topikLevelResult">🏆 {{ viewingResultQuiz.topikLevelResult }}</span>
+              </div>
+            </div>
+
+            <!-- Donut stats -->
+            <div class="review-stat-card review-donut-card">
+              <h3 class="sidebar-label">Thống kê nhanh</h3>
+              <div class="donut-wrap">
+                <div class="donut-chart" :style="donutStyle(viewingResultQuiz)">
+                  <div class="donut-hole">
+                    <span class="donut-percent">{{ correctAnswersCount(viewingResultQuiz) }}/{{ (viewingResultQuiz.questions || []).length }}</span>
+                    <span class="donut-caption">câu đúng</span>
+                  </div>
+                </div>
+              </div>
+              <div class="stat-grid-2">
+                <div class="stat-box correct-box">
+                  <p class="stat-box-label">Đúng</p>
+                  <p class="stat-box-num">{{ correctAnswersCount(viewingResultQuiz) }}</p>
+                </div>
+                <div class="stat-box incorrect-box">
+                  <p class="stat-box-label">Sai</p>
+                  <p class="stat-box-num">{{ (viewingResultQuiz.questions || []).length - correctAnswersCount(viewingResultQuiz) }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Question matrix nav -->
+            <div class="review-stat-card review-nav-card">
+              <h3 class="sidebar-label">Danh sách câu hỏi</h3>
+              <div class="review-matrix-grid">
+                <button
+                  v-for="(q, idx) in (viewingResultQuiz.questions || [])"
+                  :key="q.id"
+                  class="review-matrix-item"
+                  :class="isUserCorrect(q) ? 'correct' : 'incorrect'"
+                  @click="scrollToReviewCard(q.id)"
+                  :title="'Câu ' + (idx + 1)"
+                >{{ idx + 1 }}</button>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <!-- MAIN FEED -->
+        <main class="review-main">
+          <div class="review-filter-bar">
+            <button
+              class="filter-chip"
+              :class="{ active: reviewFilter === 'all' }"
+              @click="reviewFilter = 'all'"
+            >Tất cả</button>
+            <button
+              class="filter-chip"
+              :class="{ active: reviewFilter === 'incorrect' }"
+              @click="reviewFilter = 'incorrect'"
+            >Câu sai (✕)</button>
+            <button
+              class="filter-chip"
+              :class="{ active: reviewFilter === 'correct' }"
+              @click="reviewFilter = 'correct'"
+            >Câu đúng (✓)</button>
+            <span class="filter-count">{{ filteredReviewQuestions.length }} câu hỏi</span>
+          </div>
+
+          <div class="review-feed">
+            <div
+              v-for="q in filteredReviewQuestions"
+              :key="q.id"
+              :id="'q-card-' + q.id"
+              class="review-feed-card"
+            >
+              <div class="feed-card-header">
+                <div class="feed-card-header-left">
+                  <span class="feed-index-badge">#{{ originalQuestionIndex(q) + 1 }}</span>
+                  <span class="feed-type-label">{{ questionTypeLabel(q) }}</span>
+                </div>
+                <span class="feed-status-pill" :class="isUserCorrect(q) ? 'correct' : 'incorrect'">
+                  {{ isUserCorrect(q) ? '✓ CHÍNH XÁC' : (hasUserAnswer(q) ? '✕ CHƯA ĐÚNG' : '○ CHƯA LÀM') }}
+                </span>
+              </div>
+
+              <h2 class="feed-question-text">{{ q.question || '' }}</h2>
+
+              <!-- Replay buttons in Review for Listening -->
+              <div class="review-listening-replay" v-if="q.type === 'listening'">
+                <button v-if="q.audioUrl" class="replay-btn" @click="playCustomAudio(q.audioUrl)">
+                  <AppIcon name="play" size="14" /> Phát lại Audio 🎧
+                </button>
+                <button v-else class="replay-btn" @click="playSpeech(q.koreanText)">
+                  <AppIcon name="play" size="14" /> Phát lại giọng đọc AI: <strong>{{ q.koreanText }}</strong>
+                </button>
+              </div>
+
+              <!-- Multiple choice / listening option comparison grid -->
+              <div v-if="q.options && q.options.length" class="feed-options-grid">
+                <div
+                  v-for="(opt, optIdx) in q.options"
+                  :key="optIdx"
+                  class="feed-option-item"
+                  :class="{
+                    'is-correct': cleanAnswer(opt) === cleanAnswer(q.correctAnswer),
+                    'is-user-wrong': viewingResultQuiz.userAnswers && cleanAnswer(viewingResultQuiz.userAnswers[q.id]) === cleanAnswer(opt) && cleanAnswer(opt) !== cleanAnswer(q.correctAnswer)
+                  }"
+                >
+                  <div class="feed-option-left">
+                    <span class="feed-option-alpha">{{ getAlpha(optIdx) }}</span>
+                    <span class="feed-option-text">{{ opt }}</span>
+                  </div>
+                  <span class="feed-option-icon" v-if="cleanAnswer(opt) === cleanAnswer(q.correctAnswer)">✓</span>
+                  <span class="feed-option-icon" v-else-if="viewingResultQuiz.userAnswers && cleanAnswer(viewingResultQuiz.userAnswers[q.id]) === cleanAnswer(opt)">✕</span>
+                </div>
+              </div>
+
+              <!-- Fallback text-answer comparison (fill-in-the-blank) -->
+              <div v-else class="review-answers-grid">
+                <div class="ans-row">
+                  <span class="label">Câu trả lời của bạn:</span>
+                  <span class="ans-val student-ans" :class="{ err: !isUserCorrect(q) }">
+                    {{ viewingResultQuiz.userAnswers ? (viewingResultQuiz.userAnswers[q.id] || '(Không trả lời)') : '(Không trả lời)' }}
+                  </span>
+                </div>
+
+                <div class="ans-row" v-if="!isUserCorrect(q)">
+                  <span class="label">Đáp án đúng:</span>
+                  <span class="ans-val correct-ans">{{ q.correctAnswer || '' }}</span>
+                </div>
+              </div>
+
+              <!-- Analysis box -->
+              <div class="feed-analysis-box" v-if="q.explanation">
+                <div class="feed-analysis-icon">💡</div>
+                <div class="feed-analysis-body">
+                  <h4 class="feed-analysis-title">Tại sao {{ isUserCorrect(q) ? 'bạn đúng?' : 'bạn sai?' }}</h4>
+                  <p class="feed-analysis-text">{{ q.explanation }}</p>
+                  
+                  <div v-if="q.vocab && q.vocab.length" class="feed-vocab-tags mt-4">
+                    <span v-for="v in q.vocab" :key="v" class="feed-vocab-tag">{{ v }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-if="filteredReviewQuestions.length === 0" class="empty-state">
+              <AppIcon name="alert" size="32" />
+              <p>Không có câu hỏi nào phù hợp với bộ lọc này.</p>
+            </div>
+          </div>
+        </main>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onUnmounted, onMounted } from 'vue'
+import { ref, computed, onUnmounted, onMounted, nextTick } from 'vue'
 import AppIcon from './icons/AppIcon.vue'
 import { useQuizStore } from '../stores/quiz'
 import { toast } from 'vue3-toastify'
@@ -839,6 +942,7 @@ const currentAudio = ref(null)
 
 // Result view states
 const viewingResultQuiz = ref(null)
+const reviewFilter = ref('all') // all, correct, incorrect
 
 const currentQuestion = computed(() => {
   if (!activeQuiz.value || !activeQuiz.value.questions || !Array.isArray(activeQuiz.value.questions)) {
@@ -1153,6 +1257,7 @@ const submitQuiz = () => {
   }
   
   activeQuiz.value = null
+  reviewFilter.value = 'all'
   viewingResultQuiz.value = completedRef
 }
 
@@ -1169,6 +1274,7 @@ const viewResults = async (quiz) => {
       return
     }
   }
+  reviewFilter.value = 'all'
   viewingResultQuiz.value = fullQuiz
 }
 
@@ -1191,6 +1297,97 @@ const isUserCorrect = (question) => {
   }
 
   return false
+}
+
+// Helpers for the redesigned results-review screen
+const correctAnswersCount = (quiz) => {
+  if (!quiz || !quiz.questions) return 0
+  return quiz.questions.filter(q => isUserCorrect(q)).length
+}
+
+const scorePercent = (score, total) => {
+  const t = total || 10
+  const s = score || 0
+  if (t <= 0) return 0
+  return Math.max(0, Math.min(100, (s / t) * 100))
+}
+
+const scoreTier = (score, total) => {
+  const pct = scorePercent(score, total)
+  if (pct >= 80) return 'tier-excellent'
+  if (pct >= 50) return 'tier-good'
+  return 'tier-weak'
+}
+
+const scoreTierLabel = (score, total) => {
+  const pct = scorePercent(score, total)
+  if (pct >= 80) return '🌟 Xuất sắc'
+  if (pct >= 50) return '👍 Khá tốt'
+  return '💪 Cần cố gắng thêm'
+}
+
+const originalQuestionIndex = (question) => {
+  if (!viewingResultQuiz.value || !viewingResultQuiz.value.questions) return 0
+  return viewingResultQuiz.value.questions.findIndex(q => q.id === question.id)
+}
+
+const filteredReviewQuestions = computed(() => {
+  if (!viewingResultQuiz.value || !viewingResultQuiz.value.questions) return []
+  const list = viewingResultQuiz.value.questions
+  if (reviewFilter.value === 'correct') return list.filter(q => isUserCorrect(q))
+  if (reviewFilter.value === 'incorrect') return list.filter(q => !isUserCorrect(q))
+  return list
+})
+
+// CSS conic-gradient donut chart style: green slice = correct, red slice = incorrect
+const donutStyle = (quiz) => {
+  const total = (quiz.questions || []).length || 1
+  const correct = correctAnswersCount(quiz)
+  const pct = (correct / total) * 100
+  return {
+    background: `conic-gradient(var(--success) 0% ${pct}%, var(--danger) ${pct}% 100%)`
+  }
+}
+
+const questionTypeLabel = (q) => {
+  if (q.type === 'listening') return '🎧 Nghe hiểu'
+  if (q.type === 'fill') return '✍️ Điền từ'
+  if (q.type === 'match') return '🔗 Nối câu'
+  return '📖 Đọc hiểu'
+}
+
+const hasUserAnswer = (q) => {
+  if (!viewingResultQuiz.value || !viewingResultQuiz.value.userAnswers) return false
+  const ans = viewingResultQuiz.value.userAnswers[q.id]
+  return ans !== null && ans !== undefined && ans !== ''
+}
+
+// Jump from the sidebar matrix to a question card in the feed, switching filter if needed
+const scrollToReviewCard = (qId) => {
+  if (!viewingResultQuiz.value || !viewingResultQuiz.value.questions) return
+  const q = viewingResultQuiz.value.questions.find(item => item.id === qId)
+  if (!q) return
+
+  const correct = isUserCorrect(q)
+  if (reviewFilter.value === 'correct' && !correct) reviewFilter.value = 'all'
+  if (reviewFilter.value === 'incorrect' && correct) reviewFilter.value = 'all'
+
+  nextTick(() => {
+    setTimeout(() => {
+      const el = document.getElementById(`q-card-${qId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el.classList.add('flash-highlight')
+        setTimeout(() => el.classList.remove('flash-highlight'), 1200)
+      }
+    }, 50)
+  })
+}
+
+// Retry a completed quiz straight from the results screen
+const retryQuiz = (quiz) => {
+  viewingResultQuiz.value = null
+  startQuiz(quiz)
 }
 
 // Practice Quiz Creator Handlers
@@ -2197,217 +2394,577 @@ const formatDateShort = (dateStr) => {
   background-color: hsl(142, 72%, 24%);
 }
 
-/* RESULTS BANNER */
+/* ==========================================================================
+   RESULTS REVIEW SCREEN (Redesigned)
+   ========================================================================== */
 .results-review-container {
-  max-width: 680px;
+  max-width: 1500px;
   margin: 0 auto;
+  padding: 1rem 0;
 }
 
-.result-score-banner {
-  background: linear-gradient(135deg, var(--bg-card), var(--bg-hover));
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  padding: 2rem;
+.review-page-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 2rem;
-  box-shadow: var(--shadow-md);
   margin-bottom: 2rem;
-}
-
-.score-radial {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary), var(--success));
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  color: #fff;
-  box-shadow: 0 8px 20px var(--primary-glow);
-  flex-shrink: 0;
-}
-
-.score-radial .score-num {
-  font-size: 2rem;
-  font-weight: 900;
-  line-height: 1;
-}
-
-.score-radial .total-num {
-  font-size: 0.8rem;
-  opacity: 0.8;
-}
-
-.score-text-details h3 {
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--text-title);
-  margin-bottom: 0.25rem;
-}
-
-.score-text-details p {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin-bottom: 0.75rem;
-}
-
-.points-earned {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  color: var(--text-body);
-}
-
-.gold-award {
-  color: #f1c40f;
-}
-
-.review-heading {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--text-title);
-  margin-bottom: 1rem;
-}
-
-.questions-review-list {
-  display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
   gap: 1rem;
 }
 
-.review-question-card {
+.review-page-title {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text-title);
+}
+
+.review-page-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-top: 0.25rem;
+}
+
+.retry-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: var(--primary);
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.retry-btn:hover {
+  background-color: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.review-layout {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 2rem;
+  align-items: start;
+}
+
+.review-sidebar {
+  grid-column: 2;
+  grid-row: 1;
+  position: sticky;
+  top: 90px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  z-index: 10;
+}
+
+.review-sidebar-sticky {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.review-stat-card {
   background-color: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: 24px;
   padding: 1.5rem;
   box-shadow: var(--shadow-sm);
 }
 
-.review-question-card.correct {
-  border-left: 4px solid var(--success);
-}
-.review-question-card.incorrect {
-  border-left: 4px solid var(--danger);
+.score-summary-card {
+  text-align: center;
+  background: linear-gradient(135deg, var(--bg-card), var(--primary-light));
 }
 
-.review-q-header {
+.score-summary-top {
   display: flex;
-  justify-content: space-between;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.score-summary-num {
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.score-summary-total {
+  font-size: 1.25rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  margin-left: 0.25rem;
+}
+
+.score-summary-date {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0.5rem 0 1rem 0;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.score-summary-tags {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.score-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+}
+
+.xp-tag {
+  background-color: rgba(241, 196, 15, 0.15);
+  color: #b7860b;
+}
+
+.topik-tag {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.sidebar-label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   margin-bottom: 1rem;
 }
 
-.q-index {
+.donut-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 1rem 0;
+}
+
+.donut-chart {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.donut-hole {
+  width: 106px;
+  height: 106px;
+  background-color: var(--bg-card);
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.donut-percent {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-title);
+}
+
+.donut-caption {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.stat-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.stat-box {
+  padding: 0.75rem;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.stat-box.correct-box {
+  background-color: var(--success-light);
+}
+
+.stat-box-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--success);
+}
+
+.stat-box-num {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--success);
+  margin-top: 0.15rem;
+}
+
+.stat-box.incorrect-box {
+  background-color: var(--danger-light);
+}
+
+.stat-box.incorrect-box .stat-box-label {
+  color: var(--danger);
+}
+
+.stat-box.incorrect-box .stat-box-num {
+  color: var(--danger);
+}
+
+.review-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.5rem;
+}
+
+.review-matrix-item {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
   font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-fast);
+  background-color: var(--bg-card);
+  color: var(--text-body);
+}
+
+.review-matrix-item.correct {
+  background-color: var(--success-light);
+  color: var(--success);
+  border-color: var(--success-border);
+}
+
+.review-matrix-item.incorrect {
+  background-color: var(--danger-light);
+  color: var(--danger);
+  border-color: var(--danger-light);
+}
+
+.review-matrix-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-sm);
+}
+
+.review-main {
+  grid-column: 1;
+  grid-row: 1;
+  flex-grow: 1;
+}
+
+.review-filter-bar {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.filter-chip {
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border-radius: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background-color: transparent;
+}
+
+.filter-chip:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-title);
+}
+
+.filter-chip.active {
+  background-color: var(--primary);
+  color: white;
+}
+
+.filter-count {
+  margin-left: auto;
+  padding-right: 1rem;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
 }
 
-.correct-badge {
-  font-size: 0.75rem;
-  font-weight: 700;
-  padding: 0.25rem 0.5rem;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.correct-badge.correct { background-color: var(--success-light); color: var(--success); }
-.correct-badge.incorrect { background-color: var(--danger-light); color: var(--danger); }
-
-.q-text {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text-title);
-  margin-bottom: 1rem;
-}
-
-.review-listening-replay {
-  margin-bottom: 1rem;
-}
-
-.replay-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-color: var(--bg-badge);
-  border: 1px solid var(--border-color);
-  color: var(--text-title);
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.replay-btn:hover {
-  background-color: var(--bg-hover);
-  border-color: var(--primary);
-}
-
-.review-answers-grid {
+.review-feed {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  background-color: var(--bg-app);
-  padding: 1rem;
-  border-radius: var(--radius-md);
+  gap: 1.5rem;
+}
+
+.review-feed-card {
+  background-color: var(--bg-card);
   border: 1px solid var(--border-color);
-  margin-bottom: 1rem;
+  border-radius: 24px;
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  scroll-margin-top: 3rem;
+  transition: all var(--transition-fast);
 }
 
-.ans-row {
+.review-feed-card:hover {
+  border-color: var(--primary-glow);
+  box-shadow: var(--shadow-md);
+}
+
+.feed-card-header {
   display: flex;
-  gap: 0.5rem;
-  font-size: 0.85rem;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
 }
 
-.ans-row .label {
-  color: var(--text-muted);
-  width: 140px;
-  font-weight: 600;
-}
-
-.ans-row .ans-val {
-  font-weight: 700;
-  color: var(--text-title);
-}
-
-.ans-row .ans-val.student-ans {
-  color: var(--success);
-}
-.ans-row .ans-val.student-ans.err {
-  color: var(--danger);
-  text-decoration: line-through;
-}
-
-.ans-row .ans-val.correct-ans {
-  color: var(--primary);
-}
-
-.explanation-box {
-  background-color: var(--primary-light);
-  border: 1px solid var(--primary-glow);
-  padding: 0.85rem 1.25rem;
-  border-radius: var(--radius-md);
-  font-size: 0.85rem;
-}
-
-.explanation-box .label {
+.feed-card-header-left {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  font-weight: 700;
-  color: var(--primary);
-  margin-bottom: 0.25rem;
+  gap: 0.75rem;
 }
 
-.explanation-box p {
+.feed-index-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background-color: var(--text-title);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.feed-type-label {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: block;
+}
+
+.feed-status-pill {
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 0.4rem 0.85rem;
+  border-radius: 99px;
+  letter-spacing: 0.02em;
+}
+
+.feed-status-pill.correct {
+  background-color: var(--success-light);
+  color: var(--success);
+}
+
+.feed-status-pill.incorrect {
+  background-color: var(--danger-light);
+  color: var(--danger);
+}
+
+.feed-question-text {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-title);
+  margin-bottom: 2rem;
+  line-height: 1.45;
+}
+
+.feed-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.feed-option-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+  border-radius: 16px;
+  border: 1.5px solid var(--border-color);
+  background-color: var(--bg-card);
+  transition: all 0.2s ease;
+}
+
+.feed-option-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.feed-option-alpha {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.03);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  color: var(--text-muted);
+}
+
+.feed-option-text {
+  font-size: 0.9rem;
+  font-weight: 700;
   color: var(--text-body);
+}
+
+.feed-option-icon {
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.feed-option-item.is-correct {
+  background-color: var(--success-light);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.feed-option-item.is-correct .feed-option-alpha {
+  background-color: var(--success);
+  color: white;
+}
+
+.feed-option-item.is-correct .feed-option-text {
+  color: var(--success);
+}
+
+.feed-option-item.is-user-wrong {
+  background-color: var(--danger-light);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.feed-option-item.is-user-wrong .feed-option-alpha {
+  background-color: var(--danger);
+  color: white;
+}
+
+.feed-option-item.is-user-wrong .feed-option-text {
+  color: var(--danger);
+}
+
+.feed-analysis-box {
+  background-color: var(--bg-badge);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 1.5rem;
+  display: flex;
+  gap: 1rem;
+}
+
+.feed-analysis-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background-color: var(--bg-card);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
+  color: var(--primary);
+}
+
+.feed-analysis-body {
+  flex-grow: 1;
+}
+
+.feed-analysis-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-title);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+}
+
+.feed-analysis-text {
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-body);
+}
+
+.feed-vocab-tags {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.feed-vocab-tag {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  padding: 0.3rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.flash-highlight {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 4px var(--primary-glow) !important;
+}
+
+@media (max-width: 992px) {
+  .review-layout {
+    grid-template-columns: 1fr;
+  }
+  .review-sidebar {
+    grid-column: auto;
+    grid-row: auto;
+    position: static;
+  }
+  .review-main {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .feed-options-grid {
+    grid-template-columns: 1fr;
+  }
+  .review-page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .retry-btn {
+    width: 100%;
+    justify-content: center;
+  }
 }
 
 .empty-state {
@@ -2760,7 +3317,7 @@ const formatDateShort = (dateStr) => {
 }
 
 .question-card {
-  padding: 2.5rem;
+  padding: 1.25rem 1.75rem;
   transition: all 0.2s ease;
   scroll-margin-top: 2rem;
 }
@@ -2769,7 +3326,7 @@ const formatDateShort = (dateStr) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .question-tag {
@@ -2810,19 +3367,19 @@ const formatDateShort = (dateStr) => {
   font-weight: 700;
   color: var(--text-title);
   line-height: 1.5;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .options-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.6rem;
 }
 
 .option-item {
   display: flex;
   align-items: center;
-  padding: 1.1rem 1.25rem;
+  padding: 0.75rem 1.1rem;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -2838,19 +3395,19 @@ const formatDateShort = (dateStr) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 28px;
   background: var(--bg-badge);
   border-radius: var(--radius-sm);
   font-weight: 700;
   font-size: 0.9rem;
   color: var(--text-muted);
-  margin-right: 1rem;
+  margin-right: 0.75rem;
   transition: all 0.2s ease;
 }
 
 .option-label {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 500;
   color: var(--text-body);
 }
