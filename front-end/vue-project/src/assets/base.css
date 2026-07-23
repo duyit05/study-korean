@@ -217,8 +217,10 @@ body {
   animation: scaleUp var(--transition-normal) forwards;
 }
 
-/* Force results review screen to be wider */
-.results-review-container {
+/* Force both active quiz and results review screen to be synchronized in width */
+.results-review-container,
+.quiz-container-layout {
   max-width: 1600px !important;
   width: 95% !important;
+  margin: 0 auto !important;
 }

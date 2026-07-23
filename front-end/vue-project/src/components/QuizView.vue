@@ -580,16 +580,15 @@
     <div v-else-if="viewingResultQuiz" class="results-review-container animate-scale">
       <!-- Page header -->
       <div class="review-page-header">
-        <div>
-          <button class="back-link-btn" @click="viewingResultQuiz = null">
-            <AppIcon name="chevron-left" size="16" /> Quay lại danh sách bài tập
+        <div class="review-title-area">
+          <button class="btn-back-circle" @click="viewingResultQuiz = null" title="Quay lại danh sách bài tập">
+            <AppIcon name="chevron-left" size="20" />
           </button>
-          <h1 class="review-page-title">Phân Tích Chi Tiết 📝</h1>
-          <p class="review-page-subtitle">{{ viewingResultQuiz.title || 'Đề ôn tập' }}</p>
+          <div class="review-title-text">
+            <h1 class="review-page-title">Chi tiết bài kiểm tra</h1>
+            <p class="review-page-subtitle">{{ viewingResultQuiz.title || 'Đề ôn tập' }}</p>
+          </div>
         </div>
-        <button class="retry-btn" @click="retryQuiz(viewingResultQuiz)">
-          <AppIcon name="play" size="16" /> Làm lại bài thi
-        </button>
       </div>
 
       <div class="review-layout">
@@ -607,6 +606,11 @@
                 <span class="score-tag xp-tag"><AppIcon name="award" size="12" /> +{{ Math.round((viewingResultQuiz.score || 0) * 10) }} XP</span>
                 <span class="score-tag topik-tag" v-if="viewingResultQuiz.topikLevelResult">🏆 {{ viewingResultQuiz.topikLevelResult }}</span>
               </div>
+              
+              <!-- Retry Button inside score card -->
+              <button class="retry-btn-sidebar" @click="retryQuiz(viewingResultQuiz)">
+                <AppIcon name="play" size="16" /> Làm lại bài thi
+              </button>
             </div>
 
             <!-- Donut stats -->
@@ -2412,36 +2416,78 @@ const formatDateShort = (dateStr) => {
   gap: 1rem;
 }
 
+.review-title-area {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.review-title-text {
+  display: flex;
+  flex-direction: column;
+}
+
 .review-page-title {
   font-size: 1.85rem;
   font-weight: 800;
   color: var(--text-title);
+  line-height: 1.2;
 }
 
 .review-page-subtitle {
   font-size: 0.95rem;
   color: var(--text-muted);
   font-weight: 500;
-  margin-top: 0.25rem;
+  margin-top: 0.15rem;
 }
 
-.retry-btn {
+.btn-back-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-title);
   display: flex;
   align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.btn-back-circle:hover {
+  background-color: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+  transform: translateX(-4px);
+  box-shadow: 0 4px 12px var(--primary-glow);
+}
+
+.retry-btn-sidebar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   background-color: var(--primary);
   color: white;
-  padding: 0.75rem 1.5rem;
+  padding: 0.8rem;
   border-radius: 12px;
   font-weight: 700;
   font-size: 0.9rem;
-  box-shadow: var(--shadow-sm);
+  border: none;
+  cursor: pointer;
+  margin-top: 1.25rem;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 10px var(--primary-glow);
 }
 
-.retry-btn:hover {
+.retry-btn-sidebar:hover {
   background-color: var(--primary-hover);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 6px 16px var(--primary-glow);
 }
 
 .review-layout {
@@ -2960,10 +3006,6 @@ const formatDateShort = (dateStr) => {
   .review-page-header {
     flex-direction: column;
     align-items: flex-start;
-  }
-  .retry-btn {
-    width: 100%;
-    justify-content: center;
   }
 }
 
