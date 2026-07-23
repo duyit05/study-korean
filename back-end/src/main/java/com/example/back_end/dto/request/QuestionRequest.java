@@ -27,6 +27,8 @@ public class QuestionRequest {
 
     private String audioUrl;
 
+    private String imageUrl;
+
     private String correctAnswer;
 
     private List<String> wrongAnswers;

@@ -104,6 +104,7 @@ public class QuizService {
                 .section(request.getSection())
                 .audioUrl(request.getAudioUrl())
                 .audioSource(request.getAudioUrl() != null && !request.getAudioUrl().isEmpty() ? "UPLOAD" : "TTS")
+                .imageUrl(request.getImageUrl())
                 .correctAnswer(request.getCorrectAnswer())
                 .wrongAnswers(request.getWrongAnswers())
                 .wordType(wt)
@@ -219,6 +220,7 @@ public class QuizService {
         question.setSection(request.getSection());
         question.setAudioUrl(request.getAudioUrl());
         question.setAudioSource(request.getAudioUrl() != null && !request.getAudioUrl().isEmpty() ? "UPLOAD" : "TTS");
+        question.setImageUrl(request.getImageUrl());
         question.setCorrectAnswer(request.getCorrectAnswer());
         question.setWrongAnswers(request.getWrongAnswers());
         question.setWordType(parseWordType(request.getWordType()));

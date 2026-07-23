@@ -66,6 +66,7 @@ public class QuizMapper {
                 .koreanText(q.getKoreanText())
                 .audioUrl(q.getAudioUrl())
                 .audioSource(q.getAudioSource())
+                .imageUrl(q.getImageUrl())
                 .section(q.getSection())
                 .points(q.getPoints())
                 .explanation(q.getExplanation())

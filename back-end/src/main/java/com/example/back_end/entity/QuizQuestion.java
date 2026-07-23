@@ -53,6 +53,9 @@ public class QuizQuestion {
     @Builder.Default
     private String audioSource = "TTS";
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @Column(name = "section", length = 20)
     private String section;
 

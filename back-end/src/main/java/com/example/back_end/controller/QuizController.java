@@ -8,10 +8,12 @@ import com.example.back_end.dto.response.QuizResponse;
 import com.example.back_end.enums.QuestionSection;
 import com.example.back_end.enums.QuestionType;
 import com.example.back_end.service.QuizService;
+import com.example.back_end.service.QuizImportService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -24,6 +26,7 @@ import java.util.List;
 public class QuizController {
 
         private final QuizService quizService;
+        private final QuizImportService quizImportService;
 
         @GetMapping("/question-types")
         @PreAuthorize("hasRole('TEACHER')")
@@ -66,6 +69,18 @@ public class QuizController {
                                 .code(HttpStatus.OK.value())
                                 .message("Thêm câu hỏi thành công.")
                                 .data(response)
+                                .build();
+        }
+
+        @PostMapping("/{id}/questions/import-zip")
+        @PreAuthorize("hasRole('TEACHER')")
+        public ApiResponse<Void> importQuestionsFromZip(
+                        @PathVariable Long id,
+                        @RequestParam("file") MultipartFile file) throws Exception {
+                quizImportService.importQuizQuestionsFromZip(id, file);
+                return ApiResponse.<Void>builder()
+                                .code(HttpStatus.OK.value())
+                                .message("Import danh sách câu hỏi thành công.")
                                 .build();
         }
 

@@ -420,6 +420,15 @@
               {{ q.question || '' }}
             </h2>
 
+            <!-- Question Image -->
+            <div v-if="q.imageUrl" class="question-image-container animate-fade" style="margin: 1rem 0; text-align: center;">
+              <img 
+                :src="q.imageUrl" 
+                alt="Hình ảnh câu hỏi" 
+                style="max-width: 100%; max-height: 320px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: contain; box-shadow: var(--shadow-sm);"
+              />
+            </div>
+
             <!-- Standard Option Choice Question -->
             <div v-if="q.type === 'choice' || q.type === 'match'" class="options-list">
               <label 
@@ -437,37 +446,34 @@
             <!-- Listening (Audio Player + Option Choice) Question -->
             <div v-else-if="q.type === 'listening'" class="listening-block">
               <div class="audio-player-card" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; background-color: var(--bg-badge); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-                <!-- Custom MP3 / URL playback -->
-                <button 
+                <!-- Custom MP3 / URL playback controls -->
+                <audio 
                   v-if="q.audioUrl"
-                  class="audio-play-btn" 
-                  @click="playCustomAudio(q.audioUrl)"
-                  style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background-color: var(--bg-card); cursor: pointer; font-weight: 600; color: var(--primary);"
-                  title="Phát file âm thanh đính kèm"
-                >
-                  <AppIcon name="play" size="20" />
-                  <span>Phát Audio Đính Kèm 🎧</span>
-                </button>
+                  :src="q.audioUrl"
+                  controls
+                  style="flex-grow: 1; max-width: 100%; outline: none;"
+                ></audio>
                 
                 <!-- Fallback to TTS -->
-                <button 
-                  v-else
-                  class="audio-play-btn" 
-                  @click="playSpeech(q.koreanText)"
-                  style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background-color: var(--bg-card); cursor: pointer; font-weight: 600; color: var(--primary);"
-                  title="Phát giọng đọc mẫu bằng AI"
-                >
-                  <AppIcon name="play" size="20" />
-                  <span>Phát Giọng AI (TTS) 🔊</span>
-                </button>
-                
-                <div class="audio-visualizer" :class="{ playing: isSpeaking && (playingKoreanText === q.koreanText || playingKoreanText === q.audioUrl) }">
-                  <span class="bar bar-1"></span>
-                  <span class="bar bar-2"></span>
-                  <span class="bar bar-3"></span>
-                  <span class="bar bar-4"></span>
-                  <span class="bar bar-5"></span>
-                </div>
+                <template v-else>
+                  <button 
+                    class="audio-play-btn" 
+                    @click="playSpeech(q.koreanText)"
+                    style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background-color: var(--bg-card); cursor: pointer; font-weight: 600; color: var(--primary);"
+                    title="Phát giọng đọc mẫu bằng AI"
+                  >
+                    <AppIcon name="play" size="20" />
+                    <span>Phát Giọng AI (TTS) 🔊</span>
+                  </button>
+                  
+                  <div class="audio-visualizer" :class="{ playing: isSpeaking && (playingKoreanText === q.koreanText || playingKoreanText === q.audioUrl) }">
+                    <span class="bar bar-1"></span>
+                    <span class="bar bar-2"></span>
+                    <span class="bar bar-3"></span>
+                    <span class="bar bar-4"></span>
+                    <span class="bar bar-5"></span>
+                  </div>
+                </template>
               </div>
 
               <div class="options-list" style="margin-top: 1.5rem;">
@@ -693,11 +699,18 @@
 
               <h2 class="feed-question-text">{{ q.question || '' }}</h2>
 
+              <!-- Question Image in Review -->
+              <div v-if="q.imageUrl" class="question-image-container-review animate-fade" style="margin: 1rem 0; text-align: center;">
+                <img 
+                  :src="q.imageUrl" 
+                  alt="Hình ảnh câu hỏi" 
+                  style="max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid var(--border-color); object-fit: contain;"
+                />
+              </div>
+
               <!-- Replay buttons in Review for Listening -->
-              <div class="review-listening-replay" v-if="q.type === 'listening'">
-                <button v-if="q.audioUrl" class="replay-btn" @click="playCustomAudio(q.audioUrl)">
-                  <AppIcon name="play" size="14" /> Phát lại Audio 🎧
-                </button>
+              <div class="review-listening-replay" v-if="q.type === 'listening'" style="margin-top: 0.5rem;">
+                <audio v-if="q.audioUrl" :src="q.audioUrl" controls style="max-width: 100%; border-radius: var(--radius-sm); outline: none;"></audio>
                 <button v-else class="replay-btn" @click="playSpeech(q.koreanText)">
                   <AppIcon name="play" size="14" /> Phát lại giọng đọc AI: <strong>{{ q.koreanText }}</strong>
                 </button>
@@ -1129,6 +1142,7 @@ const startQuiz = async (quiz) => {
       koreanText: q.koreanText || '',
       audioUrl: q.audioUrl || '',
       audioSource: q.audioSource || 'tts',
+      imageUrl: q.imageUrl || '',
       options: optionsList,
       correctAnswer: q.correctAnswer || '',
       explanation: q.explanation || `Đáp án đúng là: ${q.correctAnswer}.`

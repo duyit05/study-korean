@@ -35,6 +35,7 @@ public class QuizResponse {
         private String koreanText;
         private String audioUrl;
         private String audioSource;
+        private String imageUrl;
         private String section;
         private java.math.BigDecimal points;
         private String explanation;

@@ -1,5 +1,6 @@
 <template>
   <div class="teacher-quizzes animate-fade">
+    <input type="file" ref="zipFileRef" @change="onZipFileSelected" accept=".zip" style="display: none;" />
     <div class="header-section">
       <div class="title-area">
         <h2>Soạn đề thi &amp; bài tập luyện tập</h2>
@@ -145,11 +146,17 @@
       </div>
 
       <div class="panel-body">
-        <div class="section-actions">
+        <div class="section-actions" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
           <h4>Danh sách câu hỏi trong đề ({{ selectedQuiz.questions?.length || 0 }})</h4>
-          <button class="secondary-btn" @click="openAddQuestionModal">
-            <span>+ Soạn câu hỏi mới</span>
-          </button>
+          <div style="display: flex; gap: 0.5rem;">
+            <button class="secondary-btn" @click="openAddQuestionModal">
+              <span>+ Soạn câu hỏi mới</span>
+            </button>
+            <button class="secondary-btn" @click="triggerZipImport" :disabled="importingZip" style="background-color: var(--bg-badge); color: var(--text-title); border-color: var(--border-color); display: inline-flex; align-items: center; gap: 4px;">
+              <AppIcon name="upload" size="14" />
+              <span>{{ importingZip ? 'Đang import...' : 'Import file ZIP (.zip)' }}</span>
+            </button>
+          </div>
         </div>
 
         <div class="questions-list">
@@ -161,6 +168,9 @@
             </div>
             <div class="q-body-row">
               <p class="question-text">{{ question.questionText }}</p>
+              <div v-if="question.imageUrl" class="image-preview-row" style="margin-top: 0.5rem; margin-bottom: 0.5rem;">
+                <img :src="question.imageUrl" style="max-height: 80px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); object-fit: contain;" />
+              </div>
               <div v-if="question.audioUrl" class="audio-indicator">
                 <AppIcon name="volume" size="14" />
                 <span>Có file âm thanh Nghe ({{ question.audioSource || 'TTS' }})</span>
@@ -267,6 +277,31 @@
           <div class="form-group">
             <label for="qText">Nội dung câu hỏi (Đề bài)</label>
             <textarea id="qText" v-model="newQText" placeholder="Nhập nội dung câu hỏi tiếng Hàn..." required rows="3"></textarea>
+          </div>
+
+          <!-- Image upload options -->
+          <div class="form-group border-box">
+            <label style="margin-bottom: 0.5rem; display: block;">Hình ảnh minh họa (tùy chọn) (.png, .jpg, .jpeg, .gif)</label>
+            <div class="upload-container">
+              <input 
+                type="file" 
+                ref="imageFileRef" 
+                @change="onImageFileSelected" 
+                accept="image/*" 
+                class="hidden-file-input" 
+                id="imageFileInput"
+              >
+              <label for="imageFileInput" class="upload-drag-zone" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.25rem; border: 2px dashed var(--border-color); border-radius: var(--radius-md); cursor: pointer; background-color: var(--bg-body);">
+                <AppIcon name="upload" size="20" class="upload-icon" style="color: var(--text-muted); margin-bottom: 0.25rem;" />
+                <span v-if="!uploadingImageFile && !newQImageUrl" style="font-size: 0.8rem; color: var(--text-muted);">Nhấp để tải ảnh lên...</span>
+                <span v-else-if="uploadingImageFile" class="loading-text" style="font-size: 0.8rem; color: var(--primary);">Đang tải ảnh lên...</span>
+                <span v-else class="file-name-display" style="font-size: 0.8rem; color: var(--success); font-weight: 600;">{{ getImageFileName(newQImageUrl) }}</span>
+              </label>
+            </div>
+            <div v-if="newQImageUrl" class="recording-preview" style="margin-top: 0.75rem; text-align: center;">
+              <img :src="newQImageUrl" style="max-height: 120px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); object-fit: contain;" />
+              <button type="button" class="action-btn text-link danger-action" @click="newQImageUrl = ''" style="display: block; margin: 0.4rem auto 0 auto; background: none; border: none; color: var(--danger); font-size: 0.8rem; cursor: pointer;">Xóa ảnh</button>
+            </div>
           </div>
 
           <!-- Listening Audio Options -->
@@ -461,6 +496,8 @@ const classesList = computed(() => studySetStore.classes || [])
 const selectedQuiz = ref(null)
 const showCreateModal = ref(false)
 const showAddQuestionModal = ref(false)
+const zipFileRef = ref(null)
+const importingZip = ref(false)
 
 // TOPIK levels loaded from Pinia Store
 const topikLevels = computed(() => topikLevelStore.levels || [])
@@ -672,10 +709,47 @@ const handleCreateQuiz = async () => {
   showCreateModal.value = false
 }
 
+const triggerZipImport = () => {
+  zipFileRef.value.click()
+}
+
+const onZipFileSelected = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  importingZip.value = true
+  const loadToast = toast.info("Đang xử lý import gói đề thi ZIP...", { autoClose: false })
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    await api.post(`/quizzes/${selectedQuiz.value.id}/questions/import-zip`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    toast.dismiss(loadToast)
+    toast.success("Nhập đề thi từ file ZIP thành công!")
+    // Reload quiz details to show new questions
+    await selectQuiz(selectedQuiz.value)
+  } catch (e) {
+    console.error("ZIP import failed:", e)
+    toast.dismiss(loadToast)
+    toast.error("Lỗi khi import file ZIP: Vui lòng kiểm tra định dạng file.")
+  } finally {
+    importingZip.value = false
+    event.target.value = ''
+  }
+}
+
 const isEditQuestionMode = ref(false)
 const editingQuestionId = ref(null)
 const uploadingAudioFile = ref(false)
 const audioFileRef = ref(null)
+const newQImageUrl = ref('')
+const uploadingImageFile = ref(false)
+const imageFileRef = ref(null)
 
 const openAddQuestionModal = () => {
   isEditQuestionMode.value = false
@@ -685,6 +759,7 @@ const openAddQuestionModal = () => {
   newQText.value = ''
   newQType.value = 'MULTIPLE_CHOICE'
   newQAudio.value = ''
+  newQImageUrl.value = ''
   newQCorrectAnswer.value = ''
   newQWrong1.value = ''
   newQWrong2.value = ''
@@ -706,6 +781,7 @@ const triggerEditQuestion = (question) => {
   newQText.value = question.questionText || ''
   newQType.value = question.questionType || 'MULTIPLE_CHOICE'
   newQAudio.value = question.audioUrl || ''
+  newQImageUrl.value = question.imageUrl || ''
   
   if (question.questionType === 'MULTIPLE_CHOICE') {
     newQCorrectAnswer.value = ''
@@ -763,6 +839,43 @@ const getAudioFileName = (url) => {
   return decodeURIComponent(parts[parts.length - 1])
 }
 
+const onImageFileSelected = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  uploadingImageFile.value = true
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('prefix', 'images')
+    
+    const res = await api.post('/files/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    if (res && res.key) {
+      const baseURL = api.defaults.baseURL || 'http://localhost:8080/api'
+      newQImageUrl.value = `${baseURL}/files/download/${res.key}`
+      toast.success("Tải ảnh lên thành công!")
+    } else {
+      toast.error("Tải ảnh thất bại.")
+    }
+  } catch (e) {
+    console.error("Upload image failed:", e)
+    toast.error("Lỗi khi tải ảnh lên.")
+  } finally {
+    uploadingImageFile.value = false
+  }
+}
+
+const getImageFileName = (url) => {
+  if (!url) return ''
+  const parts = url.split('/')
+  return decodeURIComponent(parts[parts.length - 1])
+}
+
 const handleAddQuestion = async () => {
   if (!selectedQuiz.value || !newQText.value) return
 
@@ -784,7 +897,8 @@ const handleAddQuestion = async () => {
       section: newQSection.value,
       correctAnswer: correctAnswerText,
       wrongAnswers: wrongAnswers,
-      audioUrl: newQSection.value === 'LISTENING' ? newQAudio.value : null
+      audioUrl: newQSection.value === 'LISTENING' ? newQAudio.value : null,
+      imageUrl: newQImageUrl.value || null
     }
 
     if (isEditQuestionMode.value) {
