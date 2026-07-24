@@ -243,4 +243,56 @@ public class QuizImportService {
         }
         return "";
     }
+
+    @Transactional
+    public void importQuizQuestionsFromTxt(Long quizId, MultipartFile txtFile) throws Exception {
+        Quiz quiz = quizRepository.findById(quizId)
+                .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        List<QuizQuestion> questions = new ArrayList<>();
+        List<QuizQuestion> existingQuestions = quizQuestionRepository.findByQuizId(quizId);
+        int nextOrder = existingQuestions.size() + 1;
+
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(txtFile.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#") || line.startsWith("//")) {
+                    continue;
+                }
+
+                String questionText = "";
+                String correctAnswer = "";
+                String[] parts = line.split("\\|", 2);
+                if (parts.length < 2) {
+                    parts = line.split("===", 2);
+                }
+
+                if (parts.length >= 2) {
+                    questionText = parts[0].trim();
+                    correctAnswer = parts[1].trim();
+                } else {
+                    questionText = line.trim();
+                }
+
+                if (!questionText.isEmpty()) {
+                    QuizQuestion q = QuizQuestion.builder()
+                            .quiz(quiz)
+                            .section("WRITING")
+                            .questionText(questionText)
+                            .questionType("WRITING")
+                            .correctAnswer(correctAnswer)
+                            .wrongAnswers(Collections.emptyList())
+                            .points(BigDecimal.valueOf(2.00))
+                            .order(nextOrder++)
+                            .build();
+                    questions.add(q);
+                }
+            }
+        }
+
+        if (!questions.isEmpty()) {
+            quizQuestionRepository.saveAll(questions);
+        }
+    }
 }

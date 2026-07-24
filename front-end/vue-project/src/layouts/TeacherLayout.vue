@@ -49,7 +49,7 @@
 
         <router-link to="/teacher/grading" class="sidebar-link" active-class="active">
           <AppIcon name="edit" size="18" />
-          <span>Chấm điểm Viết</span>
+          <span>Chấm điểm luyện dịch</span>
         </router-link>
 
         <router-link to="/teacher/topik-levels" class="sidebar-link" active-class="active">

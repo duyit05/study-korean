@@ -25,6 +25,7 @@ public class QuizAttemptResponse {
     private BigDecimal writingScore;
     private String status;
     private String topikLevelResult;
+    private String examType;
     private List<AnswerResponse> answers;
 
     @Data

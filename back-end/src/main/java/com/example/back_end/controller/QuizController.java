@@ -84,6 +84,18 @@ public class QuizController {
                                 .build();
         }
 
+        @PostMapping("/{id}/questions/import-txt")
+        @PreAuthorize("hasRole('TEACHER')")
+        public ApiResponse<Void> importQuestionsFromTxt(
+                        @PathVariable Long id,
+                        @RequestParam("file") MultipartFile file) throws Exception {
+                quizImportService.importQuizQuestionsFromTxt(id, file);
+                return ApiResponse.<Void>builder()
+                                .code(HttpStatus.OK.value())
+                                .message("Import danh sách câu hỏi thành công.")
+                                .build();
+        }
+
         @GetMapping("/{id}")
         @PreAuthorize("isAuthenticated()")
         public ApiResponse<QuizResponse> getQuizDetails(@PathVariable Long id) {

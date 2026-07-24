@@ -3,8 +3,8 @@
     <!-- Header -->
     <div class="quiz-header-section" v-if="!activeQuiz && !viewingResultQuiz && !isCreatingQuiz">
       <div>
-        <h2>Bài Tập & Kiểm Tra 📝</h2>
-        <p>Danh mục bài tập được phân loại theo kỹ năng giúp bạn dễ dàng ôn tập và học tập tốt hơn.</p>
+        <h2>{{ mode === 'translation' ? 'Luyện Dịch & Viết từ 📝' : 'Bài Tập & Kiểm Tra 📝' }}</h2>
+        <p>{{ mode === 'translation' ? 'Danh sách bài tập tự ôn luyện dịch tiếng Hàn được giáo viên giao và hướng dẫn chấm bài.' : 'Danh mục bài tập được phân loại theo kỹ năng giúp bạn dễ dàng ôn tập và học tập tốt hơn.' }}</p>
       </div>
       
       <div class="quiz-status-tabs">
@@ -13,7 +13,7 @@
           :class="{ active: activeTab === 'reading' }"
           @click="activeTab = 'reading'"
         >
-          📖 Đọc & Từ Vựng ({{ readingQuizzesCount }})
+          {{ mode === 'translation' ? '📝 Bài Tập Luyện Dịch' : '📖 Đọc & Từ Vựng' }} ({{ readingQuizzesCount }})
         </button>
         <button 
           class="tab-btn completed-tab" 
@@ -37,11 +37,11 @@
           class="quiz-card pending"
         >
           <div class="quiz-badge-row">
-            <span class="badge type-badge reading">📖 Đọc & Từ Vựng</span>
-            <span class="badge time"><AppIcon name="clock" size="14" /> {{ quiz.timeLimit || 10 }} Phút</span>
-            <span v-if="quiz.score !== null && quiz.score !== undefined" class="badge score-badge practice-score">Điểm gần nhất: {{ quiz.score }} / {{ quiz.totalScore || 10 }}</span>
+            <span class="badge type-badge reading">{{ mode === 'translation' ? '📝 Luyện dịch & viết' : '📖 Đọc & Từ Vựng' }}</span>
+            <span v-if="quiz.examType !== 'PRACTICE'" class="badge time"><AppIcon name="clock" size="14" /> {{ quiz.timeLimit || 10 }} Phút</span>
+            <span v-if="quiz.examType !== 'PRACTICE' && quiz.score !== null && quiz.score !== undefined" class="badge score-badge practice-score">Điểm gần nhất: {{ quiz.score }} / {{ quiz.totalScore || 10 }}</span>
           </div>
-          <h3>{{ quiz.title || 'Đề ôn tập đọc' }}</h3>
+          <h3>{{ quiz.title || (mode === 'translation' ? 'Bài luyện dịch' : 'Đề ôn tập đọc') }}</h3>
           <p class="due-date" v-if="quiz.dueDate && quiz.status !== 'completed'">Hạn nộp: {{ formatDate(quiz.dueDate) }}</p>
           <p class="summary-q" v-else>{{ quiz.questionCount || 0 }} câu hỏi ôn tập</p>
 
@@ -100,10 +100,17 @@
           class="quiz-card completed"
         >
           <div class="quiz-badge-row">
-            <span class="badge type-badge" :class="quiz.quizType === 'listening' ? 'listening' : 'reading'">
-              {{ quiz.quizType === 'listening' ? '🎧 Bài Nghe' : '📖 Bài Đọc' }}
+            <span class="badge type-badge" :class="quiz.examType === 'PRACTICE' ? 'reading' : (quiz.quizType === 'listening' ? 'listening' : 'reading')">
+              {{ quiz.examType === 'PRACTICE' ? '📝 Luyện dịch' : (quiz.quizType === 'listening' ? '🎧 Bài Nghe' : '📖 Bài Đọc') }}
             </span>
-            <span class="badge score-badge">Điểm: {{ quiz.score }} / {{ quiz.totalScore || 10 }}</span>
+            <span v-if="quiz.examType !== 'PRACTICE'" class="badge score-badge">Điểm: {{ quiz.score }} / {{ quiz.totalScore || 10 }}</span>
+            <span v-else-if="quiz.attemptStatus === 'COMPLETED' && quiz.score !== null" class="badge score-badge">Điểm: {{ quiz.score }} / {{ quiz.totalScore || 10 }}</span>
+            <span v-if="quiz.examType === 'PRACTICE' && quiz.attemptStatus === 'PENDING_GRADING'" class="badge type-badge" style="background-color: rgba(249, 115, 22, 0.1); color: rgb(249, 115, 22); font-weight: 600; border-radius: 20px;">
+              Chờ sửa
+            </span>
+            <span v-else-if="quiz.examType === 'PRACTICE' && quiz.attemptStatus === 'COMPLETED'" class="badge type-badge" style="background-color: rgba(16, 185, 129, 0.1); color: #10b981; font-weight: 600; border-radius: 20px;">
+              Đã sửa
+            </span>
             <span v-if="quiz.topikLevelResult" class="badge type-badge" style="background-color: var(--primary-light); color: var(--primary); font-weight: 700;">
               🏆 {{ quiz.topikLevelResult }}
             </span>
@@ -492,14 +499,25 @@
 
             <!-- Text Fill Question -->
             <div v-else-if="q.type === 'fill'" class="fill-input-box">
+              <textarea 
+                v-if="activeQuiz.examType === 'PRACTICE'"
+                v-model="userAnswers[q.id]" 
+                placeholder="Nhập nghĩa tiếng Hàn / bản dịch của bạn vào đây..."
+                class="fill-text-field"
+                rows="3"
+                style="width: 100%; padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 1rem; background-color: var(--bg-card); color: var(--text-body); resize: vertical;"
+              ></textarea>
               <input 
+                v-else
                 type="text" 
                 v-model="userAnswers[q.id]" 
                 placeholder="Nhập câu trả lời của bạn..."
                 class="fill-text-field"
                 style="width: 100%; padding: 1rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 1rem; background-color: var(--bg-card); color: var(--text-body);"
               >
-              <p class="input-hint" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">* Điền từ hoặc cụm từ tiếng Hàn chính xác.</p>
+              <p class="input-hint" style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                {{ activeQuiz.examType === 'PRACTICE' ? '* Gõ nghĩa tiếng Hàn hoặc dịch câu chính xác.' : '* Điền từ hoặc cụm từ tiếng Hàn chính xác.' }}
+              </p>
             </div>
           </div>
         </div>
@@ -531,7 +549,7 @@
 
       <!-- CỘT PHẢI: BẢNG TIẾN ĐỘ & TRẠNG THÁI TOÀN ĐỀ -->
       <aside class="card-panel-quiz sidebar-content">
-        <div class="timer-widget">
+        <div v-if="activeQuiz.examType !== 'PRACTICE'" class="timer-widget">
           <div class="timer-left">⏱️ Thời gian còn lại</div>
           <div id="countdown-timer">{{ padZero(timerMinutes) }}:{{ padZero(timerSeconds) }}</div>
         </div>
@@ -546,7 +564,7 @@
           </div>
         </div>
 
-        <div class="sidebar-title">Bảng điều hướng nhanh ({{ totalQuestionsCount }} câu)</div>
+        <div class="sidebar-title">Tổng số câu ({{ totalQuestionsCount }} câu)</div>
 
         <div class="matrix-grid">
           <button 
@@ -603,24 +621,27 @@
           <div class="review-sidebar-sticky">
             <!-- Score summary -->
             <div class="review-stat-card score-summary-card">
-              <div class="score-summary-top">
+              <div v-if="viewingResultQuiz.examType === 'PRACTICE'" class="score-summary-top" style="justify-content: center; text-align: center; padding: 0.5rem 0;">
+                <span class="score-summary-num" style="font-size: 1.8rem; color: var(--primary);">ĐÃ NỘP BÀI</span>
+              </div>
+              <div v-else class="score-summary-top">
                 <span class="score-summary-num">{{ viewingResultQuiz.score || 0 }}</span>
                 <span class="score-summary-total">/ {{ viewingResultQuiz.totalScore || 10 }}</span>
               </div>
               <p class="score-summary-date"><AppIcon name="clock" size="12" /> {{ formatDate(viewingResultQuiz.completedAt) }}</p>
               <div class="score-summary-tags">
-                <span class="score-tag xp-tag"><AppIcon name="award" size="12" /> +{{ Math.round((viewingResultQuiz.score || 0) * 10) }} XP</span>
+                <span v-if="viewingResultQuiz.examType !== 'PRACTICE'" class="score-tag xp-tag"><AppIcon name="award" size="12" /> +{{ Math.round((viewingResultQuiz.score || 0) * 10) }} XP</span>
                 <span class="score-tag topik-tag" v-if="viewingResultQuiz.topikLevelResult">🏆 {{ viewingResultQuiz.topikLevelResult }}</span>
               </div>
               
               <!-- Retry Button inside score card -->
               <button class="retry-btn-sidebar" @click="retryQuiz(viewingResultQuiz)">
-                <AppIcon name="play" size="16" /> Làm lại bài thi
+                <AppIcon name="play" size="16" /> Làm lại bài
               </button>
             </div>
 
             <!-- Donut stats -->
-            <div class="review-stat-card review-donut-card">
+            <div v-if="viewingResultQuiz.examType !== 'PRACTICE'" class="review-stat-card review-donut-card">
               <h3 class="sidebar-label">Thống kê nhanh</h3>
               <div class="donut-wrap">
                 <div class="donut-chart" :style="donutStyle(viewingResultQuiz)">
@@ -650,7 +671,7 @@
                   v-for="(q, idx) in (viewingResultQuiz.questions || [])"
                   :key="q.id"
                   class="review-matrix-item"
-                  :class="isUserCorrect(q) ? 'correct' : 'incorrect'"
+                  :class="viewingResultQuiz.examType === 'PRACTICE' ? '' : (isUserCorrect(q) ? 'correct' : 'incorrect')"
                   @click="scrollToReviewCard(q.id)"
                   :title="'Câu ' + (idx + 1)"
                 >{{ idx + 1 }}</button>
@@ -661,7 +682,7 @@
 
         <!-- MAIN FEED -->
         <main class="review-main">
-          <div class="review-filter-bar">
+          <div v-if="viewingResultQuiz.examType !== 'PRACTICE'" class="review-filter-bar">
             <button
               class="filter-chip"
               :class="{ active: reviewFilter === 'all' }"
@@ -692,7 +713,10 @@
                   <span class="feed-index-badge">#{{ originalQuestionIndex(q) + 1 }}</span>
                   <span class="feed-type-label">{{ questionTypeLabel(q) }}</span>
                 </div>
-                <span class="feed-status-pill" :class="isUserCorrect(q) ? 'correct' : 'incorrect'">
+                <span v-if="viewingResultQuiz.examType === 'PRACTICE'" class="feed-status-pill done" style="background-color: var(--bg-badge); color: var(--text-title);">
+                  {{ hasUserAnswer(q) ? '✓ ĐÃ TRẢ LỜI' : '○ CHƯA TRẢ LỜI' }}
+                </span>
+                <span v-else class="feed-status-pill" :class="isUserCorrect(q) ? 'correct' : 'incorrect'">
                   {{ isUserCorrect(q) ? '✓ CHÍNH XÁC' : (hasUserAnswer(q) ? '✕ CHƯA ĐÚNG' : '○ CHƯA LÀM') }}
                 </span>
               </div>
@@ -717,7 +741,7 @@
               </div>
 
               <!-- Multiple choice / listening option comparison grid -->
-              <div v-if="q.options && q.options.length" class="feed-options-grid">
+              <div v-if="q.type !== 'fill' && q.options && q.options.length" class="feed-options-grid">
                 <div
                   v-for="(opt, optIdx) in q.options"
                   :key="optIdx"
@@ -740,14 +764,23 @@
               <div v-else class="review-answers-grid">
                 <div class="ans-row">
                   <span class="label">Câu trả lời của bạn:</span>
-                  <span class="ans-val student-ans" :class="{ err: !isUserCorrect(q) }">
+                  <span class="ans-val student-ans" :class="{ err: viewingResultQuiz.examType !== 'PRACTICE' && !isUserCorrect(q) }">
                     {{ viewingResultQuiz.userAnswers ? (viewingResultQuiz.userAnswers[q.id] || '(Không trả lời)') : '(Không trả lời)' }}
                   </span>
                 </div>
 
-                <div class="ans-row" v-if="!isUserCorrect(q)">
-                  <span class="label">Đáp án đúng:</span>
+                <div class="ans-row" v-if="viewingResultQuiz.examType === 'PRACTICE' ? q.correctAnswer : !isUserCorrect(q)">
+                  <span class="label">Bản dịch mẫu / Gợi ý:</span>
                   <span class="ans-val correct-ans">{{ q.correctAnswer || '' }}</span>
+                </div>
+              </div>
+
+              <!-- Teacher Feedback -->
+              <div class="feed-analysis-box teacher-feedback-box" v-if="q.feedback || (viewingResultQuiz.feedback && viewingResultQuiz.feedback[q.id])" style="background-color: var(--primary-light); border-left: 4px solid var(--primary); margin-top: 1rem;">
+                
+                <div class="feed-analysis-body">
+                  <h4 class="feed-analysis-title" style="color: var(--primary);">Nhận xét:</h4>
+                  <div class="feed-analysis-text" v-html="q.feedback || viewingResultQuiz.feedback[q.id]"></div>
                 </div>
               </div>
 
@@ -755,7 +788,9 @@
               <div class="feed-analysis-box" v-if="q.explanation">
                 <div class="feed-analysis-icon">💡</div>
                 <div class="feed-analysis-body">
-                  <h4 class="feed-analysis-title">Tại sao {{ isUserCorrect(q) ? 'bạn đúng?' : 'bạn sai?' }}</h4>
+                  <h4 class="feed-analysis-title">
+                    {{ viewingResultQuiz.examType === 'PRACTICE' ? 'Giải thích / Hướng dẫn' : ('Tại sao ' + (isUserCorrect(q) ? 'bạn đúng?' : 'bạn sai?')) }}
+                  </h4>
                   <p class="feed-analysis-text">{{ q.explanation }}</p>
                   
                   <div v-if="q.vocab && q.vocab.length" class="feed-vocab-tags mt-4">
@@ -788,10 +823,35 @@ const props = defineProps({
     type: Array,
     required: true,
     default: () => []
+  },
+  mode: {
+    type: String,
+    default: 'quizzes'
   }
 })
 
 const emit = defineEmits(['submit-quiz'])
+const quizStore = useQuizStore()
+
+const mergedQuizzes = computed(() => {
+  const rawQuizzes = Array.isArray(props.quizzes) ? props.quizzes : []
+  const attempts = quizStore.studentAttempts || []
+
+  return rawQuizzes.map(quiz => {
+    const attempt = attempts.find(a => a.quizId === quiz.id)
+    if (attempt) {
+      return {
+        ...quiz,
+        status: 'completed',
+        score: attempt.score !== null && attempt.score !== undefined ? attempt.score : null,
+        completedAt: attempt.submittedAt,
+        topikLevelResult: attempt.topikLevelResult,
+        attemptStatus: attempt.status
+      }
+    }
+    return quiz
+  })
+})
 
 const activeTab = ref('reading') // reading, listening, completed
 
@@ -974,18 +1034,25 @@ onMounted(() => {
 
 // Categories lists - teacher assigned quizzes only for Bài tập page
 const readingQuizzes = computed(() => {
-  const list = Array.isArray(props.quizzes) ? props.quizzes : []
-  return list.filter(q => q.status !== 'completed' && q.quizType !== 'listening')
+  const list = mergedQuizzes.value
+  if (props.mode === 'translation') {
+    return list.filter(q => q.status !== 'completed' && q.examType === 'PRACTICE')
+  }
+  return list.filter(q => q.status !== 'completed' && q.examType !== 'PRACTICE' && q.quizType !== 'listening')
 })
 
 const listeningQuizzes = computed(() => {
-  const list = Array.isArray(props.quizzes) ? props.quizzes : []
-  return list.filter(q => q.status !== 'completed' && q.quizType === 'listening')
+  const list = mergedQuizzes.value
+  if (props.mode === 'translation') {
+    return []
+  }
+  return list.filter(q => q.status !== 'completed' && q.examType !== 'PRACTICE' && q.quizType === 'listening')
 })
 
 const completedQuizzes = computed(() => {
-  const list = Array.isArray(props.quizzes) ? props.quizzes : []
-  const teacherCompleted = list.filter(q => q.status === 'completed')
+  const list = mergedQuizzes.value
+  const filterCond = q => q.status === 'completed' && (props.mode === 'translation' ? q.examType === 'PRACTICE' : q.examType !== 'PRACTICE')
+  const teacherCompleted = list.filter(filterCond)
   return [...teacherCompleted].sort((a, b) => {
     const dateA = a.completedAt ? new Date(a.completedAt).getTime() : 0
     const dateB = b.completedAt ? new Date(b.completedAt).getTime() : 0
@@ -1129,7 +1196,7 @@ const startQuiz = async (quiz) => {
 
     // Determine the type
     let type = 'choice';
-    if (q.questionType === 'ESSAY') {
+    if (q.questionType === 'ESSAY' || q.questionType === 'WRITING') {
       type = 'fill';
     } else if (q.audioUrl || q.section === 'LISTENING') {
       type = 'listening';
@@ -1145,7 +1212,7 @@ const startQuiz = async (quiz) => {
       imageUrl: q.imageUrl || '',
       options: optionsList,
       correctAnswer: q.correctAnswer || '',
-      explanation: q.explanation || `Đáp án đúng là: ${q.correctAnswer}.`
+      explanation: q.explanation || (fullQuiz.examType === 'PRACTICE' ? null : `Đáp án đúng là: ${q.correctAnswer}.`)
     };
   });
 
@@ -1171,21 +1238,25 @@ const startQuiz = async (quiz) => {
     })
   }
 
-  // Start countdown timer
-  timerMinutes.value = mappedQuiz.timeLimit || 10
-  timerSeconds.value = 0
-  
-  clearInterval(timerInterval)
-  timerInterval = setInterval(() => {
-    if (timerSeconds.value > 0) {
-      timerSeconds.value--
-    } else if (timerMinutes.value > 0) {
-      timerMinutes.value--
-      timerSeconds.value = 59
-    } else {
-      submitQuiz()
-    }
-  }, 1000)
+  // Start countdown timer if not practice
+  if (mappedQuiz.examType !== 'PRACTICE') {
+    timerMinutes.value = mappedQuiz.timeLimit || 10
+    timerSeconds.value = 0
+    
+    clearInterval(timerInterval)
+    timerInterval = setInterval(() => {
+      if (timerSeconds.value > 0) {
+        timerSeconds.value--
+      } else if (timerMinutes.value > 0) {
+        timerMinutes.value--
+        timerSeconds.value = 59
+      } else {
+        submitQuiz()
+      }
+    }, 1000)
+  } else {
+    clearInterval(timerInterval)
+  }
 }
 
 
@@ -1250,18 +1321,32 @@ const submitQuiz = () => {
       localStorage.setItem('sk_practice_quizzes', JSON.stringify(practiceQuizzes.value))
     }
     
+    const answersArray = Object.keys(userAnswers.value).map(qId => ({
+      questionId: parseInt(qId),
+      selectedAnswer: userAnswers.value[qId],
+      writtenAnswer: userAnswers.value[qId],
+      timeTakenMs: 5000
+    }))
+    
     // Reward XP globally by emitting to parent
     emit('submit-quiz', {
       quizId: activeQuiz.value.id,
       score,
-      userAnswers: userAnswers.value,
+      userAnswers: answersArray,
       completedAt: compAt
     })
   } else {
+    const answersArray = Object.keys(userAnswers.value).map(qId => ({
+      questionId: parseInt(qId),
+      selectedAnswer: userAnswers.value[qId],
+      writtenAnswer: userAnswers.value[qId],
+      timeTakenMs: 5000
+    }))
+    
     emit('submit-quiz', {
       quizId: activeQuiz.value.id,
       score,
-      userAnswers: userAnswers.value,
+      userAnswers: answersArray,
       completedAt: compAt
     })
   }
@@ -1292,13 +1377,85 @@ const viewResults = async (quiz) => {
       return
     }
   }
+
+  // Map backend quiz questions to the format expected by QuizView.vue
+  const mappedQuestions = (fullQuiz.questions || []).map(q => {
+    if (q.options && q.question) return q;
+
+    let rawOptions = [];
+    if (q.wrongAnswers && q.wrongAnswers.length === 4) {
+      rawOptions = [...q.wrongAnswers];
+    } else {
+      if (q.correctAnswer) rawOptions.push(q.correctAnswer);
+      if (q.wrongAnswers && Array.isArray(q.wrongAnswers)) {
+        rawOptions.push(...q.wrongAnswers);
+      }
+    }
+
+    const optionsList = [...rawOptions];
+
+    let type = 'choice';
+    if (q.questionType === 'ESSAY' || q.questionType === 'WRITING') {
+      type = 'fill';
+    } else if (q.audioUrl || q.section === 'LISTENING') {
+      type = 'listening';
+    }
+
+    return {
+      id: q.id,
+      type: type,
+      question: q.questionText || '',
+      koreanText: q.koreanText || '',
+      audioUrl: q.audioUrl || '',
+      audioSource: q.audioSource || 'tts',
+      imageUrl: q.imageUrl || '',
+      options: optionsList,
+      correctAnswer: q.correctAnswer || '',
+      explanation: q.explanation || (fullQuiz.examType === 'PRACTICE' ? null : `Đáp án đúng là: ${q.correctAnswer}.`)
+    };
+  });
+
+  fullQuiz = {
+    ...fullQuiz,
+    questions: mappedQuestions
+  }
+
+  const attempt = quizStore.studentAttempts.find(a => a.quizId === quiz.id)
+  if (attempt && attempt.answers) {
+    const userAnswersObj = {}
+    const feedbackObj = {}
+    attempt.answers.forEach(ans => {
+      userAnswersObj[ans.questionId] = ans.studentAnswer
+      feedbackObj[ans.questionId] = ans.feedback
+    })
+    fullQuiz = {
+      ...fullQuiz,
+      userAnswers: userAnswersObj,
+      feedback: feedbackObj,
+      score: attempt.score !== null && attempt.score !== undefined ? attempt.score : null,
+      completedAt: attempt.submittedAt,
+      attemptStatus: attempt.status,
+      topikLevelResult: attempt.topikLevelResult
+    }
+  }
+
   reviewFilter.value = 'all'
   viewingResultQuiz.value = fullQuiz
 }
 
 // Grader check helper for UI display - with fallback typeguards
 const isUserCorrect = (question) => {
-  if (!question || !viewingResultQuiz.value || !viewingResultQuiz.value.userAnswers) return false
+  if (!question || !viewingResultQuiz.value) return false
+  
+  if (viewingResultQuiz.value.examType === 'PRACTICE') {
+    const attempt = quizStore.studentAttempts.find(a => a.quizId === viewingResultQuiz.value.id)
+    if (attempt && attempt.answers) {
+      const ans = attempt.answers.find(a => a.questionId === question.id)
+      return ans ? ans.isCorrect === true : false
+    }
+  }
+
+  if (!viewingResultQuiz.value.userAnswers) return false
   const studentAns = (viewingResultQuiz.value.userAnswers[question.id] || '').toString().trim().toLowerCase()
   const correctAns = (question.correctAnswer || '').toString().trim().toLowerCase()
   
@@ -1369,7 +1526,7 @@ const donutStyle = (quiz) => {
 
 const questionTypeLabel = (q) => {
   if (q.type === 'listening') return '🎧 Nghe hiểu'
-  if (q.type === 'fill') return '✍️ Điền từ'
+  if (q.type === 'fill') return 'Luyện từ'
   if (q.type === 'match') return '🔗 Nối câu'
   return '📖 Đọc hiểu'
 }

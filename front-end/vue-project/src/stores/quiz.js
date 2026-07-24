@@ -6,6 +6,9 @@ export const useQuizStore = defineStore('quiz', () => {
   const quizzes = ref([]);
   const pendingAttempts = ref([]);
   const studentAttempts = ref([]);
+  const teacherAttempts = ref([]);
+  const totalTeacherAttemptElements = ref(0);
+  const totalTeacherAttemptPages = ref(1);
   const questionTypes = ref([]);
   const questionSections = ref([]);
   const loading = ref(false);
@@ -161,6 +164,28 @@ export const useQuizStore = defineStore('quiz', () => {
     }
   };
 
+  const fetchTeacherAttempts = async (params = {}) => {
+    loading.value = true;
+    errorMessage.value = '';
+    try {
+      const response = await api.get('/quiz-attempts/teacher', { params });
+      if (response.data && response.data.items !== undefined) {
+        teacherAttempts.value = response.data.items || [];
+        totalTeacherAttemptElements.value = response.data.totalElements || 0;
+        totalTeacherAttemptPages.value = response.data.totalPage || 1;
+        return response.data;
+      } else {
+        teacherAttempts.value = response.data || [];
+        return teacherAttempts.value;
+      }
+    } catch (error) {
+      errorMessage.value = error.message;
+      throw error;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   const fetchPendingAttempts = async () => {
     loading.value = true;
     errorMessage.value = '';
@@ -242,6 +267,9 @@ export const useQuizStore = defineStore('quiz', () => {
     quizzes,
     pendingAttempts,
     studentAttempts,
+    teacherAttempts,
+    totalTeacherAttemptElements,
+    totalTeacherAttemptPages,
     questionTypes,
     questionSections,
     loading,
@@ -261,6 +289,7 @@ export const useQuizStore = defineStore('quiz', () => {
     deleteQuestion,
     submitQuizAttempt,
     fetchPendingAttempts,
+    fetchTeacherAttempts,
     submitGrading,
     fetchMyAttempts
   };

@@ -52,6 +52,21 @@ public class QuizService {
 
     @Transactional
     public QuizResponse createQuiz(QuizRequest request) {
+        if (request.getExamType() != ExamType.PRACTICE) {
+            if (request.getTimeLimitMins() == null) {
+                throw new AppException(ErrorCode.TIME_LIMIT_REQUIRED);
+            }
+            if (request.getTimeLimitMins() < 1) {
+                throw new AppException(ErrorCode.TIME_LIMIT_MIN);
+            }
+            if (request.getTotalScore() == null) {
+                throw new AppException(ErrorCode.TOTAL_SCORE_REQUIRED);
+            }
+            if (request.getTotalScore() < 1) {
+                throw new AppException(ErrorCode.TOTAL_SCORE_MIN);
+            }
+        }
+
         User creator = userService.getCurrentUser();
         Class clazz = null;
         if (request.getClassId() != null) {
@@ -171,6 +186,21 @@ public class QuizService {
 
     @Transactional
     public QuizResponse updateQuiz(Long id, QuizRequest request) {
+        if (request.getExamType() != ExamType.PRACTICE) {
+            if (request.getTimeLimitMins() == null) {
+                throw new AppException(ErrorCode.TIME_LIMIT_REQUIRED);
+            }
+            if (request.getTimeLimitMins() < 1) {
+                throw new AppException(ErrorCode.TIME_LIMIT_MIN);
+            }
+            if (request.getTotalScore() == null) {
+                throw new AppException(ErrorCode.TOTAL_SCORE_REQUIRED);
+            }
+            if (request.getTotalScore() < 1) {
+                throw new AppException(ErrorCode.TOTAL_SCORE_MIN);
+            }
+        }
+
         Quiz quiz = quizRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
 

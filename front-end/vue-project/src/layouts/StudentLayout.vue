@@ -37,6 +37,15 @@
         </router-link>
 
         <router-link 
+          to="/student/translation" 
+          class="nav-tab-btn" 
+          active-class="active"
+        >
+          <AppIcon name="book" size="18" />
+          <span>Luyện dịch</span>
+        </router-link>
+
+        <router-link 
           to="/student/practice" 
           class="nav-tab-btn" 
           active-class="active"
@@ -120,6 +129,7 @@
     <!-- Main View Content Area -->
     <main class="app-main-content">
       <router-view 
+        :key="$route.fullPath"
         :user="user"
         :classes="classes"
         :study-sets="studySets"
@@ -146,6 +156,10 @@
       <router-link to="/student/quizzes" class="bottom-nav-item" active-class="active">
         <AppIcon name="quiz" size="18" />
         <span>Bài tập</span>
+      </router-link>
+      <router-link to="/student/translation" class="bottom-nav-item" active-class="active">
+        <AppIcon name="book" size="18" />
+        <span>Luyện dịch</span>
       </router-link>
       <router-link to="/student/practice" class="bottom-nav-item" active-class="active">
         <AppIcon name="award" size="18" />

@@ -132,6 +132,7 @@ onMounted(async () => {
         await studySetStore.fetchClasses('TEACHER');
       } else {
         await studySetStore.fetchClasses('STUDENT');
+        await quizStore.fetchMyAttempts();
         const studentClasses = studySetStore.classes || [];
         
         // Filter and map only study sets assigned to student's classes with class metadata
@@ -231,6 +232,7 @@ const handleLoginSuccess = async (userData) => {
       await studySetStore.fetchClasses('TEACHER');
     } else {
       await studySetStore.fetchClasses('STUDENT');
+      await quizStore.fetchMyAttempts();
       const studentClasses = studySetStore.classes || [];
       
       // Filter and map only study sets assigned to student's classes with class metadata
@@ -341,7 +343,24 @@ const handleSubmitQuiz = async ({ quizId, score, userAnswers, completedAt }) => 
       if (user.value.role === 'TEACHER') {
         await quizStore.fetchMyCreatedQuizzes();
       } else {
-        await quizStore.fetchQuizzesByClass(1);
+        const studentClasses = studySetStore.classes || [];
+        let allQuizzes = [];
+        if (studentClasses.length > 0) {
+          for (const cls of studentClasses) {
+            try {
+              const res = await api.get(`/quizzes/class/${cls.id}`);
+              if (res && res.data) {
+                allQuizzes = allQuizzes.concat(res.data);
+              }
+            } catch (e) {
+              console.warn(`Failed to fetch quizzes for class ${cls.id}:`, e);
+            }
+          }
+          quizStore.quizzes = allQuizzes;
+        } else {
+          await quizStore.fetchQuizzesByClass(1);
+        }
+        await quizStore.fetchMyAttempts();
       }
     } catch (e) {
       console.error("Failed to submit quiz attempt to API:", e)

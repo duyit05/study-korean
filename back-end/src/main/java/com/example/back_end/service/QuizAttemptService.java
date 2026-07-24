@@ -21,6 +21,13 @@ import com.example.back_end.mapper.QuizAttemptMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.back_end.dto.response.PageResponse;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -249,5 +256,67 @@ public class QuizAttemptService {
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
         List<QuizAnswer> answers = quizAnswerRepository.findByAttemptIdInWithQuestion(List.of(attemptId));
         return quizAttemptMapper.toResponse(attempt, answers);
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<QuizAttemptResponse> getAttemptsForTeacher(
+            String search,
+            String status,
+            String dateStr,
+            int pageNo,
+            int pageSize) {
+        User teacher = userService.getCurrentUser();
+        
+        int page = Math.max(0, pageNo - 1);
+        Pageable pageable = PageRequest.of(page, pageSize, Sort.by("submittedAt").descending());
+
+        LocalDateTime startDate = LocalDateTime.of(1970, 1, 1, 0, 0, 0);
+        LocalDateTime endDate = LocalDateTime.of(2099, 12, 31, 23, 59, 59);
+        if (dateStr != null && !dateStr.trim().isEmpty()) {
+            try {
+                LocalDate localDate = LocalDate.parse(dateStr.trim());
+                startDate = localDate.atStartOfDay();
+                endDate = localDate.atTime(LocalTime.MAX);
+            } catch (Exception e) {
+                log.warn("Failed to parse search date: {}", dateStr, e);
+            }
+        }
+
+        String searchParam = (search == null || search.trim().isEmpty()) ? null : search.trim();
+        String statusParam = (status == null || status.trim().isEmpty()) ? null : status.trim();
+
+        Page<QuizAttempt> pageResult = quizAttemptRepository.findAttemptsForTeacherWithFilters(
+                teacher.getId(), statusParam, searchParam, startDate, endDate, pageable);
+
+        List<QuizAttempt> attemptsList = pageResult.getContent();
+        if (attemptsList.isEmpty()) {
+            return PageResponse.<QuizAttemptResponse>builder()
+                    .pageNo(page + 1)
+                    .pageSize(pageSize)
+                    .totalPage(pageResult.getTotalPages())
+                    .totalElements(pageResult.getTotalElements())
+                    .items(List.of())
+                    .build();
+        }
+
+        List<Long> attemptIds = attemptsList.stream().map(QuizAttempt::getId).collect(Collectors.toList());
+        List<QuizAnswer> allAnswers = quizAnswerRepository.findByAttemptIdInWithQuestion(attemptIds);
+        Map<Long, List<QuizAnswer>> answersByAttemptMap = allAnswers.stream()
+                .collect(Collectors.groupingBy(ans -> ans.getAttempt().getId()));
+
+        List<QuizAttemptResponse> items = attemptsList.stream()
+                .map(attempt -> {
+                    List<QuizAnswer> answers = answersByAttemptMap.getOrDefault(attempt.getId(), List.of());
+                    return quizAttemptMapper.toResponse(attempt, answers);
+                })
+                .collect(Collectors.toList());
+
+        return PageResponse.<QuizAttemptResponse>builder()
+                .pageNo(page + 1)
+                .pageSize(pageSize)
+                .totalPage(pageResult.getTotalPages())
+                .totalElements(pageResult.getTotalElements())
+                .items(items)
+                .build();
     }
 }

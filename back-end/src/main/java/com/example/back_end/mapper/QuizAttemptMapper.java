@@ -53,6 +53,7 @@ public class QuizAttemptMapper {
                 .writingScore(attempt.getWritingScore())
                 .status(attempt.getStatus())
                 .topikLevelResult(calculateTopikLevelResult(attempt.getQuiz().getExamType(), attempt.getScore()))
+                .examType(attempt.getQuiz().getExamType() != null ? attempt.getQuiz().getExamType().name() : null)
                 .answers(answers != null ? answers.stream().map(this::toAnswerResponse).collect(Collectors.toList()) : List.of())
                 .build();
     }

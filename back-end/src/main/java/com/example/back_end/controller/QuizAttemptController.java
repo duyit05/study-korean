@@ -4,6 +4,7 @@ import com.example.back_end.dto.request.GradeAttemptRequest;
 import com.example.back_end.dto.request.QuizSubmitRequest;
 import com.example.back_end.dto.response.ApiResponse;
 import com.example.back_end.dto.response.QuizAttemptResponse;
+import com.example.back_end.dto.response.PageResponse;
 import com.example.back_end.service.QuizAttemptService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -77,6 +78,23 @@ public class QuizAttemptController {
         return ApiResponse.<QuizAttemptResponse>builder()
                 .code(HttpStatus.OK.value())
                 .message("Lấy chi tiết bài làm thành công.")
+                .data(response)
+                .build();
+    }
+
+    @GetMapping("/teacher")
+    @PreAuthorize("hasRole('TEACHER')")
+    public ApiResponse<PageResponse<QuizAttemptResponse>> getAttemptsForTeacher(
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String date,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PageResponse<QuizAttemptResponse> response = quizAttemptService.getAttemptsForTeacher(
+                search, status, date, page, size);
+        return ApiResponse.<PageResponse<QuizAttemptResponse>>builder()
+                .code(HttpStatus.OK.value())
+                .message("Lấy danh sách bài thi thành công.")
                 .data(response)
                 .build();
     }

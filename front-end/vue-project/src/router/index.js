@@ -47,7 +47,8 @@ const routes = [
       { path: '', redirect: '/student/dashboard' },
       { path: 'dashboard', name: 'StudentDashboard', component: DashboardView },
       { path: 'vocabulary', name: 'StudentVocabulary', component: VocabularyView },
-      { path: 'quizzes', name: 'StudentQuizzes', component: QuizView },
+      { path: 'quizzes', name: 'StudentQuizzes', component: QuizView, props: { mode: 'quizzes' } },
+      { path: 'translation', name: 'StudentTranslation', component: QuizView, props: { mode: 'translation' } },
       { path: 'practice', name: 'StudentPractice', component: StudentPracticeView },
       { path: 'schedule', name: 'StudentSchedule', component: ScheduleView },
       { path: 'profile', name: 'StudentProfile', component: ProfileView }

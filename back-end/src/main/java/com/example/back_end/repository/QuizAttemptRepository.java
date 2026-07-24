@@ -9,6 +9,10 @@ import java.util.List;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import java.time.LocalDateTime;
+
 @Repository
 public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> {
     @Query("SELECT qa FROM QuizAttempt qa " +
@@ -37,4 +41,28 @@ public interface QuizAttemptRepository extends JpaRepository<QuizAttempt, Long> 
 
     @Query("SELECT qa FROM QuizAttempt qa JOIN FETCH qa.quiz q WHERE q.creator.id = :creatorId")
     List<QuizAttempt> findByQuizCreatorId(@Param("creatorId") Long creatorId);
+
+    @Query(value = "SELECT qa FROM QuizAttempt qa " +
+           "JOIN FETCH qa.quiz q " +
+           "JOIN FETCH qa.student s " +
+           "WHERE q.creator.id = :creatorId " +
+           "AND (:status IS NULL OR qa.status = :status) " +
+           "AND (CAST(:search AS string) IS NULL OR LOWER(s.fullName) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) OR LOWER(s.username) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
+           "AND qa.submittedAt >= :startDate " +
+           "AND qa.submittedAt <= :endDate",
+           countQuery = "SELECT COUNT(qa) FROM QuizAttempt qa " +
+                        "JOIN qa.quiz q " +
+                        "JOIN qa.student s " +
+                        "WHERE q.creator.id = :creatorId " +
+                        "AND (:status IS NULL OR qa.status = :status) " +
+                        "AND (CAST(:search AS string) IS NULL OR LOWER(s.fullName) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%')) OR LOWER(s.username) LIKE LOWER(CONCAT('%', CAST(:search AS string), '%'))) " +
+                        "AND qa.submittedAt >= :startDate " +
+                        "AND qa.submittedAt <= :endDate")
+    Page<QuizAttempt> findAttemptsForTeacherWithFilters(
+            @Param("creatorId") Long creatorId,
+            @Param("status") String status,
+            @Param("search") String search,
+            @Param("startDate") LocalDateTime startDate,
+            @Param("endDate") LocalDateTime endDate,
+            Pageable pageable);
 }

@@ -1,6 +1,7 @@
 <template>
   <div class="teacher-quizzes animate-fade">
     <input type="file" ref="zipFileRef" @change="onZipFileSelected" accept=".zip" style="display: none;" />
+    <input type="file" ref="txtFileRef" @change="onTxtFileSelected" accept=".txt" style="display: none;" />
     <div class="header-section">
       <div class="title-area">
         <h2>Soạn đề thi &amp; bài tập luyện tập</h2>
@@ -66,7 +67,7 @@
             </div>
           </div>
           <div class="quiz-body">
-            <div class="meta-row">
+            <div v-if="quiz.examType !== 'PRACTICE'" class="meta-row">
               <AppIcon name="clock" size="16" class="icon" />
               <span>Thời gian: {{ quiz.timeLimitMins }} phút</span>
             </div>
@@ -78,9 +79,9 @@
               <AppIcon name="book" size="16" class="icon" />
               <span>{{ quiz.questionCount || 0 }} câu hỏi</span>
             </div>
-            <div class="meta-row">
+            <div v-if="quiz.examType !== 'PRACTICE'" class="meta-row">
               <AppIcon name="award" size="16" class="icon" />
-              <span>Tổng điểm: {{ quiz.totalScore || 100 }} điểm</span>
+              <span>Tổng điểm: {{ quiz.totalScore }} điểm</span>
             </div>
           </div>
           <div class="quiz-footer">
@@ -137,9 +138,9 @@
         <div class="header-title">
           <h3>Đề: {{ selectedQuiz.title }}</h3>
           <p>
-            Loại đề: <strong>{{ selectedQuiz.examType === 'TOPIK_I' ? 'TOPIK I' : selectedQuiz.examType === 'TOPIK_II' ? 'TOPIK II' : 'Tự do' }}</strong>
+            Loại đề: <strong>{{ selectedQuiz.examType === 'TOPIK_I' ? 'TOPIK I' : selectedQuiz.examType === 'TOPIK_II' ? 'TOPIK II' : 'Luyện tập' }}</strong>
             <span v-if="selectedQuiz.topikLevel"> | Cấp độ: {{ selectedQuiz.topikLevel }}</span>
-            | Thời gian: {{ selectedQuiz.timeLimitMins }} phút | Tổng điểm: {{ selectedQuiz.totalScore || 100 }} điểm
+            <span v-if="selectedQuiz.examType !== 'PRACTICE'"> | Thời gian: {{ selectedQuiz.timeLimitMins }} phút | Tổng điểm: {{ selectedQuiz.totalScore || 100 }} điểm</span>
           </p>
         </div>
         <button class="close-btn" @click="selectedQuiz = null">&times;</button>
@@ -152,9 +153,13 @@
             <button class="secondary-btn" @click="openAddQuestionModal">
               <span>+ Soạn câu hỏi mới</span>
             </button>
-            <button class="secondary-btn" @click="triggerZipImport" :disabled="importingZip" style="background-color: var(--bg-badge); color: var(--text-title); border-color: var(--border-color); display: inline-flex; align-items: center; gap: 4px;">
+            <button v-if="selectedQuiz.examType !== 'PRACTICE'" class="secondary-btn" @click="triggerZipImport" :disabled="importingZip" style="background-color: var(--bg-badge); color: var(--text-title); border-color: var(--border-color); display: inline-flex; align-items: center; gap: 4px;">
               <AppIcon name="upload" size="14" />
               <span>{{ importingZip ? 'Đang import...' : 'Import file ZIP (.zip)' }}</span>
+            </button>
+            <button v-else class="secondary-btn" @click="triggerTxtImport" :disabled="importingTxt" style="background-color: var(--bg-badge); color: var(--text-title); border-color: var(--border-color); display: inline-flex; align-items: center; gap: 4px;">
+              <AppIcon name="upload" size="14" />
+              <span>{{ importingTxt ? 'Đang import...' : 'Import file TXT (.txt)' }}</span>
             </button>
           </div>
         </div>
@@ -186,8 +191,9 @@
                   <span>{{ String.fromCharCode(65 + oIdx) }}. {{ opt.text }}</span>
                 </div>
               </div>
-              <div v-else class="essay-indicator">
-                <span>[Tự luận] Học sinh điền câu trả lời ngắn hoặc viết bài luận.</span>
+              <div v-else class="essay-indicator" style="margin-top: 0.5rem; padding: 0.5rem; background-color: var(--bg-badge); border-radius: var(--radius-sm); border-left: 3px solid var(--primary);">
+                <div style="font-weight: 600; font-size: 0.85rem; color: var(--primary);">Bản dịch mẫu / Đáp án đúng:</div>
+                <div style="font-size: 0.9rem; margin-top: 0.25rem; color: var(--text-title);">{{ question.correctAnswer }}</div>
               </div>
             </div>
             <div class="q-actions-row" style="display: flex; justify-content: flex-end; gap: 1rem; align-items: center;">
@@ -197,7 +203,12 @@
           </div>
           
           <div v-if="!selectedQuiz.questions || selectedQuiz.questions.length === 0" class="empty-state">
-            Đề thi này chưa có câu hỏi nào. Hãy soạn thảo các câu hỏi Nghe, Đọc, Viết để học viên ôn tập!
+            <span v-if="selectedQuiz.examType === 'PRACTICE'">
+              Bài tập tự ôn này chưa có câu hỏi luyện dịch nào. Hãy bấm <strong>+ Soạn câu hỏi mới</strong> hoặc chuẩn bị file <strong>.txt</strong> (định dạng: <em>Câu gốc | Bản dịch mẫu</em> trên mỗi dòng) và bấm <strong>Import file TXT (.txt)</strong> để tải lên nhanh!
+            </span>
+            <span v-else>
+              Đề thi này chưa có câu hỏi nào. Hãy soạn thảo các câu hỏi Nghe, Đọc, Viết để học viên ôn tập!
+            </span>
           </div>
         </div>
       </div>
@@ -223,14 +234,14 @@
             <label for="quizLevel">Dạng đề thi (TOPIK)</label>
             <AppSelect id="quizLevel" v-model="newQuizLevelId" :options="levelOptions" />
           </div>
-          <div class="form-row-2">
+          <div v-if="newQuizExamType !== 'PRACTICE'" class="form-row-2">
             <div class="form-group">
               <label for="quizTime">Thời gian (phút)</label>
-              <input type="number" id="quizTime" v-model="newQuizTime" placeholder="Ví dụ: 50" required min="1" :disabled="newQuizExamType !== 'PRACTICE'">
+              <input type="number" id="quizTime" v-model="newQuizTime" placeholder="Ví dụ: 50" required min="1">
             </div>
             <div class="form-group">
               <label for="quizScore">Tổng điểm bài thi</label>
-              <input type="number" id="quizScore" v-model="newQuizScore" placeholder="Ví dụ: 100" required min="1" :disabled="newQuizExamType !== 'PRACTICE'">
+              <input type="number" id="quizScore" v-model="newQuizScore" placeholder="Ví dụ: 100" required min="1">
             </div>
           </div>
           <div v-if="newQuizExamType === 'TOPIK_I'" class="info-tip">
@@ -263,7 +274,7 @@
           <button class="close-btn" @click="closeQuestionModal">&times;</button>
         </div>
         <form @submit.prevent="handleAddQuestion" class="modal-form">
-          <div class="form-row-2">
+          <div v-if="selectedQuiz.examType !== 'PRACTICE'" class="form-row-2">
             <div class="form-group">
               <label for="qSection">Kỹ năng / Phần thi</label>
               <AppSelect id="qSection" v-model="newQSection" :options="qSectionOptions" />
@@ -275,12 +286,12 @@
           </div>
 
           <div class="form-group">
-            <label for="qText">Nội dung câu hỏi (Đề bài)</label>
-            <textarea id="qText" v-model="newQText" placeholder="Nhập nội dung câu hỏi tiếng Hàn..." required rows="3"></textarea>
+            <label for="qText">{{ selectedQuiz.examType === 'PRACTICE' ? 'Câu cần dịch (tiếng Hàn hoặc tiếng Việt)' : 'Nội dung câu hỏi (Đề bài)' }}</label>
+            <textarea id="qText" v-model="newQText" :placeholder="selectedQuiz.examType === 'PRACTICE' ? 'Nhập câu gốc cần luyện dịch...' : 'Nhập nội dung câu hỏi tiếng Hàn...'" required rows="3"></textarea>
           </div>
 
           <!-- Image upload options -->
-          <div class="form-group border-box">
+          <div v-if="selectedQuiz.examType !== 'PRACTICE'" class="form-group border-box">
             <label style="margin-bottom: 0.5rem; display: block;">Hình ảnh minh họa (tùy chọn) (.png, .jpg, .jpeg, .gif)</label>
             <div class="upload-container">
               <input 
@@ -331,7 +342,7 @@
             </div>
           </div>
 
-          <div class="form-group">
+          <div v-if="selectedQuiz.examType !== 'PRACTICE'" class="form-group">
             <label for="qType">Dạng câu trả lời</label>
             <AppSelect id="qType" v-model="newQType" :options="qTypeOptions" />
           </div>
@@ -366,8 +377,14 @@
 
           <!-- Essay Fields -->
           <div v-else class="form-group border-box">
-            <label for="qCorrectEssay">Gợi ý đáp án / Bài mẫu tự luận (tùy chọn)</label>
-            <textarea id="qCorrectEssay" v-model="newQCorrectAnswer" placeholder="Nhập đáp án mẫu để tham khảo khi chấm bài..." rows="2"></textarea>
+            <template v-if="selectedQuiz.examType === 'PRACTICE'">
+              <label for="qCorrectEssay">Bản dịch mẫu / Gợi ý đáp án (Tùy chọn)</label>
+              <textarea id="qCorrectEssay" v-model="newQCorrectAnswer" placeholder="Nhập bản dịch chuẩn/đáp án gợi ý (nếu có)..." rows="2"></textarea>
+            </template>
+            <template v-else>
+              <label for="qCorrectEssay">Gợi ý đáp án / Bài mẫu tự luận (tùy chọn)</label>
+              <textarea id="qCorrectEssay" v-model="newQCorrectAnswer" placeholder="Nhập đáp án mẫu để tham khảo khi chấm bài..." rows="2"></textarea>
+            </template>
           </div>
 
           <div class="modal-actions">
@@ -398,14 +415,14 @@
             <label for="editQuizLevel">Cấp độ (TOPIK)</label>
             <AppSelect id="editQuizLevel" v-model="editQuizLevelId" :options="levelOptions" />
           </div>
-          <div class="form-row-2">
+          <div v-if="editQuizExamType !== 'PRACTICE'" class="form-row-2">
             <div class="form-group">
               <label for="editQuizTime">Thời gian (phút)</label>
-              <input type="number" id="editQuizTime" v-model.number="editQuizTime" required min="5" :disabled="editQuizExamType !== 'PRACTICE'">
+              <input type="number" id="editQuizTime" v-model.number="editQuizTime" required min="5">
             </div>
             <div class="form-group">
               <label for="editQuizScore">Tổng điểm bài thi</label>
-              <input type="number" id="editQuizScore" v-model="editQuizScore"  required min="1" :disabled="editQuizExamType !== 'PRACTICE'">
+              <input type="number" id="editQuizScore" v-model="editQuizScore"  required min="1">
             </div>
           </div>
           <div v-if="editQuizExamType === 'TOPIK_I'" class="info-tip">
@@ -498,6 +515,8 @@ const showCreateModal = ref(false)
 const showAddQuestionModal = ref(false)
 const zipFileRef = ref(null)
 const importingZip = ref(false)
+const txtFileRef = ref(null)
+const importingTxt = ref(false)
 
 // TOPIK levels loaded from Pinia Store
 const topikLevels = computed(() => topikLevelStore.levels || [])
@@ -688,17 +707,18 @@ const openCreateQuizModal = () => {
 }
 
 const handleCreateQuiz = async () => {
-  if (!newQuizTitle.value || !newQuizTime.value || !newQuizDueDate.value || !newQuizScore.value) return
+  if (!newQuizTitle.value || !newQuizDueDate.value) return
+  if (newQuizExamType.value !== 'PRACTICE' && (!newQuizTime.value || !newQuizScore.value)) return
 
   try {
     await quizStore.createQuiz({
       title: newQuizTitle.value,
       examType: newQuizExamType.value,
       topikLevelId: newQuizLevelId.value,
-      timeLimitMins: parseInt(newQuizTime.value),
+      timeLimitMins: newQuizExamType.value === 'PRACTICE' ? null : parseInt(newQuizTime.value),
       dueDate: newQuizDueDate.value + 'T23:59:59',
       classId: newQuizClassId.value || null,
-      totalScore: parseInt(newQuizScore.value)
+      totalScore: newQuizExamType.value === 'PRACTICE' ? null : parseInt(newQuizScore.value)
     })
     toast.success("Tạo đề thi/bài tập mới thành công!")
   } catch (e) {
@@ -743,6 +763,40 @@ const onZipFileSelected = async (event) => {
   }
 }
 
+const triggerTxtImport = () => {
+  txtFileRef.value.click()
+}
+
+const onTxtFileSelected = async (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  importingTxt.value = true
+  const loadToast = toast.info("Đang xử lý import danh sách câu dịch từ file TXT...", { autoClose: false })
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    await api.post(`/quizzes/${selectedQuiz.value.id}/questions/import-txt`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    
+    toast.dismiss(loadToast)
+    toast.success("Nhập câu hỏi luyện dịch thành công!")
+    // Reload quiz details to show new questions
+    await selectQuiz(selectedQuiz.value)
+  } catch (e) {
+    console.error("TXT import failed:", e)
+    toast.dismiss(loadToast)
+    toast.error("Lỗi khi import file TXT: Vui lòng kiểm tra định dạng file.")
+  } finally {
+    importingTxt.value = false
+    event.target.value = ''
+  }
+}
+
 const isEditQuestionMode = ref(false)
 const editingQuestionId = ref(null)
 const uploadingAudioFile = ref(false)
@@ -754,10 +808,15 @@ const imageFileRef = ref(null)
 const openAddQuestionModal = () => {
   isEditQuestionMode.value = false
   editingQuestionId.value = null
-  newQSection.value = 'LISTENING'
+  if (selectedQuiz.value && selectedQuiz.value.examType === 'PRACTICE') {
+    newQSection.value = 'WRITING'
+    newQType.value = 'WRITING'
+  } else {
+    newQSection.value = 'LISTENING'
+    newQType.value = 'MULTIPLE_CHOICE'
+  }
   newQPoints.value = 2
   newQText.value = ''
-  newQType.value = 'MULTIPLE_CHOICE'
   newQAudio.value = ''
   newQImageUrl.value = ''
   newQCorrectAnswer.value = ''
@@ -776,14 +835,19 @@ const closeQuestionModal = () => {
 const triggerEditQuestion = (question) => {
   isEditQuestionMode.value = true
   editingQuestionId.value = question.id
-  newQSection.value = question.section || 'LISTENING'
+  if (selectedQuiz.value && selectedQuiz.value.examType === 'PRACTICE') {
+    newQSection.value = 'WRITING'
+    newQType.value = 'WRITING'
+  } else {
+    newQSection.value = question.section || 'LISTENING'
+    newQType.value = question.questionType || 'MULTIPLE_CHOICE'
+  }
   newQPoints.value = question.points || 2
   newQText.value = question.questionText || ''
-  newQType.value = question.questionType || 'MULTIPLE_CHOICE'
   newQAudio.value = question.audioUrl || ''
   newQImageUrl.value = question.imageUrl || ''
   
-  if (question.questionType === 'MULTIPLE_CHOICE') {
+  if (newQType.value === 'MULTIPLE_CHOICE') {
     newQCorrectAnswer.value = ''
     if (question.wrongAnswers && question.wrongAnswers.length > 0) {
       newQOptions.value = [...question.wrongAnswers]
@@ -1015,17 +1079,18 @@ const triggerEditQuiz = (quiz) => {
 }
 
 const handleUpdateQuiz = async () => {
-  if (!quizToEdit.value || !editQuizTitle.value || !editQuizTime.value || !editQuizDueDate.value || !editQuizScore.value) return
+  if (!quizToEdit.value || !editQuizTitle.value || !editQuizDueDate.value) return
+  if (editQuizExamType.value !== 'PRACTICE' && (!editQuizTime.value || !editQuizScore.value)) return
 
   try {
     await quizStore.updateQuiz(quizToEdit.value.id, {
       title: editQuizTitle.value,
       examType: editQuizExamType.value,
       topikLevelId: editQuizLevelId.value,
-      timeLimitMins: parseInt(editQuizTime.value),
+      timeLimitMins: editQuizExamType.value === 'PRACTICE' ? null : parseInt(editQuizTime.value),
       dueDate: editQuizDueDate.value + 'T23:59:59',
       classId: editQuizClassId.value || null,
-      totalScore: parseInt(editQuizScore.value)
+      totalScore: editQuizExamType.value === 'PRACTICE' ? null : parseInt(editQuizScore.value)
     })
     toast.success("Cập nhật đề thi thành công!")
     showEditQuizModal.value = false
