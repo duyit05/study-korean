@@ -14,4 +14,5 @@ public class ClassMaterialResponse {
     private String contentType;
     private LocalDateTime createdAt;
     private String downloadUrl;
+    private String viewUrl;
 }

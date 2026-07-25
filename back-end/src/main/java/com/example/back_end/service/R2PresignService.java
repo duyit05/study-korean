@@ -20,13 +20,22 @@ public class R2PresignService {
     private String bucket;
 
     public String generatePresignedUrl(String key, Duration expiry) {
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+        return generatePresignedUrl(key, expiry, null);
+    }
+
+    public String generatePresignedUrl(String key, Duration expiry, String filename) {
+        GetObjectRequest.Builder builder = GetObjectRequest.builder()
                 .bucket(bucket)
-                .key(key)
-                .build();
+                .key(key);
+
+        if (filename != null) {
+            builder.responseContentDisposition("attachment; filename=\"" + filename + "\"");
+        }
+
+        GetObjectRequest getObjectRequest = builder.build();
 
         GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                .signatureDuration(expiry) // ví dụ 15 phút
+                .signatureDuration(expiry)
                 .getObjectRequest(getObjectRequest)
                 .build();
 

@@ -277,7 +277,7 @@
                     <AppIcon :name="getFileIcon(item.contentType)" size="20" />
                   </div>
                   <div class="material-details">
-                    <a :href="item.downloadUrl" target="_blank" class="material-title-link">
+                    <a :href="item.viewUrl || item.downloadUrl" target="_blank" class="material-title-link">
                       {{ item.title }}
                     </a>
                     <div class="material-meta">

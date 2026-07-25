@@ -69,7 +69,8 @@
             <div 
               v-for="cls in classes" 
               :key="cls.id" 
-              class="class-item-card"
+              class="class-item-card clickable-card"
+              @click="openClassDetails(cls)"
             >
               <div class="class-info">
                 <h4>{{ cls.name }}</h4>
@@ -200,11 +201,80 @@
       </div>
     </div>
   </div>
+
+  <!-- Class Details Modal -->
+  <div v-if="selectedClassDetails" class="modal-overlay" @click.self="closeClassDetails">
+    <div class="modal-wrapper animate-scale" style="max-width: 600px; width: 100%;">
+      <div class="modal-header">
+        <h3>Chi tiết lớp học: {{ selectedClassDetails.name }}</h3>
+        <button class="close-btn" @click="closeClassDetails">✕</button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="class-summary-section">
+          <div class="summary-item horizontal">
+            <span class="label">Mã lớp:</span>
+            <span class="value room-badge">{{ selectedClassDetails.code }}</span>
+          </div>
+          <div class="summary-item horizontal">
+            <span class="label">Giáo viên:</span>
+            <span class="value">{{ selectedClassDetails.teacherName || 'Chưa phân công' }}</span>
+          </div>
+          <div class="summary-item horizontal">
+            <span class="label">Lịch học:</span>
+            <span class="value">{{ selectedClassDetails.schedule }}</span>
+          </div>
+          <div class="summary-item horizontal">
+            <span class="label">Phòng học:</span>
+            <span class="value">{{ selectedClassDetails.room || 'Chưa xác định' }}</span>
+          </div>
+          <div v-if="selectedClassDetails.notes" class="summary-item full-width">
+            <span class="label">Ghi chú từ giáo viên:</span>
+            <p class="notes-text">{{ selectedClassDetails.notes }}</p>
+          </div>
+        </div>
+        
+        <div class="materials-section">
+          <h4 class="section-subtitle">Tài liệu & Giáo trình</h4>
+          
+          <div v-if="loadingMaterials" class="loading-state">
+            <span class="spinner"></span>
+            <p>Đang tải danh sách tài liệu...</p>
+          </div>
+          
+          <div v-else-if="classMaterials.length === 0" class="empty-state" style="padding: 2rem 0;">
+            <AppIcon name="alert" size="24" />
+            <p>Lớp học chưa có tài liệu nào được tải lên.</p>
+          </div>
+          
+          <div v-else class="materials-list">
+            <div v-for="mat in classMaterials" :key="mat.id" class="material-card-item">
+              <div class="material-left">
+                <div class="material-icon-box" :class="getFileIconClass(mat.contentType)">
+                  📄
+                </div>
+                <div class="material-meta-info">
+                  <a :href="mat.viewUrl" target="_blank" class="material-filename-link" :title="mat.title">
+                    {{ mat.title }}
+                  </a>
+                  <span class="material-filesize">{{ formatBytes(mat.fileSize) }} • Đăng lúc {{ formatMaterialDate(mat.createdAt) }}</span>
+                </div>
+              </div>
+              <a :href="mat.downloadUrl" target="_blank" class="download-link-btn" title="Tải tài liệu">
+                Tải xuống
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import AppIcon from './icons/AppIcon.vue'
+import api from '../services/axios'
 
 const props = defineProps({
   user: {
@@ -307,6 +377,59 @@ const formatDateShort = (dateStr) => {
   }) + ' ' + date.toLocaleTimeString('vi-VN', { 
     hour: '2-digit', 
     minute: '2-digit' 
+  })
+}
+
+// Class details and materials logic
+const selectedClassDetails = ref(null)
+const classMaterials = ref([])
+const loadingMaterials = ref(false)
+
+const openClassDetails = async (cls) => {
+  selectedClassDetails.value = cls
+  loadingMaterials.value = true
+  classMaterials.value = []
+  try {
+    const res = await api.get(`/classes/${cls.id}/materials`)
+    if (res && res.data) {
+      classMaterials.value = res.data
+    }
+  } catch (e) {
+    console.error("Failed to fetch class materials:", e)
+  } finally {
+    loadingMaterials.value = false
+  }
+}
+
+const closeClassDetails = () => {
+  selectedClassDetails.value = null
+  classMaterials.value = []
+}
+
+const getFileIconClass = (contentType) => {
+  if (!contentType) return 'other'
+  const ct = contentType.toLowerCase()
+  if (ct.includes('pdf')) return 'pdf'
+  if (ct.includes('word') || ct.includes('document') || ct.includes('docx')) return 'word'
+  if (ct.includes('image')) return 'image'
+  return 'other'
+}
+
+const formatBytes = (bytes) => {
+  if (!bytes) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+}
+
+const formatMaterialDate = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
   })
 }
 </script>
@@ -801,5 +924,305 @@ const formatDateShort = (dateStr) => {
     gap: 0.25rem;
   }
 }
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 1.5rem;
+  animation: fadeInOverlay 0.25s ease-out;
+}
+
+.modal-wrapper {
+  background-color: var(--bg-card, #ffffff);
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-lg, 16px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border-color, #e2e8f0);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-title, #1e293b);
+  margin: 0;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--text-muted, #64748b);
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+  width: 32px;
+  height: 32px;
+}
+
+.close-btn:hover {
+  background-color: var(--bg-hover, #f1f5f9);
+  color: var(--text-title, #1e293b);
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Class summary section */
+.class-summary-section {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  background-color: var(--bg-body, #f8fafc);
+  padding: 1.25rem;
+  border-radius: var(--radius-md, 12px);
+  border: 1px dashed var(--border-color, #e2e8f0);
+}
+
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.summary-item.horizontal {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.summary-item.horizontal .value.room-badge {
+  align-self: center;
+}
+
+.summary-item.full-width {
+  grid-column: span 2;
+}
+
+.summary-item .label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.summary-item .value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-body, #334155);
+}
+
+.summary-item .value.room-badge {
+  align-self: flex-start;
+  background-color: var(--primary-glow, rgba(99, 102, 241, 0.1));
+  color: var(--primary, #6366f1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.notes-text {
+  font-size: 0.85rem;
+  color: var(--text-body, #334155);
+  margin-top: 0.25rem;
+  line-height: 1.5;
+  background-color: var(--bg-card, #ffffff);
+  padding: 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #e2e8f0);
+}
+
+/* Materials section */
+.materials-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.section-subtitle {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-title, #1e293b);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.materials-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.material-card-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: var(--radius-md, 12px);
+  background-color: var(--bg-card, #ffffff);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.material-card-item:hover {
+  border-color: var(--primary-glow, #cbd5e1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.material-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  overflow: hidden;
+}
+
+.material-icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+
+.material-icon-box.pdf {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: rgb(239, 68, 68);
+}
+
+.material-icon-box.word {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: rgb(59, 130, 246);
+}
+
+.material-icon-box.image {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: rgb(16, 185, 129);
+}
+
+.material-icon-box.other {
+  background-color: rgba(107, 114, 128, 0.1);
+  color: rgb(107, 114, 128);
+}
+
+.material-meta-info {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.material-filename-link {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-title, #1e293b);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.material-filename-link:hover {
+  color: var(--primary, #6366f1);
+  text-decoration: underline;
+}
+
+.material-filesize {
+  font-size: 0.72rem;
+  color: var(--text-muted, #64748b);
+  margin-top: 0.1rem;
+}
+
+.download-link-btn {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary, #6366f1);
+  background-color: var(--primary-glow, rgba(99, 102, 241, 0.08));
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-sm, 6px);
+  text-decoration: none;
+  transition: background-color 0.2s, color 0.2s;
+  flex-shrink: 0;
+}
+
+.download-link-btn:hover {
+  background-color: var(--primary, #6366f1);
+  color: #ffffff;
+}
+
+/* Loading indicator */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 0;
+  gap: 0.75rem;
+  color: var(--text-muted, #64748b);
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--border-color, #e2e8f0);
+  border-top-color: var(--primary, #6366f1);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.clickable-card {
+  cursor: pointer;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.clickable-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary, #6366f1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeInOverlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+  
 </style>
 

@@ -37,10 +37,14 @@ public class ClassMaterialService {
         return classMaterialRepository.findByClazzIdOrderByCreatedAtDesc(classId).stream()
                 .map(material -> {
                     String downloadUrl = "";
+                    String viewUrl = "";
                     try {
                         // Generate a presigned URL valid for 30 minutes
+                        // downloadUrl has filename to trigger forced download via Content-Disposition header
                         downloadUrl = r2PresignService.generatePresignedUrl(material.getFileKey(),
-                                Duration.ofMinutes(30));
+                                Duration.ofMinutes(30), material.getTitle());
+                        viewUrl = r2PresignService.generatePresignedUrl(material.getFileKey(),
+                                Duration.ofMinutes(30), null);
                     } catch (Exception e) {
                         log.error("Failed to generate presigned URL for file: {}", material.getFileKey(), e);
                     }
@@ -52,6 +56,7 @@ public class ClassMaterialService {
                             .contentType(material.getContentType())
                             .createdAt(material.getCreatedAt())
                             .downloadUrl(downloadUrl)
+                            .viewUrl(viewUrl)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -80,8 +85,10 @@ public class ClassMaterialService {
         ClassMaterial saved = classMaterialRepository.save(material);
 
         String downloadUrl = "";
+        String viewUrl = "";
         try {
-            downloadUrl = r2PresignService.generatePresignedUrl(saved.getFileKey(), Duration.ofMinutes(30));
+            downloadUrl = r2PresignService.generatePresignedUrl(saved.getFileKey(), Duration.ofMinutes(30), saved.getTitle());
+            viewUrl = r2PresignService.generatePresignedUrl(saved.getFileKey(), Duration.ofMinutes(30), null);
         } catch (Exception e) {
             log.error("Failed to generate presigned URL", e);
         }
@@ -93,6 +100,7 @@ public class ClassMaterialService {
                 .contentType(saved.getContentType())
                 .createdAt(saved.getCreatedAt())
                 .downloadUrl(downloadUrl)
+                .viewUrl(viewUrl)
                 .build();
     }
 
