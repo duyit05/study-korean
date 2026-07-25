@@ -109,21 +109,23 @@ public class UserService {
             throw new AppException(ErrorCode.INVALID_PASSWORD);
         }
 
-        // ─── Lớp 2: IP Tracking ──────────────────────────────────────
-        long distinctIpCount = redisTokenService.trackLoginIp(user.getUsername(), clientIp);
-
-        if (distinctIpCount > 2) {
-            // Auto-lock account
-            user.setIsActive(false);
-            userRepository.save(user);
-            redisTokenService.deleteActiveSession(user.getUsername());
-            redisTokenService.deleteRefreshToken(user.getUsername());
-            log.warn("Account auto-locked due to IP sharing: username={}, ip={}, ipCount={}",
-                    user.getUsername(), clientIp, distinctIpCount);
-            throw new AppException(ErrorCode.ACCOUNT_LOCKED_SHARING);
+        // ─── Lớp 2: IP Tracking (Chỉ áp dụng cho HỌC SINH) ─────────────
+        long distinctIpCount = 0;
+        boolean ipWarning = false;
+        if (user.getRole() == UserRole.STUDENT) {
+            distinctIpCount = redisTokenService.trackLoginIp(user.getUsername(), clientIp);
+            if (distinctIpCount > 2) {
+                // Auto-lock account
+                user.setIsActive(false);
+                userRepository.save(user);
+                redisTokenService.deleteActiveSession(user.getUsername());
+                redisTokenService.deleteRefreshToken(user.getUsername());
+                log.warn("Account auto-locked due to IP sharing: username={}, ip={}, ipCount={}",
+                        user.getUsername(), clientIp, distinctIpCount);
+                throw new AppException(ErrorCode.ACCOUNT_LOCKED_SHARING);
+            }
+            ipWarning = (distinctIpCount == 2);
         }
-
-        boolean ipWarning = (distinctIpCount == 2);
 
         UserDetails userDetails = org.springframework.security.core.userdetails.User.withUsername(user.getUsername())
                 .password(user.getPasswordHash())
@@ -376,16 +378,19 @@ public class UserService {
             throw new AppException(ErrorCode.USER_BLOCKED);
         }
 
-        long distinctIpCount = redisTokenService.trackLoginIp(user.getUsername(), clientIp);
-        if (distinctIpCount > 2) {
-            user.setIsActive(false);
-            userRepository.save(user);
-            redisTokenService.deleteActiveSession(user.getUsername());
-            redisTokenService.deleteRefreshToken(user.getUsername());
-            throw new AppException(ErrorCode.ACCOUNT_LOCKED_SHARING);
+        long distinctIpCount = 0;
+        boolean ipWarning = false;
+        if (user.getRole() == UserRole.STUDENT) {
+            distinctIpCount = redisTokenService.trackLoginIp(user.getUsername(), clientIp);
+            if (distinctIpCount > 2) {
+                user.setIsActive(false);
+                userRepository.save(user);
+                redisTokenService.deleteActiveSession(user.getUsername());
+                redisTokenService.deleteRefreshToken(user.getUsername());
+                throw new AppException(ErrorCode.ACCOUNT_LOCKED_SHARING);
+            }
+            ipWarning = (distinctIpCount == 2);
         }
-
-        boolean ipWarning = (distinctIpCount == 2);
 
         UserDetails userDetails = org.springframework.security.core.userdetails.User.withUsername(user.getUsername())
                 .password(user.getPasswordHash())

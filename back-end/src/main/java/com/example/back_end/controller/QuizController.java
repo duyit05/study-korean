@@ -96,17 +96,6 @@ public class QuizController {
                                 .build();
         }
 
-        @GetMapping("/{id}")
-        @PreAuthorize("isAuthenticated()")
-        public ApiResponse<QuizResponse> getQuizDetails(@PathVariable Long id) {
-                QuizResponse response = quizService.getQuizDetails(id);
-                return ApiResponse.<QuizResponse>builder()
-                                .code(HttpStatus.OK.value())
-                                .message("Lấy chi tiết đề thi thành công.")
-                                .data(response)
-                                .build();
-        }
-
         @GetMapping("/class/{classId}")
         @PreAuthorize("isAuthenticated()")
         public ApiResponse<List<QuizResponse>> getQuizzesByClass(@PathVariable Long classId) {
@@ -141,6 +130,17 @@ public class QuizController {
                                 .code(HttpStatus.OK.value())
                                 .message("Lấy danh sách đề thi tự tạo thành công.")
                                 .data(data)
+                                .build();
+        }
+
+        @GetMapping("/{id}")
+        @PreAuthorize("isAuthenticated()")
+        public ApiResponse<QuizResponse> getQuizDetails(@PathVariable Long id) {
+                QuizResponse response = quizService.getQuizDetails(id);
+                return ApiResponse.<QuizResponse>builder()
+                                .code(HttpStatus.OK.value())
+                                .message("Lấy chi tiết đề thi thành công.")
+                                .data(response)
                                 .build();
         }
 

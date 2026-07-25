@@ -33,76 +33,14 @@ const studentImportFileName = ref('')
 
 let timerInterval = null
 
-const practiceQuizzes = ref([
-  {
-    id: 'practice-seed-reading',
-    title: 'Đề tự luyện Đọc: Từ vựng Động từ cơ bản 📖',
-    quizType: 'reading',
-    status: 'not_started',
-    points: 10,
-    score: null,
-    timeLimit: 10,
-    completedAt: null,
-    questions: [
-      {
-        id: 'pq-reading-1',
-        type: 'choice',
-        question: "Từ '일어나다' trong tiếng Hàn có nghĩa là gì?",
-        options: ['A. Đi làm', 'B. Thức dậy', 'C. Ăn cơm', 'D. Thể dục'],
-        correctAnswer: 'B. Thức dậy',
-        explanation: '일어나다 nghĩa là Thức dậy.'
-      },
-      {
-        id: 'pq-reading-2',
-        type: 'choice',
-        question: "Từ nào có nghĩa là 'Học tập'?",
-        options: ['A. 운동하다', 'B. 공부하다', 'C. 세수하다', 'D. 일하다'],
-        correctAnswer: 'B. 공부하다',
-        explanation: '공부하다 nghĩa là Học tập.'
-      }
-    ]
-  },
-  {
-    id: 'practice-seed-listening',
-    title: 'Đề thi thử Nghe: TOEIC Hàn ngữ Part 1 🎧',
-    quizType: 'listening',
-    status: 'not_started',
-    points: 10,
-    score: null,
-    timeLimit: 10,
-    completedAt: null,
-    questions: [
-      {
-        id: 'pq-listening-1',
-        type: 'listening',
-        question: 'Hãy nghe đoạn âm thanh tiếng Hàn sau và chọn ý nghĩa chính xác:',
-        koreanText: '오늘 날씨가 아주 따뜻합니다',
-        audioSource: 'tts',
-        audioUrl: '',
-        options: ['A. Thời tiết hôm nay rất lạnh.', 'B. Thời tiết hôm nay rất ấm áp.', 'C. Thời tiết hôm nay mát mẻ.', 'D. Hôm nay trời mưa lớn.'],
-        correctAnswer: 'B. Thời tiết hôm nay rất ấm áp.',
-        explanation: "Âm thanh tiếng Hàn nói: '오늘 날씨가 아주 따뜻합니다' (Thời tiết hôm nay rất ấm áp)."
-      },
-      {
-        id: 'pq-listening-2',
-        type: 'listening',
-        question: 'Hãy nghe phát âm và chọn động từ mô tả hành động tương ứng:',
-        koreanText: '세수하다',
-        audioSource: 'tts',
-        audioUrl: '',
-        options: ['A. Rửa mặt', 'B. Thức dậy', 'C. Đi ngủ', 'D. Ăn cơm'],
-        correctAnswer: 'A. Rửa mặt',
-        explanation: "Từ nghe được là '세수하다', nghĩa là Rửa mặt."
-      }
-    ]
-  }
-])
+const practiceQuizzes = ref([])
 
 // ============================================================
 // Main composable factory
 // ============================================================
 export function useQuizState(props, emit) {
   const quizStore = useQuizStore()
+  const mode = computed(() => props.mode || 'quizzes')
 
   // ---- Merged quizzes (teacher-assigned + attempts) ----
   const mergedQuizzes = computed(() => {
@@ -682,6 +620,7 @@ export function useQuizState(props, emit) {
   })
 
   return {
+    mode,
     // state refs
     activeTab, activeQuiz, viewingResultQuiz, isCreatingQuiz,
     creatorQuizType, newQuizTitle, newQuizQuestions,

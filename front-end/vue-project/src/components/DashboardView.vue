@@ -100,7 +100,7 @@
                   <AppIcon name="book" size="20" />
                 </div>
                 <div>
-                  <h5>Học Từ Vựng: {{ nextVocabSet.name }}</h5>
+                  <h5>Học Từ Vựng: {{ nextVocabSet.title }}</h5>
                   <p>{{ nextVocabSet.description }}</p>
                 </div>
               </div>
@@ -110,22 +110,22 @@
             </div>
 
             <!-- Quiz Shortcut -->
-            <div v-if="pendingQuiz" class="shortcut-action-card">
+            <div v-for="quiz in pendingQuizzes" :key="quiz.id" class="shortcut-action-card">
               <div class="action-details">
                 <div class="action-icon quiz">
                   <AppIcon name="quiz" size="20" />
                 </div>
                 <div>
-                  <h5>Làm Bài Tập: {{ pendingQuiz.title }}</h5>
-                  <p class="due">Hạn nộp: {{ formatDate(pendingQuiz.dueDate) }}</p>
+                  <h5>Làm Bài Tập: {{ quiz.title }}</h5>
+                  <p class="due">Hạn nộp: {{ formatDate(quiz.dueDate) }}</p>
                 </div>
               </div>
-              <button class="action-btn warning-btn" @click="$emit('navigate', 'quizzes')">
+              <button class="action-btn warning-btn" @click="$emit('navigate', quiz.examType === 'PRACTICE' ? 'translation' : 'quizzes')">
                 Làm Quiz <AppIcon name="chevron-right" size="14" />
               </button>
             </div>
 
-            <div v-if="!nextVocabSet && !pendingQuiz" class="empty-state">
+            <div v-if="!nextVocabSet && pendingQuizzes.length === 0" class="empty-state">
               <AppIcon name="check" size="32" class="success-text" />
               <p>Tuyệt vời! Bạn đã hoàn thành tất cả nhiệm vụ hôm nay.</p>
             </div>
@@ -277,9 +277,9 @@ const nextVocabSet = computed(() => {
   return props.studySets[0] || null
 })
 
-const pendingQuiz = computed(() => {
-  // Find quiz with 'not_started' or 'in_progress' status
-  return props.quizzes.find(q => q.status !== 'completed') || null
+const pendingQuizzes = computed(() => {
+  const list = Array.isArray(props.quizzes) ? props.quizzes : []
+  return list.filter(q => q.status !== 'completed')
 })
 
 // Unread announcements

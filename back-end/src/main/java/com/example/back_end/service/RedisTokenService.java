@@ -131,4 +131,15 @@ public class RedisTokenService {
         recordLoginIp(username, ip);
         return getDistinctIpCountToday(username);
     }
+
+    public void clearLoginIps(String username) {
+        try {
+            String today = LocalDate.now().toString();
+            String key = LOGIN_IPS_PREFIX + username + ":" + today;
+            redisTemplate.delete(key);
+            log.info("Cleared login IPs in Redis for user: {}", username);
+        } catch (Exception e) {
+            log.warn("Redis connection failed on clearLoginIps: {}", e.getMessage());
+        }
+    }
 }

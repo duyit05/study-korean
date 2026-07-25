@@ -1403,6 +1403,7 @@ const handleAssignQuiz = async () => {
     const quizDetails = await quizStore.fetchQuizDetails(assignQuizForm.quizId)
     const payload = {
       title: quizDetails.title,
+      examType: quizDetails.examType || 'PRACTICE',
       topikLevelId: quizDetails.topikLevel?.id || quizDetails.topikLevelId,
       timeLimitMins: quizDetails.timeLimitMins,
       totalScore: quizDetails.totalScore,
@@ -1433,6 +1434,7 @@ const confirmUnassignQuiz = async () => {
     const quizDetails = await quizStore.fetchQuizDetails(unassignQuizTargetId.value)
     const payload = {
       title: quizDetails.title,
+      examType: quizDetails.examType || 'PRACTICE',
       topikLevelId: quizDetails.topikLevel?.id || quizDetails.topikLevelId,
       timeLimitMins: quizDetails.timeLimitMins,
       totalScore: quizDetails.totalScore,

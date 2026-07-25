@@ -149,8 +149,7 @@
                 </span>
               </div>
               <div class="ans-row" v-if="viewingResultQuiz.examType === 'PRACTICE' ? q.correctAnswer : !isUserCorrect(q)">
-                <span class="label">Bản dịch mẫu / Gợi ý:</span>
-                <span class="ans-val correct-ans">{{ q.correctAnswer || '' }}</span>
+               
               </div>
             </div>
 

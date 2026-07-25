@@ -71,17 +71,6 @@ public class QuizAttemptController {
                 .build();
     }
 
-    @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
-    public ApiResponse<QuizAttemptResponse> getAttemptDetails(@PathVariable Long id) {
-        QuizAttemptResponse response = quizAttemptService.getAttemptDetails(id);
-        return ApiResponse.<QuizAttemptResponse>builder()
-                .code(HttpStatus.OK.value())
-                .message("Lấy chi tiết bài làm thành công.")
-                .data(response)
-                .build();
-    }
-
     @GetMapping("/teacher")
     @PreAuthorize("hasRole('TEACHER')")
     public ApiResponse<PageResponse<QuizAttemptResponse>> getAttemptsForTeacher(
@@ -95,6 +84,17 @@ public class QuizAttemptController {
         return ApiResponse.<PageResponse<QuizAttemptResponse>>builder()
                 .code(HttpStatus.OK.value())
                 .message("Lấy danh sách bài thi thành công.")
+                .data(response)
+                .build();
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ApiResponse<QuizAttemptResponse> getAttemptDetails(@PathVariable Long id) {
+        QuizAttemptResponse response = quizAttemptService.getAttemptDetails(id);
+        return ApiResponse.<QuizAttemptResponse>builder()
+                .code(HttpStatus.OK.value())
+                .message("Lấy chi tiết bài làm thành công.")
                 .data(response)
                 .build();
     }

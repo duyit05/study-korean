@@ -49,6 +49,7 @@ public class StudentService {
     private final ReviewLogRepository reviewLogRepository;
     private final AssignedStudySetRepository assignedStudySetRepository;
     private final PaymentRepository paymentRepository;
+    private final RedisTokenService redisTokenService;
 
     @Transactional(readOnly = true)
     public List<StudentResponse> getAllStudents(String search, String level, Boolean isActive) {
@@ -148,6 +149,9 @@ public class StudentService {
         user.setFullName(request.getFullName());
         user.setPhone(request.getPhone());
         if (request.getIsActive() != null) {
+            if (request.getIsActive() && (user.getIsActive() == null || !user.getIsActive())) {
+                redisTokenService.clearLoginIps(user.getUsername());
+            }
             user.setIsActive(request.getIsActive());
         }
 
