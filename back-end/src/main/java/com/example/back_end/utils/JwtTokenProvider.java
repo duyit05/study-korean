@@ -27,9 +27,12 @@ public class JwtTokenProvider {
     private String secretRefreshKeyString;
 
     @Value("${jwt.expiry-time}")
-    private long expiryTimeHours;
+    private String expiryTimeHoursStr;
 
     @Value("${jwt.expiry-day}")
+    private String expiryTimeDaysStr;
+
+    private long expiryTimeHours;
     private long expiryTimeDays;
 
     private Key jwtSecret;
@@ -42,10 +45,28 @@ public class JwtTokenProvider {
     public void init() {
         byte[] keyBytes = Decoders.BASE64.decode(secretKeyString);
         this.jwtSecret = Keys.hmacShaKeyFor(keyBytes);
+        
+        try {
+            this.expiryTimeHours = (expiryTimeHoursStr == null || expiryTimeHoursStr.trim().isEmpty())
+                    ? 1L
+                    : Long.parseLong(expiryTimeHoursStr.trim());
+        } catch (NumberFormatException e) {
+            log.warn("Invalid jwt.expiry-time '{}', using default 1 hour", expiryTimeHoursStr);
+            this.expiryTimeHours = 1L;
+        }
         this.jwtExpirationInMs = expiryTimeHours * 60 * 60 * 1000;
 
         byte[] refreshKeyBytes = Decoders.BASE64.decode(secretRefreshKeyString);
         this.jwtRefreshSecret = Keys.hmacShaKeyFor(refreshKeyBytes);
+        
+        try {
+            this.expiryTimeDays = (expiryTimeDaysStr == null || expiryTimeDaysStr.trim().isEmpty())
+                    ? 14L
+                    : Long.parseLong(expiryTimeDaysStr.trim());
+        } catch (NumberFormatException e) {
+            log.warn("Invalid jwt.expiry-day '{}', using default 14 days", expiryTimeDaysStr);
+            this.expiryTimeDays = 14L;
+        }
         this.jwtRefreshExpirationInMs = expiryTimeDays * 24 * 60 * 60 * 1000;
     }
 
