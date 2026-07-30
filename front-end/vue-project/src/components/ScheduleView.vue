@@ -26,7 +26,8 @@
     </div>
 
     <!-- Calendar Timeline list -->
-    <div class="schedule-timeline animate-scale">
+     <!-- -->
+    <div class="schedule-timeline animate-scale" style="display: none">
       <div 
         v-for="item in filteredSchedule" 
         :key="item.id" 
@@ -93,6 +94,9 @@
       </div>
     </div>
   </div>
+    <div class="empty-state">
+          <p>Chưa phát triển.</p>
+        </div>
 </template>
 
 <script setup>

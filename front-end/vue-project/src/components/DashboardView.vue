@@ -79,9 +79,6 @@
                   <span class="schedule"><AppIcon name="clock" size="14" /> {{ cls.schedule }}</span>
                 </div>
               </div>
-              <div class="class-action">
-                <span class="room-badge">{{ cls.room }}</span>
-              </div>
             </div>
             <div v-if="!classes || classes.length === 0" class="empty-state">
               <AppIcon name="alert" size="32" />
@@ -204,7 +201,7 @@
 
   <!-- Class Details Modal -->
   <div v-if="selectedClassDetails" class="modal-overlay" @click.self="closeClassDetails">
-    <div class="modal-wrapper animate-scale" style="max-width: 600px; width: 100%;">
+    <div class="modal-wrapper animate-scale" style="max-width: 700px; width: 100%;">
       <div class="modal-header">
         <h3>Chi tiết lớp học: {{ selectedClassDetails.name }}</h3>
         <button class="close-btn" @click="closeClassDetails">✕</button>
@@ -226,7 +223,19 @@
           </div>
           <div class="summary-item horizontal">
             <span class="label">Phòng học:</span>
-            <span class="value">{{ selectedClassDetails.room || 'Chưa xác định' }}</span>
+            <a 
+              v-if="getRoomLink(selectedClassDetails.room)" 
+              :href="getRoomLink(selectedClassDetails.room)" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class="value room-link"
+              title="Nhấn để mở liên kết lớp học"
+            >
+              {{ selectedClassDetails.room }}
+            </a>
+            <span v-else class="value">
+              {{ selectedClassDetails.room || 'Chưa xác định' }}
+            </span>
           </div>
           <div v-if="selectedClassDetails.notes" class="summary-item full-width">
             <span class="label">Ghi chú từ giáo viên:</span>
@@ -275,6 +284,18 @@
 import { ref, computed } from 'vue'
 import AppIcon from './icons/AppIcon.vue'
 import api from '../services/axios'
+
+const getRoomLink = (str) => {
+  if (!str) return ''
+  const trimmed = str.trim()
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed
+  }
+  if (/^www\./i.test(trimmed)) {
+    return 'https://' + trimmed
+  }
+  return ''
+}
 
 const props = defineProps({
   user: {
@@ -1222,6 +1243,21 @@ const formatMaterialDate = (dateStr) => {
 @keyframes fadeInOverlay {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+.room-link {
+  color: var(--primary, #6366f1) !important;
+  text-decoration: underline !important;
+  cursor: pointer;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.room-link:hover {
+  color: var(--primary-hover, #4f46e5) !important;
+  opacity: 0.9;
 }
   
 </style>

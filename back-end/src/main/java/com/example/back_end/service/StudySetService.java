@@ -15,7 +15,11 @@ import com.example.back_end.repository.CardRepository;
 import com.example.back_end.repository.StudySetRepository;
 import com.example.back_end.repository.TopikLevelRepository;
 import com.example.back_end.repository.CardProgressRepository;
+import com.example.back_end.repository.ReviewLogRepository;
+import com.example.back_end.repository.AssignedStudySetRepository;
+import com.example.back_end.repository.QuizRepository;
 import com.example.back_end.entity.CardProgress;
+import com.example.back_end.entity.Quiz;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +40,9 @@ public class StudySetService {
     private final StudySetMapper studySetMapper;
     private final TopikLevelRepository topikLevelRepository;
     private final CardProgressRepository cardProgressRepository;
+    private final ReviewLogRepository reviewLogRepository;
+    private final AssignedStudySetRepository assignedStudySetRepository;
+    private final QuizRepository quizRepository;
 
     @Transactional(readOnly = true)
     public List<StudySetResponse> getAllStudySets() {
@@ -199,8 +206,31 @@ public class StudySetService {
     public void deleteStudySet(Long id) {
         StudySet studySet = studySetRepository.findById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        // 1. Delete assignments in assigned_study_sets
+        assignedStudySetRepository.deleteByStudySetId(id);
+
+        // 2. Delete review logs referencing this study set
+        reviewLogRepository.deleteByStudySetId(id);
+
+        // 3. Delete card progress referencing cards of this study set
         List<Card> cards = cardRepository.findByStudySetId(id);
+        if (!cards.isEmpty()) {
+            List<Long> cardIds = cards.stream().map(Card::getId).collect(Collectors.toList());
+            cardProgressRepository.deleteByCardIdIn(cardIds);
+        }
+
+        // 4. Unlink quizzes (set study_set = null) to preserve quiz objects and student attempts
+        List<Quiz> quizzes = quizRepository.findByStudySetId(id);
+        for (Quiz q : quizzes) {
+            q.setStudySet(null);
+        }
+        quizRepository.saveAllAndFlush(quizzes);
+
+        // 5. Delete cards associated with the study set
         cardRepository.deleteAll(cards);
+
+        // 6. Finally, delete the study set itself
         studySetRepository.delete(studySet);
     }
 }

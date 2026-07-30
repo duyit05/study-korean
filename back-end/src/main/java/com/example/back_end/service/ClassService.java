@@ -13,8 +13,15 @@ import com.example.back_end.repository.ClassRepository;
 import com.example.back_end.repository.UserRepository;
 import com.example.back_end.repository.TopikLevelRepository;
 import com.example.back_end.repository.CourseRepository;
+import com.example.back_end.repository.ClassMaterialRepository;
+import com.example.back_end.repository.SessionRepository;
+import com.example.back_end.repository.ScheduleRepository;
+import com.example.back_end.repository.QuizRepository;
+import com.example.back_end.repository.PaymentPlanRepository;
+import com.example.back_end.repository.AssignedStudySetRepository;
 import com.example.back_end.entity.Course;
 import com.example.back_end.entity.TopikLevel;
+import com.example.back_end.entity.Quiz;
 import com.example.back_end.dto.response.PageResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -41,6 +48,12 @@ public class ClassService {
     private final UserRepository userRepository;
     private final TopikLevelRepository topikLevelRepository;
     private final CourseRepository courseRepository;
+    private final ClassMaterialRepository classMaterialRepository;
+    private final SessionRepository sessionRepository;
+    private final ScheduleRepository scheduleRepository;
+    private final QuizRepository quizRepository;
+    private final PaymentPlanRepository paymentPlanRepository;
+    private final AssignedStudySetRepository assignedStudySetRepository;
 
     @Transactional(readOnly = true)
     public List<ClassResponse> getTeacherClasses() {
@@ -156,7 +169,6 @@ public class ClassService {
         classRepository.save(clazz);
     }
 
-
     @Transactional
     public ClassResponse updateClass(Long id, ClassRequest request) {
         User teacher = userService.getCurrentUser();
@@ -201,9 +213,18 @@ public class ClassService {
                 .orElseThrow(() -> new AppException(
                         ErrorCode.RESOURCE_NOT_FOUND));
 
-        // Since it is @ManyToMany, clear the list of students to remove rows in the
-        // join table
         clazz.getStudents().clear();
+        classRepository.saveAndFlush(clazz);
+        assignedStudySetRepository.deleteAll(assignedStudySetRepository.findByClazzId(id));
+        classMaterialRepository.deleteAll(classMaterialRepository.findByClazzIdOrderByCreatedAtDesc(id));
+        paymentPlanRepository.deleteAll(paymentPlanRepository.findByClazzId(id));
+        List<Quiz> classQuizzes = quizRepository.findByClazzId(id);
+        for (Quiz q : classQuizzes) {
+            q.setClazz(null);
+        }
+        quizRepository.saveAllAndFlush(classQuizzes);
+        sessionRepository.deleteAll(sessionRepository.findByClazzId(id));
+        scheduleRepository.deleteAll(scheduleRepository.findByClazzId(id));
         classRepository.delete(clazz);
     }
 }

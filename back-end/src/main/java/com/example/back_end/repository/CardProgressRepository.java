@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.repository.query.Param;
 
 @Repository
@@ -30,4 +31,8 @@ public interface CardProgressRepository extends JpaRepository<CardProgress, Long
 
     @Query("SELECT COUNT(DISTINCT cp.card.studySet.id) FROM CardProgress cp WHERE cp.student.id = :studentId AND cp.repetitions > 0")
     int countDistinctLearnedStudySetsByStudentId(@Param("studentId") Long studentId);
+
+    @Modifying
+    @Query("DELETE FROM CardProgress cp WHERE cp.card.id IN :cardIds")
+    void deleteByCardIdIn(@Param("cardIds") List<Long> cardIds);
 }

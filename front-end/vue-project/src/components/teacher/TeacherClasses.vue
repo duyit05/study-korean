@@ -456,10 +456,6 @@
             <AppSelect id="className" v-model="newClassLevelId" :options="levelOptions" placeholder="-- Chọn lớp học từ Cấp độ TOPIK --" />
           </div>
           <div class="form-group">
-            <label for="classCourse">Khóa học liên kết</label>
-            <AppSelect id="classCourse" v-model="newClassCourseId" :options="courseOptions" placeholder="-- Không liên kết khóa học --" />
-          </div>
-          <div class="form-group">
             <label for="classSchedule">Lịch học</label>
             <input type="text" id="classSchedule" v-model="newClassSchedule" placeholder="Ví dụ: Thứ 2, 4, 6 (18:00 - 19:30)" required>
           </div>
@@ -486,10 +482,6 @@
           <div class="form-group">
             <label for="editClassName">Tên lớp học</label>
             <AppSelect id="editClassName" v-model="editClassLevelId" :options="levelOptions" placeholder="-- Chọn lớp học từ Cấp độ TOPIK --" />
-          </div>
-          <div class="form-group">
-            <label for="editClassCourse">Khóa học liên kết</label>
-            <AppSelect id="editClassCourse" v-model="editClassCourseId" :options="courseOptions" placeholder="-- Không liên kết khóa học --" />
           </div>
           <div class="form-group">
             <label for="editClassSchedule">Lịch học</label>

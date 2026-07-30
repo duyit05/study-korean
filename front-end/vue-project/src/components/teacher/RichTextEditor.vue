@@ -1,23 +1,23 @@
 <template>
   <div class="rich-text-editor-container">
     <div class="rich-editor-toolbar">
-      <button type="button" class="tool-btn" @click="exec('bold')" title="Bôi đậm"><b>B</b></button>
-      <button type="button" class="tool-btn" @click="exec('italic')" title="In nghiêng"><i>I</i></button>
-      <button type="button" class="tool-btn" @click="exec('underline')" title="Gạch chân"><u>U</u></button>
+      <button type="button" class="tool-btn" @mousedown.prevent="exec('bold')" title="Bôi đậm"><b>B</b></button>
+      <button type="button" class="tool-btn" @mousedown.prevent="exec('italic')" title="In nghiêng"><i>I</i></button>
+      <button type="button" class="tool-btn" @mousedown.prevent="exec('underline')" title="Gạch chân"><u>U</u></button>
       
       <span class="tool-separator"></span>
       
       <!-- Text Colors -->
-      <button type="button" class="tool-btn color-dot red" @click="exec('foreColor', '#d90429')" title="Chữ đỏ">A</button>
-      <button type="button" class="tool-btn color-dot blue" @click="exec('foreColor', '#0077b6')" title="Chữ xanh">A</button>
-      <button type="button" class="tool-btn color-dot green" @click="exec('foreColor', '#38b000')" title="Chữ xanh lá">A</button>
+      <button type="button" class="tool-btn color-dot red" @mousedown.prevent="exec('foreColor', '#d90429')" title="Chữ đỏ">A</button>
+      <button type="button" class="tool-btn color-dot blue" @mousedown.prevent="exec('foreColor', '#0077b6')" title="Chữ xanh">A</button>
+      <button type="button" class="tool-btn color-dot green" @mousedown.prevent="exec('foreColor', '#38b000')" title="Chữ xanh lá">A</button>
       
       <!-- Highlight Color -->
-      <button type="button" class="tool-btn highlight-btn" @click="exec('hiliteColor', '#fff3cd')" title="Tô nền vàng">🖍️</button>
+      <button type="button" class="tool-btn highlight-btn" @mousedown.prevent="exec('hiliteColor', '#fff3cd')" title="Tô nền vàng">🖍️</button>
       
       <span class="tool-separator"></span>
       
-      <button type="button" class="tool-btn" @click="exec('removeFormat')" title="Xóa định dạng">❌</button>
+      <button type="button" class="tool-btn" @mousedown.prevent="exec('removeFormat')" title="Xóa định dạng">❌</button>
     </div>
     <div
       ref="editorRef"

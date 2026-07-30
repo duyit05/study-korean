@@ -19,6 +19,7 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
     List<Quiz> findByCreatorIdWithTopikLevel(@Param("creatorId") Long creatorId);
 
     List<Quiz> findByClazzId(Long clazzId);
+    List<Quiz> findByStudySetId(Long studySetId);
     List<Quiz> findByCreatorId(Long creatorId);
 
     @Query(value = "SELECT q FROM Quiz q LEFT JOIN FETCH q.topikLevel tl " +

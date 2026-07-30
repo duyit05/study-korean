@@ -3,7 +3,7 @@
     <!-- Header Section -->
     <div class="practice-header-section" v-if="!activeQuiz && !viewingResultQuiz && !isCreatingQuiz">
       <div class="header-left">
-        <h2>Góc Tự Ôn Tập & Luyện Đề 🎯</h2>
+        <h2>Góc Tự Ôn Tập & Luyện Đề</h2>
         <p>Tự tạo bài tập đọc từ vựng, bài thi nghe và import từ vựng hàng loạt để ôn tập cá nhân.</p>
       </div>
       <div class="practice-status-tabs">
@@ -12,21 +12,21 @@
           :class="{ active: activeTab === 'reading' }" 
           @click="activeTab = 'reading'"
         >
-          📖 Đọc & Từ Vựng ({{ readingQuizzes.length }})
+           Đọc & Từ Vựng ({{ readingQuizzes.length }})
         </button>
         <button 
           class="tab-btn" 
           :class="{ active: activeTab === 'listening' }" 
           @click="activeTab = 'listening'"
         >
-          🎧 Kỹ Năng Nghe ({{ listeningQuizzes.length }})
+           Nghe ({{ listeningQuizzes.length }})
         </button>
         <button 
           class="tab-btn" 
           :class="{ active: activeTab === 'completed' }" 
           @click="activeTab = 'completed'"
         >
-          ✅ Lịch Sử Làm Bài ({{ completedQuizzes.length }})
+           Lịch Sử Làm Bài ({{ completedQuizzes.length }})
         </button>
       </div>
     </div>
@@ -509,37 +509,6 @@ const viewingResultQuiz = ref(null)
 
 // Practice Quizzes array stored locally
 const practiceQuizzes = ref([
-  {
-    id: "practice-seed-reading",
-    title: "Đề tự luyện Đọc: Từ vựng Động từ cơ bản 📖",
-    quizType: "reading",
-    status: "not_started",
-    points: 10,
-    score: null,
-    totalScore: 10,
-    timeLimit: 10,
-    completedAt: null,
-    questions: [
-      {
-        id: "pq-reading-1",
-        type: "choice",
-        question: "Từ '일어나다' trong tiếng Hàn có nghĩa là gì?",
-        wordType: "Động từ",
-        pronunciation: "i-reo-na-da",
-        options: ["A. Đi làm", "B. Thức dậy", "C. Ăn cơm", "D. Thể dục"],
-        correctAnswer: "B. Thức dậy"
-      },
-      {
-        id: "pq-reading-2",
-        type: "choice",
-        question: "Từ nào có nghĩa là 'Học tập'?",
-        wordType: "Động từ",
-        pronunciation: "gong-bu-ha-da",
-        options: ["A. 공부하다", "B. 일하다", "C. 자다", "D. 쉬다"],
-        correctAnswer: "A. 공부하다"
-      }
-    ]
-  }
 ])
 
 onMounted(() => {

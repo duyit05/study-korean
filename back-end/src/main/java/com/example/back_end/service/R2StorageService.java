@@ -33,11 +33,16 @@ public class R2StorageService {
     }
 
     public String uploadFile(MultipartFile file, String keyPrefix) throws IOException {
-        String key = keyPrefix + "/" + UUID.randomUUID() + "-" + file.getOriginalFilename();
+        if (keyPrefix != null && (keyPrefix.contains("..") || keyPrefix.startsWith("/"))) {
+            throw new SecurityException("Tiền tố thư mục không hợp lệ (Directory Traversal attempt)");
+        }
+
+        String key = (keyPrefix != null ? keyPrefix : "audio") + "/" + UUID.randomUUID() + "-"
+                + file.getOriginalFilename();
 
         if (isDummyConfig()) {
             log.info("R2 endpoint is dummy. Saving file locally: {}", key);
-            File localFile = new File(UPLOADS_DIR, key);
+            File localFile = validateAndGetLocalFile(key);
             localFile.getParentFile().mkdirs();
             try (FileOutputStream fos = new FileOutputStream(localFile)) {
                 fos.write(file.getBytes());
@@ -58,7 +63,7 @@ public class R2StorageService {
             return key;
         } catch (Exception e) {
             log.warn("Failed to upload to Cloudflare R2, falling back to local file storage: {}", key, e);
-            File localFile = new File(UPLOADS_DIR, key);
+            File localFile = validateAndGetLocalFile(key);
             localFile.getParentFile().mkdirs();
             try (FileOutputStream fos = new FileOutputStream(localFile)) {
                 fos.write(file.getBytes());
@@ -70,9 +75,13 @@ public class R2StorageService {
     public void deleteFile(String key) {
         if (key != null && key.startsWith("local/")) {
             String relativeKey = key.substring(6);
-            File localFile = new File(UPLOADS_DIR, relativeKey);
-            if (localFile.exists()) {
-                localFile.delete();
+            try {
+                File localFile = validateAndGetLocalFile(relativeKey);
+                if (localFile.exists()) {
+                    localFile.delete();
+                }
+            } catch (Exception e) {
+                log.warn("Failed to delete local file safely: {}", key, e);
             }
             return;
         }
@@ -90,7 +99,7 @@ public class R2StorageService {
     public byte[] getFileBytes(String key) throws IOException {
         if (key != null && key.startsWith("local/")) {
             String relativeKey = key.substring(6);
-            File localFile = new File(UPLOADS_DIR, relativeKey);
+            File localFile = validateAndGetLocalFile(relativeKey);
             if (localFile.exists()) {
                 try (FileInputStream fis = new FileInputStream(localFile)) {
                     return fis.readAllBytes();
@@ -99,15 +108,15 @@ public class R2StorageService {
         }
 
         try {
-            software.amazon.awssdk.services.s3.model.GetObjectRequest request = 
-                software.amazon.awssdk.services.s3.model.GetObjectRequest.builder()
+            software.amazon.awssdk.services.s3.model.GetObjectRequest request = software.amazon.awssdk.services.s3.model.GetObjectRequest
+                    .builder()
                     .bucket(bucket)
                     .key(key)
                     .build();
             return s3Client.getObjectAsBytes(request).asByteArray();
         } catch (Exception e) {
             log.warn("Failed to download from R2, checking local storage for key: {}", key);
-            File localFile = new File(UPLOADS_DIR, key);
+            File localFile = validateAndGetLocalFile(key);
             if (localFile.exists()) {
                 try (FileInputStream fis = new FileInputStream(localFile)) {
                     return fis.readAllBytes();
@@ -115,5 +124,17 @@ public class R2StorageService {
             }
             throw new IOException("File not found in S3 or local fallback", e);
         }
+    }
+
+    private File validateAndGetLocalFile(String relativePath) throws IOException {
+        if (relativePath == null || relativePath.contains("..") || relativePath.startsWith("/")) {
+            throw new SecurityException("Phát hiện đường dẫn không hợp lệ hoặc tấn công Directory Traversal");
+        }
+        File baseDir = new File(UPLOADS_DIR).getCanonicalFile();
+        File localFile = new File(baseDir, relativePath).getCanonicalFile();
+        if (!localFile.getPath().startsWith(baseDir.getPath())) {
+            throw new SecurityException("Đường dẫn tệp nằm ngoài thư mục lưu trữ tải lên cho phép");
+        }
+        return localFile;
     }
 }

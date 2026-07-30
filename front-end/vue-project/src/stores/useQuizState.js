@@ -4,43 +4,41 @@ import { toast } from 'vue3-toastify'
 import 'vue3-toastify/dist/index.css'
 
 // ============================================================
-// Module-level state – shared across all quiz sub-components
-// ============================================================
-const activeTab = ref('reading')
-const activeQuiz = ref(null)
-const viewingResultQuiz = ref(null)
-const isCreatingQuiz = ref(false)
-const creatorQuizType = ref('reading')
-const newQuizTitle = ref('')
-const newQuizQuestions = ref([
-  { type: 'choice', question: '', koreanText: '', audioSource: 'tts', audioUrl: '', options: ['', '', '', ''], correctOptionIndex: 0 }
-])
-const currentQuestionIndex = ref(0)
-const userAnswers = ref({})
-const timerMinutes = ref(0)
-const timerSeconds = ref(0)
-const currentPage = ref(1)
-const rowsPerPage = ref(10)
-const reviewStatus = ref({})
-const isSpeaking = ref(false)
-const playingKoreanText = ref('')
-const currentAudio = ref(null)
-const reviewFilter = ref('all')
-const showStudentImportModal = ref(false)
-const studentImportTab = ref('paste')
-const studentImportText = ref('')
-const studentImportFileName = ref('')
-
-let timerInterval = null
-
-const practiceQuizzes = ref([])
-
-// ============================================================
 // Main composable factory
 // ============================================================
 export function useQuizState(props, emit) {
   const quizStore = useQuizStore()
   const mode = computed(() => props.mode || 'quizzes')
+
+  // Instance-level state - created fresh on each router view mount
+  const activeTab = ref('reading')
+  const activeQuiz = ref(null)
+  const viewingResultQuiz = ref(null)
+  const isCreatingQuiz = ref(false)
+  const creatorQuizType = ref('reading')
+  const newQuizTitle = ref('')
+  const newQuizQuestions = ref([
+    { type: 'choice', question: '', koreanText: '', audioSource: 'tts', audioUrl: '', options: ['', '', '', ''], correctOptionIndex: 0 }
+  ])
+  const currentQuestionIndex = ref(0)
+  const userAnswers = ref({})
+  const timerMinutes = ref(0)
+  const timerSeconds = ref(0)
+  const currentPage = ref(1)
+  const rowsPerPage = ref(10)
+  const reviewStatus = ref({})
+  const isSpeaking = ref(false)
+  const playingKoreanText = ref('')
+  const currentAudio = ref(null)
+  const reviewFilter = ref('all')
+  const showStudentImportModal = ref(false)
+  const studentImportTab = ref('paste')
+  const studentImportText = ref('')
+  const studentImportFileName = ref('')
+
+  let timerInterval = null
+
+  const practiceQuizzes = ref([])
 
   // ---- Merged quizzes (teacher-assigned + attempts) ----
   const mergedQuizzes = computed(() => {

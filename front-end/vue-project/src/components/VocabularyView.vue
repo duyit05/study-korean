@@ -3,7 +3,7 @@
     <!-- Header -->
     <div class="vocab-header-section">
       <div v-if="!selectedSet">
-        <h2>Học Từ Vựng & Flashcard 🗂️</h2>
+        <h2>Học Từ Vựng & Flashcard</h2>
         <p>Chọn bộ từ vựng dưới đây để học và ôn tập bằng thẻ ghi nhớ thông minh.</p>
       </div>
       <div v-else class="selected-header-left animate-fade">

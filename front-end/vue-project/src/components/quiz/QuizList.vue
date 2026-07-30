@@ -3,16 +3,16 @@
     <!-- Header -->
     <div class="quiz-header-section">
       <div>
-        <h2>{{ mode === 'translation' ? 'Bài tập &amp; Luyện dịch 📝' : 'Bài Tập &amp; Kiểm Tra 📝' }}</h2>
+        <h2>{{ mode === 'translation' ? 'Bài tập &amp; Luyện dịch' : 'Bài Tập &amp; Kiểm Tra' }}</h2>
         <p>{{ mode === 'translation' ? 'Danh sách bài tập tự ôn luyện dịch tiếng Hàn được giáo viên giao và hướng dẫn chấm bài.' : 'Danh mục bài tập được phân loại theo kỹ năng giúp bạn dễ dàng ôn tập và học tập tốt hơn.' }}</p>
       </div>
 
       <div class="quiz-status-tabs">
         <button class="tab-btn" :class="{ active: activeTab === 'reading' }" @click="activeTab = 'reading'">
-          {{ mode === 'translation' ? '📝 Bài Tập Luyện Dịch' : '📖 Đọc &amp; Từ Vựng' }} ({{ readingQuizzesCount }})
+          {{ mode === 'translation' ? 'Bài Tập Luyện Dịch' : 'Đọc &amp; Từ Vựng' }} ({{ readingQuizzesCount }})
         </button>
         <button class="tab-btn completed-tab" :class="{ active: activeTab === 'completed' }" @click="activeTab = 'completed'">
-          ✅ Lịch Sử Làm Bài ({{ completedQuizzes.length }})
+           Lịch Sử Làm Bài ({{ completedQuizzes.length }})
         </button>
       </div>
     </div>

@@ -209,7 +209,11 @@ public class StudentService {
         }
         quizAttemptRepository.deleteAll(attempts);
 
-        // 7. Finally, delete the User (which cascades and deletes StudentProfile)
+        // 6.5. Delete the StudentProfile associated with the user to prevent foreign key constraint violation
+        studentProfileRepository.findByUserId(user.getId())
+                .ifPresent(studentProfileRepository::delete);
+
+        // 7. Finally, delete the User
         userRepository.delete(user);
     }
 
